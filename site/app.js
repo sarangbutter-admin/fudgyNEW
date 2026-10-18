@@ -1796,7 +1796,7 @@ function mqBuild(el){
 function mqFit(){document.querySelectorAll(".marq").forEach(el=>{if(el._m&&!el.hidden)mqBuild(el);else if(el._ai&&!el.hidden)anMqBuild(el)})}
 const LP_DEFAULT_SVG=`<svg viewBox="0 0 30 24" aria-hidden="true"><path d="M3 21a12 12 0 0 1 24 0Z" fill="currentColor"/><circle cx="15" cy="5" r="2.6" fill="currentColor"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="currentColor"/></svg>`;
 function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
-  hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,shape:"dome"},
+  hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
   build:{title:"Build your box",intro:"Choose a size, fill every spot, then tell us when you want it. Each box is baked the morning it leaves the oven room."},
   blocks:[],
@@ -1838,11 +1838,18 @@ const LP_STACK={display:'"Unbounded","Arial Black",system-ui,sans-serif',body:'"
 function lpFamily(key,pg,role){const fb=LP_STACK[role==="head"?"display":"body"];
   if(String(key).startsWith("f:")){const f=(pg.fonts||[]).find(x=>x.id===key.slice(2));if(f)return `"DD-${f.id}",${fb}`}
   const m=MQ_FONTS[key]||MQ_FONTS.body;return key==="display"?LP_STACK.display:key==="body"?LP_STACK.body:m[1]}
+const ytId=s=>(String(s||"").match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/)||[])[1]||"";
+const vimeoId=s=>(String(s||"").match(/vimeo\.com\/(?:video\/)?(\d+)/)||[])[1]||"";
+const isVideoSrc=s=>/^data:video\//i.test(s)||/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(s)||!!ytId(s)||!!vimeoId(s);
 function videoHTML(src,{bg=false}={}){
   src=safeMedia(src);if(!src)return "";
   if(/^data:video\//i.test(src)||/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src))
     return bg?`<video src="${esc(src)}" ${RM?"":"autoplay"} muted loop playsinline preload="metadata"></video>`:`<video src="${esc(src)}" controls playsinline preload="metadata"></video>`;
-  if(bg)return "";
+  // YouTube / Vimeo links play muted and looping behind the words (no controls)
+  if(bg){const ifr=(u,tall)=>`<div class="vbg${tall?" v916":""}"><iframe src="${u}" title="" tabindex="-1" aria-hidden="true" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`;
+    const y=ytId(src);if(y)return ifr(`https://www.youtube-nocookie.com/embed/${y}?autoplay=${RM?0:1}&mute=1&loop=1&playlist=${y}&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3`,/shorts\//i.test(src));
+    const v=vimeoId(src);if(v)return ifr(`https://player.vimeo.com/video/${v}?background=1&autoplay=${RM?0:1}&muted=1&loop=1&dnt=1`);
+    return ""}
   let m=src.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
   if(m)return `<div class="vf"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}" title="Video" loading="lazy" allow="fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
   m=src.match(/vimeo\.com\/(?:video\/)?(\d+)/);
@@ -1871,7 +1878,7 @@ function heroFill(dome,h){
   const hm=q(".hm");hm.innerHTML="";hm.style.backgroundImage="";clearInterval(dome._car);
   let list=heroList(h);if(!(h.carousel!==false))list=list.slice(0,1);
   list.forEach((m,i)=>{const src=safeMedia(m.src),sl=document.createElement("div");sl.className="hs"+(i?"":" on");
-    if(m.type==="video"){const v=videoHTML(src,{bg:true});if(!v)return;sl.innerHTML=v}
+    if(m.type==="video"||isVideoSrc(src)){const v=videoHTML(src,{bg:true});if(!v)return;sl.innerHTML=v}
     else sl.style.backgroundImage=`url("${imgOk(src).replace(/["()\\\s]/g,c=>encodeURIComponent(c))}")`;
     hm.appendChild(sl)});
   const sls=hm.querySelectorAll(".hs"),hasM=sls.length>0;
@@ -1880,7 +1887,26 @@ function heroFill(dome,h){
   if(shp==="none"){dome.style.background=hasM?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
   q(".ho").style.opacity=hasM?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
   heroFloats(dome,h);
+  dome.classList.toggle("fit-contain",h.fit==="contain");
+  dome._h=h;dome._ratio=null;
+  if(hasM&&(h.size||"auto")==="auto")heroRatio(list[0],r=>{if(dome._h===h){dome._ratio=r;heroLayout(dome)}});
+  heroLayout(dome);
 }
+const HERO_BP=640,HR_RATIO=new Map();
+function heroRatio(m,cb){const src=safeMedia(m&&m.src);if(!src)return;if(HR_RATIO.has(src)){cb(HR_RATIO.get(src));return}
+  const done=r=>{if(r>0&&isFinite(r)){r=Math.max(.4,Math.min(4,r));HR_RATIO.set(src,r);cb(r)}};
+  if(ytId(src)){done(/shorts\//i.test(src)?9/16:16/9);return}
+  if(vimeoId(src)){done(16/9);return}
+  if(m.type==="video"||isVideoSrc(src)){const v=document.createElement("video");v.muted=true;v.preload="metadata";v.onloadedmetadata=()=>done(v.videoWidth/v.videoHeight);v.src=src;return}
+  const im=new Image();im.onload=()=>done(im.naturalWidth/im.naturalHeight);im.src=imgOk(src)}
+function heroLayout(dome){const h=dome&&dome._h;if(!h)return;
+  const dev=dome._dev||(innerWidth>HERO_BP?"pc":"ph"),size=h.size||"auto",w=dome.clientWidth;let mh=0;
+  if(size==="custom")mh=dev==="pc"?Math.max(260,Math.min(1000,+h.hPc||480)):Math.max(220,Math.min(900,+h.hPh||360));
+  else if(size==="auto"&&dome._ratio&&w)mh=Math.round(Math.min(w/dome._ratio,innerHeight*(dome._dev?.6:.9)));
+  dome.style.minHeight=mh?mh+"px":"";dome.classList.toggle("hsz",!!mh);
+  const bp=h[dev==="pc"?"btnPc":"btnPh"],c=dome.querySelector(".hero-ctas"),ok=bp&&isFinite(bp.x)&&isFinite(bp.y);
+  dome.classList.toggle("btnfree",!!ok);if(c){c.style.left=ok?bp.x+"%":"";c.style.top=ok?bp.y+"%":""}}
+let heroRz=0;addEventListener("resize",()=>{cancelAnimationFrame(heroRz);heroRz=requestAnimationFrame(()=>document.querySelectorAll(".dome").forEach(heroLayout))});
 function heroShapes(){return [["dome","Dome (arch top)"],["rounded","Rounded box"],["pill","Pill"],["capsule","Capsule (round top and bottom)"],["oval","Oval"],["leaf","Leaf"],["none","No shape"]]}
 function heroList(h){const L=(h.media||[]).filter(m=>m&&safeMedia(m.src));if(L.length)return L;
   return h.mediaType&&h.mediaType!=="none"&&safeMedia(h.src)?[{type:h.mediaType,src:h.src}]:[]}

@@ -1927,10 +1927,11 @@ function viewAnnouncer(){
 A.hr=null;
 const hrDraft=()=>A.hr||(A.hr=heroNorm(DB.page.hero));
 const hrDirty=()=>A.hr&&JSON.stringify(A.hr)!==JSON.stringify(heroNorm(DB.page.hero));
+const hrDev=()=>A.hrDev||(innerWidth>HERO_BP?"pc":"ph");
 function hrDraw(){
   const el=document.getElementById("hrPrev");if(!el)return;const pg=DB.page,wrap=el.parentNode;
   wrap.style.setProperty("--blue",pg.brand);wrap.style.setProperty("--display",lpFamily(pg.headFont,pg,"head"));wrap.style.setProperty("--body",lpFamily(pg.bodyFont,pg,"body"));
-  const h=anClone(hrDraft());if(!h.bg)h.bg=pg.brand;heroFill(el,h);
+  const h=anClone(hrDraft());if(!h.bg)h.bg=pg.brand;el._dev=hrDev();heroFill(el,h);
   const d=hrDirty();["hrDirty"].forEach(i=>{const n=document.getElementById(i);if(n)n.hidden=!d});
   ["hrSave","hrDisc"].forEach(i=>{const n=document.getElementById(i);if(n)n.disabled=!d});
 }
@@ -1952,7 +1953,9 @@ function viewHero(){
   <div class="stack">
     <section class="panel hrsticky">
       <div class="phead"><div><h2>Preview <span id="hrDirty" hidden style="font-size:12px;background:var(--red);color:#fff;border-radius:99px;padding:2px 9px;margin-left:6px;vertical-align:middle">Not saved yet</span></h2><p class="sub">Updates as you edit.</p></div></div>
-      <div style="--blue:${pg.brand}"><div class="dome" id="hrPrev"><div class="hm"></div><div class="ho"></div><p class="eyebrow"></p><h1></h1><p class="lede"></p><div class="hero-ctas"><a class="btn btn-white"></a><a class="btn btn-ghost"></a></div></div></div>
+      <div class="chips" style="margin:0 0 10px">${[["ph","📱 Phone"],["pc","💻 Computer"]].map(([k,l])=>`<button class="fchip" type="button" data-hrdev="${k}" aria-pressed="${hrDev()===k}">${l}</button>`).join("")}</div>
+      <div class="hrpvw${hrDev()==="ph"?" ph":""}" style="--blue:${pg.brand}"><div class="dome" id="hrPrev"><div class="hm"></div><div class="ho"></div><p class="eyebrow"></p><h1></h1><p class="lede"></p><div class="hero-ctas" title="Drag to move"><a class="btn btn-white"></a><a class="btn btn-ghost"></a></div></div></div>
+      <p class="note" style="margin:8px 0 0">✋ Drag the buttons in the preview to move them. ${hrDev()==="ph"?"Phones":"Computers"} keep their own spot. ${h[hrDev()==="pc"?"btnPc":"btnPh"]?`<button class="ghost" type="button" data-hrbtnreset style="padding:4px 10px;margin-left:4px">Put back under the words</button>`:""}</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-blue" id="hrSave" type="button" data-hrsave disabled>Save &amp; publish</button><button class="btn btn-ghost-blue" id="hrDisc" type="button" data-hrdisc disabled>Discard changes</button><button class="danger" type="button" data-hrreset>Reset to default</button></div>
     </section>
     <section class="panel"><h2>Words and buttons</h2>
@@ -1964,12 +1967,19 @@ function viewHero(){
     <section class="panel"><h2>Shape</h2><p class="sub">The shape of the banner. Its color is the Banner color above. "No shape" removes it.</p>
       <div class="chips" style="margin-top:10px">${heroShapes().map(([k,l])=>`<button class="fchip" type="button" data-hrshape="${k}" aria-pressed="${(h.shape||"dome")===k}">${l}</button>`).join("")}</div>
     </section>
-    <section class="panel"><h2>Pictures and videos</h2><p class="sub">Shown behind the words. Add as many as you like (up to 8). Uploaded videos: 3 MB each, or paste an .mp4 link.</p>
-      <div class="stack" style="gap:8px;margin-top:10px">${h.media.map((m,i)=>{const sm=safeMedia(m.src);return `<div class="pmcard hrmrow"><div class="hrmth">${m.type==="video"?`<span aria-hidden="true">🎬</span>`:`<img src="${esc(imgOk(sm))}" alt="">`}</div>
-        <div><b>${m.type==="video"?"Video":"Picture"} ${i+1}</b><small class="note">${/^data:/i.test(m.src)?"Uploaded":esc(String(m.src).slice(0,60))}</small></div>
+    <section class="panel"><h2>Banner size</h2><p class="sub">How tall the banner is.</p>
+      <div class="chips" style="margin-top:10px">${[["auto","Fit the picture or video"],["text","Fit the words"],["custom","Custom height"]].map(([k,l])=>`<button class="fchip" type="button" data-hrsize="${k}" aria-pressed="${(h.size||"auto")===k}">${l}</button>`).join("")}</div>
+      <p class="note" style="margin:8px 0 0">${(h.size||"auto")==="auto"?"The banner takes the shape of your first picture or video, so it isn't cut off. The words always fit; very tall pictures stop at 90% of the screen height.":(h.size==="text")?"The banner is only as tall as the words. Pictures are cropped to fit.":"Pick the height for phones and computers. The words always fit."}</p>
+      ${h.size==="custom"?`<div class="grid2" style="margin-top:10px"><label class="af">Height on phones: ${+h.hPh||360}px<input type="range" min="220" max="900" step="10" value="${+h.hPh||360}" data-hr="hPh" data-hrnum="1" data-hrlbl="Height on phones: #px"></label><label class="af">Height on computers: ${+h.hPc||480}px<input type="range" min="260" max="1000" step="10" value="${+h.hPc||480}" data-hr="hPc" data-hrnum="1" data-hrlbl="Height on computers: #px"></label></div>`:""}
+      <div class="af" style="margin-top:12px">Picture fit</div>
+      <div class="chips" style="margin-top:6px">${[["cover","Fill (crops the edges)"],["contain","Show the whole picture"]].map(([k,l])=>`<button class="fchip" type="button" data-hrfit="${k}" aria-pressed="${(h.fit||"cover")===k}">${l}</button>`).join("")}</div>
+    </section>
+    <section class="panel"><h2>Pictures and videos</h2><p class="sub">Shown behind the words. Add as many as you like (up to 8). Uploaded videos: 3 MB each. Or paste a link: YouTube, Vimeo or an .mp4 file. Links play muted on a loop and don't use your site's storage.</p>
+      <div class="stack" style="gap:8px;margin-top:10px">${h.media.map((m,i)=>{const sm=safeMedia(m.src);return `<div class="pmcard hrmrow"><div class="hrmth">${m.type==="video"||isVideoSrc(sm)?(ytId(sm)?`<img src="https://i.ytimg.com/vi/${ytId(sm)}/mqdefault.jpg" alt="">`:`<span aria-hidden="true">🎬</span>`):`<img src="${esc(imgOk(sm))}" alt="">`}</div>
+        <div><b>${m.type==="video"||isVideoSrc(sm)?(ytId(sm)?"YouTube video":vimeoId(sm)?"Vimeo video":"Video"):"Picture"} ${i+1}</b><small class="note">${/^data:/i.test(m.src)?"Uploaded":esc(String(m.src).slice(0,60))}</small></div>
         <div class="hrmact"><button class="ghost" type="button" data-hrmup="${i}" ${i?"":"disabled"} aria-label="Move up">↑</button><button class="ghost" type="button" data-hrmdn="${i}" ${i<h.media.length-1?"":"disabled"} aria-label="Move down">↓</button><button class="danger" type="button" data-hrmrm="${i}">Remove</button></div></div>`}).join("")||`<p class="note">None yet. The banner shows its solid color.</p>`}</div>
       <div class="colin" style="margin-top:10px;flex-wrap:wrap;gap:8px"><label class="ghost mqbtn">+ Add picture<input type="file" accept="image/*" hidden data-hradd="image"></label><label class="ghost mqbtn">+ Add video<input type="file" accept="video/mp4,video/webm" hidden data-hradd="video"></label></div>
-      <div class="colin" style="margin-top:10px"><input class="in" id="hrLink" placeholder="Or paste a link (https://... .jpg / .mp4)"><button class="ghost" type="button" data-hrlink>Add link</button></div>
+      <div class="colin" style="margin-top:10px"><input class="in" id="hrLink" placeholder="Or paste a link: YouTube, Vimeo, .mp4 or a picture"><button class="ghost" type="button" data-hrlink>Add link</button></div>
       ${h.media.length>1?`<div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap"><label class="sw"><input type="checkbox" data-hr="carousel" data-hrrr="1" ${h.carousel!==false?"checked":""} aria-label="Carousel"><span></span></label><span class="stlabel">Carousel: play them one after another${h.carousel!==false?"":" (off: only the first one shows)"}</span>
         ${h.carousel!==false?`<label class="af" style="margin:0;max-width:170px"><div class="money-in"><input class="in" type="number" min="2" max="30" step="1" data-hr="carouselSec" data-hrnum="1" value="${+h.carouselSec||5}"><span style="padding-right:10px">sec each</span></div></label>`:""}</div>`:""}
       ${h.media.length?`<label class="af" style="margin-top:10px">Darken the picture: ${h.overlay}%<input type="range" min="0" max="80" step="5" value="${h.overlay}" data-hr="overlay" data-hrnum="1"></label>`:""}
@@ -3499,6 +3509,15 @@ function setK(el){
   return {coll,field};
 }
 const am=$("#amain");
+// drag the banner buttons in the preview (saved as % of the banner, separately for phones and computers)
+am.addEventListener("pointerdown",e=>{const c=e.target.closest("#hrPrev .hero-ctas");if(!c||e.button>0)return;e.preventDefault();
+  const dome=$("#hrPrev"),h=hrDraft(),k=hrDev()==="pc"?"btnPc":"btnPh",r0=c.getBoundingClientRect(),gx=e.clientX-(r0.left+r0.width/2),gy=e.clientY-(r0.top+r0.height/2);
+  c.setPointerCapture(e.pointerId);dome.classList.add("dragging");
+  const mv=ev=>{const r=dome.getBoundingClientRect();let x=(ev.clientX-gx-r.left)/r.width*100,y=(ev.clientY-gy-r.top)/r.height*100;
+    x=Math.max(5,Math.min(95,x));y=Math.max(5,Math.min(95,y));if(Math.abs(x-50)<3)x=50;h[k]={x:Math.round(x*10)/10,y:Math.round(y*10)/10};
+    dome.classList.add("btnfree");c.style.left=h[k].x+"%";c.style.top=h[k].y+"%"};
+  const up=()=>{c.removeEventListener("pointermove",mv);c.removeEventListener("pointerup",up);c.removeEventListener("pointercancel",up);dome.classList.remove("dragging");if(h[k])renderAdmin()};
+  c.addEventListener("pointermove",mv);c.addEventListener("pointerup",up);c.addEventListener("pointercancel",up)});
 am.addEventListener("input",e=>{const el=e.target;if(!el.dataset.cpf||!A.cp)return;cpSetF(el)});
 am.addEventListener("change",e=>{const el=e.target;if(!el.dataset.cpf||!A.cp)return;cpSetF(el);if(el.dataset.cprr)renderAdmin()});
 function cpSetF(el){const k=el.dataset.cpf;A.cp[k]=el.type==="checkbox"?el.checked:el.type==="number"?(+el.value||0):el.value}
@@ -3524,7 +3543,7 @@ function hrSetX(el){const h=hrDraft(),[i,k]=el.dataset.hrx.split("."),n=+i;if(!A
   if(k==="op"){const l=el.closest("label");if(l&&l.firstChild)l.firstChild.textContent=`Opacity: ${x.op}%`}}
 am.addEventListener("input",e=>{const el=e.target;if(el.dataset.hrx){hrSetX(el);return}if(!el.dataset.hr)return;hrSet(el)});
 function hrSet(el){const h=hrDraft(),k=el.dataset.hr;h[k]=el.type==="checkbox"?el.checked:el.dataset.hrnum?+el.value:el.value;
-  if(k==="src"&&!el.value)h.src="";hrDraw();if(el.dataset.hrrr)renderAdmin();else if(k==="overlay"){const l=el.closest("label");if(l&&l.firstChild)l.firstChild.textContent=`Darken the picture: ${h.overlay}%`}}
+  if(k==="src"&&!el.value)h.src="";hrDraw();if(el.dataset.hrlbl){const l=el.closest("label");if(l&&l.firstChild)l.firstChild.textContent=el.dataset.hrlbl.replace("#",el.value);return}if(el.dataset.hrrr)renderAdmin();else if(k==="overlay"){const l=el.closest("label");if(l&&l.firstChild)l.firstChild.textContent=`Darken the picture: ${h.overlay}%`}}
 am.addEventListener("change",async e=>{const el=e.target;
   if(el.dataset.hrx){hrSetX(el);return}
   if(el.dataset.hr){hrSet(el);return}
@@ -3543,10 +3562,16 @@ am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   else if(d.hrckdel!==undefined){const h=hrDraft(),n=+d.hrckdel;h.cookies.splice(n,1);if(h.ckx)h.ckx.splice(n,1);h.ckn=Math.max(6,heroCkN(h)-1);hrDraw();renderAdmin()}
   else if(d.hrmediarm!==undefined){hrDraft().src="";renderAdmin()}
   else if(d.hrshape){hrDraft().shape=d.hrshape;renderAdmin()}
+  else if(d.hrsize){hrDraft().size=d.hrsize;renderAdmin()}
+  else if(d.hrfit){hrDraft().fit=d.hrfit;renderAdmin()}
+  else if(d.hrdev){A.hrDev=d.hrdev;renderAdmin()}
+  else if(d.hrbtnreset!==undefined){hrDraft()[hrDev()==="pc"?"btnPc":"btnPh"]=null;renderAdmin()}
   else if(d.hrmrm!==undefined){hrDraft().media.splice(+d.hrmrm,1);renderAdmin()}
   else if(d.hrmup!==undefined||d.hrmdn!==undefined){const m=hrDraft().media,i=+(d.hrmup??d.hrmdn),j=d.hrmup!==undefined?i-1:i+1;if(m[j]){[m[i],m[j]]=[m[j],m[i]];renderAdmin()}}
   else if(d.hrlink!==undefined){const v=($("#hrLink")||{}).value||"",u=safeMedia(v.trim()),h=hrDraft();if(!u||!/^https:\/\//i.test(u)){toast("Paste a link that starts with https://");return}if(h.media.length>=8){toast("Up to 8 pictures and videos.");return}
-    const ty=/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(u)?"video":"image";h.media.push({type:ty,src:u});renderAdmin();toast("Added to the preview. Press Save to publish.")}
+    let lk=u;if(/dropbox\.com/i.test(lk))lk=lk.replace(/([?&])dl=0/,"$1raw=1");
+    if(!isVideoSrc(lk)&&/(drive\.google|instagram\.com|tiktok\.com|facebook\.com|fb\.watch|dropbox\.com)/i.test(lk)){toast("That link is a web page, not a video file. Use a YouTube or Vimeo link, or a direct .mp4 link.");return}
+    const ty=isVideoSrc(lk)?"video":"image";h.media.push({type:ty,src:lk});renderAdmin();toast("Added to the preview. Press Save to publish.")}
   else if(d.hrsave!==undefined){const prev=DB.page.hero;DB.page.hero=heroNorm(A.hr);if(saveDB()){if(SBH.publish)draftPublish("page",["hero"]);toast("Top banner published to the shop");A.hr=null;renderAdmin()}else{DB.page.hero=prev;toast("Not enough storage space. Try smaller pictures.")}}
   else if(d.hrdisc!==undefined){A.hr=null;renderAdmin();toast("Changes discarded")}
   else if(d.hrreset!==undefined){armed(b,()=>{A.hr=heroNorm(defaultPage().hero);renderAdmin();toast("Reset in the preview. Press Save to publish.")})}
@@ -3924,7 +3949,7 @@ am.addEventListener("click",e=>{
 /* --- landing page editor --- */
 const LP_DEFAULT_SVG=`<svg viewBox="0 0 30 24" aria-hidden="true"><path d="M3 21a12 12 0 0 1 24 0Z" fill="currentColor"/><circle cx="15" cy="5" r="2.6" fill="currentColor"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="currentColor"/></svg>`;
 function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
-  hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,shape:"dome"},
+  hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
   build:{title:"Build your box",intro:"Choose a size, fill every spot, then tell us when you want it. Each box is baked the morning it leaves the oven room."},
   blocks:[],
@@ -3969,11 +3994,18 @@ const LP_STACK={display:'"Unbounded","Arial Black",system-ui,sans-serif',body:'"
 function lpFamily(key,pg,role){const fb=LP_STACK[role==="head"?"display":"body"];
   if(String(key).startsWith("f:")){const f=(pg.fonts||[]).find(x=>x.id===key.slice(2));if(f)return `"DD-${f.id}",${fb}`}
   const m=MQ_FONTS[key]||MQ_FONTS.body;return key==="display"?LP_STACK.display:key==="body"?LP_STACK.body:m[1]}
+const ytId=s=>(String(s||"").match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/)||[])[1]||"";
+const vimeoId=s=>(String(s||"").match(/vimeo\.com\/(?:video\/)?(\d+)/)||[])[1]||"";
+const isVideoSrc=s=>/^data:video\//i.test(s)||/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(s)||!!ytId(s)||!!vimeoId(s);
 function videoHTML(src,{bg=false}={}){
   src=safeMedia(src);if(!src)return "";
   if(/^data:video\//i.test(src)||/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src))
     return bg?`<video src="${esc(src)}" ${RM?"":"autoplay"} muted loop playsinline preload="metadata"></video>`:`<video src="${esc(src)}" controls playsinline preload="metadata"></video>`;
-  if(bg)return "";
+  // YouTube / Vimeo links play muted and looping behind the words (no controls)
+  if(bg){const ifr=(u,tall)=>`<div class="vbg${tall?" v916":""}"><iframe src="${u}" title="" tabindex="-1" aria-hidden="true" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`;
+    const y=ytId(src);if(y)return ifr(`https://www.youtube-nocookie.com/embed/${y}?autoplay=${RM?0:1}&mute=1&loop=1&playlist=${y}&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3`,/shorts\//i.test(src));
+    const v=vimeoId(src);if(v)return ifr(`https://player.vimeo.com/video/${v}?background=1&autoplay=${RM?0:1}&muted=1&loop=1&dnt=1`);
+    return ""}
   let m=src.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
   if(m)return `<div class="vf"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}" title="Video" loading="lazy" allow="fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
   m=src.match(/vimeo\.com\/(?:video\/)?(\d+)/);
@@ -4003,7 +4035,7 @@ function heroFill(dome,h){
   const hm=q(".hm");hm.innerHTML="";hm.style.backgroundImage="";clearInterval(dome._car);
   let list=heroList(h);if(!(h.carousel!==false))list=list.slice(0,1);
   list.forEach((m,i)=>{const src=safeMedia(m.src),sl=document.createElement("div");sl.className="hs"+(i?"":" on");
-    if(m.type==="video"){const v=videoHTML(src,{bg:true});if(!v)return;sl.innerHTML=v}
+    if(m.type==="video"||isVideoSrc(src)){const v=videoHTML(src,{bg:true});if(!v)return;sl.innerHTML=v}
     else sl.style.backgroundImage=`url("${imgOk(src).replace(/["()\\\s]/g,c=>encodeURIComponent(c))}")`;
     hm.appendChild(sl)});
   const sls=hm.querySelectorAll(".hs"),hasM=sls.length>0;
@@ -4012,7 +4044,28 @@ function heroFill(dome,h){
   if(shp==="none"){dome.style.background=hasM?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
   q(".ho").style.opacity=hasM?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
   heroFloats(dome,h);
+  dome.classList.toggle("fit-contain",h.fit==="contain");
+  dome._h=h;dome._ratio=null;
+  if(hasM&&(h.size||"auto")==="auto")heroRatio(list[0],r=>{if(dome._h===h){dome._ratio=r;heroLayout(dome)}});
+  heroLayout(dome);
 }
+/* banner height and button position. Phones (up to 640px wide) and computers each keep their own button spot.
+   dome._dev forces one of them (the admin preview). */
+const HERO_BP=640,HR_RATIO=new Map();
+function heroRatio(m,cb){const src=safeMedia(m&&m.src);if(!src)return;if(HR_RATIO.has(src)){cb(HR_RATIO.get(src));return}
+  const done=r=>{if(r>0&&isFinite(r)){r=Math.max(.4,Math.min(4,r));HR_RATIO.set(src,r);cb(r)}};
+  if(ytId(src)){done(/shorts\//i.test(src)?9/16:16/9);return}
+  if(vimeoId(src)){done(16/9);return}
+  if(m.type==="video"||isVideoSrc(src)){const v=document.createElement("video");v.muted=true;v.preload="metadata";v.onloadedmetadata=()=>done(v.videoWidth/v.videoHeight);v.src=src;return}
+  const im=new Image();im.onload=()=>done(im.naturalWidth/im.naturalHeight);im.src=imgOk(src)}
+function heroLayout(dome){const h=dome&&dome._h;if(!h)return;
+  const dev=dome._dev||(innerWidth>HERO_BP?"pc":"ph"),size=h.size||"auto",w=dome.clientWidth;let mh=0;
+  if(size==="custom")mh=dev==="pc"?Math.max(260,Math.min(1000,+h.hPc||480)):Math.max(220,Math.min(900,+h.hPh||360));
+  else if(size==="auto"&&dome._ratio&&w)mh=Math.round(Math.min(w/dome._ratio,innerHeight*(dome._dev?.6:.9)));
+  dome.style.minHeight=mh?mh+"px":"";dome.classList.toggle("hsz",!!mh);
+  const bp=h[dev==="pc"?"btnPc":"btnPh"],c=dome.querySelector(".hero-ctas"),ok=bp&&isFinite(bp.x)&&isFinite(bp.y);
+  dome.classList.toggle("btnfree",!!ok);if(c){c.style.left=ok?bp.x+"%":"";c.style.top=ok?bp.y+"%":""}}
+let heroRz=0;addEventListener("resize",()=>{cancelAnimationFrame(heroRz);heroRz=requestAnimationFrame(()=>document.querySelectorAll(".dome").forEach(heroLayout))});
 function heroShapes(){return [["dome","Dome (arch top)"],["rounded","Rounded box"],["pill","Pill"],["capsule","Capsule (round top and bottom)"],["oval","Oval"],["leaf","Leaf"],["none","No shape"]]}
 function heroList(h){const L=(h.media||[]).filter(m=>m&&safeMedia(m.src));if(L.length)return L;
   return h.mediaType&&h.mediaType!=="none"&&safeMedia(h.src)?[{type:h.mediaType,src:h.src}]:[]}
