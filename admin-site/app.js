@@ -114,7 +114,7 @@ function seedDB(){
   {const c=db.orders.find(o=>o.status==="completed");if(c)c.completedAt=now-3*H}
   return db;
 }
-function countItems(box){const c={};box.forEach(id=>c[id]=(c[id]||0)+1);return c}
+function countItems(box){const c={};box.forEach(id=>{if(id)c[id]=(c[id]||0)+1});return c}
 
 /* --- load / save --- */
 let DB;
@@ -377,15 +377,21 @@ function sanitizeCart(){
   const sz=activeSizes();
   if(!sz.find(s=>s.n===S.size)&&!validCustom(S.size))S.size=(sz.find(s=>s.n===6)||sz[0]||{n:6}).n;
   const used={};
-  {const was=S.auto||[],au=[];
-    S.box=S.box.filter((id,i)=>{const p=prod(id);if(!p||p.status!=="available")return false;used[id]=(used[id]||0)+1;const ok=used[id]<=stockLeft(p);if(ok)au.push(!!was[i]);return ok}).slice(0,S.size);S.auto=au.slice(0,S.box.length)}
+  {const was=S.auto||[],nb=[],au=[];
+    for(let i=0;i<Math.min(S.box.length,S.size);i++){const id=S.box[i];let ok=false;
+      if(id){const p=prod(id);if(p&&p.status==="available"){used[id]=(used[id]||0)+1;ok=used[id]<=stockLeft(p)}}
+      nb.push(ok?id:null);au.push(ok&&!!was[i])}
+    S.box=nb;S.auto=au}
   S.addons=(S.addons||[]).filter(id=>DB.addons.find(a=>a.id===id&&a.active));
   if(S.editId){const eo=DB.orders.find(x=>x.id===S.editId);if(!eo||eo.status!=="awaiting")S.editId=null}
   if(!full())S.step=1;
 }
-const full = () => S.box.length===S.size && S.size>0;
+// the box keeps its spots: a removed cookie leaves an empty spot (null) that is filled again later, nothing moves up
+const boxN = () => S.box.filter(Boolean).length;
+const firstEmpty = () => {for(let i=0;i<S.size;i++)if(!S.box[i])return i;return -1};
+const full = () => S.size>0 && boxN()===S.size;
 const countOf = id => S.box.filter(x=>x===id).length;
-const isAuto = i => !!(S.auto&&S.auto[i]);
+const isAuto = i => !!(S.box[i]&&S.auto&&S.auto[i]);
 const Q = () => quote(S,DB,{withDelivery:S.step===2});
 const total = () => {const q=Q();return S.step===2?q.total:r2(q.total-q.addons)};
 
@@ -536,7 +542,7 @@ function renderStoreStatic(){
 }
 
 function ctaState(){
-  const left=S.size-S.box.length;
+  const left=S.size-boxN();
   if(S.step===1) return left>0?{label:`Pick ${left} more`,dis:false,go:"pick"}:{label:"Choose a day",dis:false,go:"step2"};
   if(!S.day||!S.time) return {label:"Pick a day and time",dis:false,go:"when"};
   if(bsPending(S))return {label:`Checkout (${money(total())})`,dis:false,go:"needcourier"};
@@ -576,10 +582,10 @@ function renderStore(){
   const cols=S.size<=4?2:S.size<=9?3:4;
   $("#slots").style.gridTemplateColumns=`repeat(${cols},minmax(0,1fr))`;
   $("#slots").innerHTML=Array.from({length:S.size},(_,i)=>{const id=S.box[i];if(!id)return `<div class="slot" aria-hidden="true"></div>`;
-    const p=prod(id),pd=pop.get(i);return `<button class="slot filled${pd!==undefined?" pop":""}" type="button" data-slot="${i}" style="--i:${i};--pd:${pd||0}ms" aria-label="Remove ${esc(p.name)}${isAuto(i)?" (picked by shuffle)":""}">${plateHTML(p)}${isAuto(i)?`<span class="autodie" aria-hidden="true">🎲</span>`:""}</button>`}).join("");
+    const p=prod(id),pd=pop.get(i);return `<button class="slot filled${pd!==undefined?" pop":""}" type="button" data-slot="${i}" style="--i:${i};--pd:${pd||0}ms" aria-label="Double-tap to remove ${esc(p.name)}${isAuto(i)?" (picked by shuffle)":""}">${plateHTML(p)}${isAuto(i)?`<span class="autodie" aria-hidden="true">🎲</span>`:""}</button>`}).join("");
   $("#bpTitle").textContent=`Box of ${S.size}`;
-  $("#bpCount").textContent=`${S.box.length} of ${S.size}`;
-  $("#pillCount").textContent=`${S.box.length}/${S.size}`;
+  $("#bpCount").textContent=`${boxN()} of ${S.size}`;
+  $("#pillCount").textContent=`${boxN()}/${S.size}`;
   let L=`<div><dt>Box of ${S.size}</dt><dd>${money(q.base)}</dd></div>`;
   if(q.sale)L+=`<div class="saleln"><dt>${esc(q.sale.name)} (${saleOffText(q.sale)})</dt><dd>−${money(q.discount)}</dd></div>`;
   giftLines(S.size).forEach(t=>{L+=`<div class="saleln giftln"><dt>${esc(t)}</dt><dd>${fbHTML("Gift")}</dd></div>`});
@@ -598,12 +604,12 @@ function renderStore(){
   const c=ctaState();
   for(const b of [$("#panelCta"),$("#barCta")]){b.textContent=c.label;b.disabled=c.dis;b.dataset.go=c.go||"";b.classList.toggle("ready",!c.dis&&c.go!=="when"&&c.go!=="needcourier");b.classList.toggle("pickmore",c.go==="pick")}
   if(c.go!=="needcourier"){const m=$("#ctaMsg");if(m)m.hidden=true}
-  $("#clearBtn").disabled=!S.box.length;
+  $("#clearBtn").disabled=!boxN();
   $("#randBtn").disabled=!availProducts().length;
   $("#randLabel").textContent=full()?"Shuffle box":"Random fill";
   pop.clear();
   $("#barTotal").textContent=money(total());
-  $("#barSub").textContent=S.step===1?`${S.box.length} of ${S.size} picked`:`Box of ${S.size}`;
+  $("#barSub").textContent=S.step===1?`${boxN()} of ${S.size} picked`:`Box of ${S.size}`;
   updateFlash();
   saveCart();
 }
@@ -720,7 +726,8 @@ function celebrate(){if(RM)return;const p=$(".boxpanel");
   if(inView(p.getBoundingClientRect()))crumbs(p.querySelector(".slots"),{dough:"#FFFFFF",edge:"#D9DCFA",chips:["#FFFFFF","#EEF0FF"]})}
 
 /* --- box actions --- */
-function setSize(n){S.size=n;if(S.box.length>n){S.box=S.box.slice(0,n);S.auto=(S.auto||[]).slice(0,n)}if(!full())S.step=1;renderStore()}
+// a smaller box: the cookies move up to fit
+function setSize(n){S.size=n;if(S.box.slice(0,n).filter(Boolean).length<boxN()||S.box.length>n){const keep=S.box.map((id,i)=>[id,!!(S.auto&&S.auto[i])]).filter(x=>x[0]).slice(0,n);S.box=keep.map(x=>x[0]);S.auto=keep.map(x=>x[1])}if(!full())S.step=1;renderStore()}
 
 function cpMsg(t,ok){const m=$("#cpnMsg");if(!m)return;m.textContent=t||"";m.hidden=!t;m.classList.toggle("ok",!!ok);clearTimeout(cpMsg.t);if(t)cpMsg.t=setTimeout(()=>{m.hidden=true},6000)}
 function renderGiftHint(){
@@ -784,7 +791,7 @@ $("#menuGrid").addEventListener("click",e=>{
 function add(id,card){
   if(full())return;
   if(countOf(id)>=stockLeft(prod(id))){toast(`That's all we have of ${prod(id).name} right now`);return}
-  S.box.push(id);S.auto=S.auto||[];S.auto[S.box.length-1]=false;const idx=S.box.length-1;
+  const idx=firstEmpty();if(idx<0)return;S.box[idx]=id;S.auto=S.auto||[];S.auto[idx]=false;
   if(!card||RM)pop.set(idx,0);
   renderStore();
   if(card&&!RM){const pl=card.querySelector(".plate"),p=prod(id),st=card.querySelector(".stepper");
@@ -793,13 +800,13 @@ function add(id,card){
   if(full())celebrate();
 }
 function removeAt(i){
-  const id=S.box[i];if(id===undefined)return;ghostOut(i);S.box.splice(i,1);if(S.auto)S.auto.splice(i,1);S.step=1;renderStore();
+  const id=S.box[i];if(id===undefined)return;ghostOut(i);S.box[i]=null;if(S.auto)S.auto[i]=false;S.step=1;renderStore();
   if(!RM){const card=document.querySelector(`.card[data-id="${id}"]`);if(card&&inView(card.getBoundingClientRect())){shake(card.querySelector(".plate")||card.querySelector("h4"));bump(card.querySelector("output"))}}
 }
 function removeOne(id,card){const i=S.box.lastIndexOf(id);if(i<0)return;removeAt(i);if(card&&!RM)tag(card.querySelector(".stepper"),"−1")}
 const randomId = () => {const a=pickable();return a.length?a[Math.floor(Math.random()*a.length)].id:null};
 function fillBox(base){
-  S.auto=S.auto||[];let k=0;while(!full()){const id=randomId();if(!id)break;S.box.push(id);S.auto[S.box.length-1]=true;S.shuf=1;pop.set(S.box.length-1,base+k++*80)}
+  S.auto=S.auto||[];let k=0;while(!full()){const id=randomId(),at=firstEmpty();if(!id||at<0)break;S.box[at]=id;S.auto[at]=true;S.shuf=1;pop.set(at,base+k++*80)}
   if(!full())toast("Not enough stock to fill the whole box");
 }
 function fillRest(){if(!pickable().length){toast("Every flavor is out of stock right now");return}fillBox(0);renderStore();if(full())celebrate()}
@@ -925,7 +932,7 @@ function guardCardHTML(kind,t){
 let gdFn=null;
 function guardBox(kind,fn){
   const t=DB.settings,on=t.guardOn!==false&&(kind==="clear"?t.guardClear!==false:t.guardShuf!==false);
-  if(!on||!bsOn()||S.mode!=="delivery"||!S.ship||!S.box.length||(kind!=="clear"&&!full())||(kind==="shuf"&&!S.box.some((_,i)=>isAuto(i)))){fn();return}
+  if(!on||!bsOn()||S.mode!=="delivery"||!S.ship||!boxN()||(kind!=="clear"&&!full())||(kind==="shuf"&&!S.box.some((_,i)=>isAuto(i)))){fn();return}
   gdFn=fn;$("#gdCard").innerHTML=guardCardHTML(kind,t);$("#gdSheet").hidden=false;
   setTimeout(()=>{const b=$("#gdCard [data-gdno]");b&&b.focus()},60);
 }
@@ -986,7 +993,7 @@ function fbHTML(kind){const t=DB.settings,D=FB_DEF[kind],p="fb"+kind;
   const txt=String(t[p+"Txt"]||"").trim()||"FREE",o={img:t[p+"Img"],imgCut:t[p+"ImgCut"],icon:t[p+"Icon"],fx:t[p+"Fx"]||D.fx,bgMode:"none"};
   return `<span class="fbadge" style="--fb-bg:${hexOk(t[p+"Bg"],D.bg)};--fb-ink:${hexOk(t[p+"Ink"],D.ink)}">${lvHTML(o,D.icon,18)}<b>${esc(txt)}</b></span>`}
 const addonPr=a=>a.price>0?"+"+money(a.price):fbHTML("Extra");
-function clearBox(){if(!S.box.length)return;S.shuf=0;S.box.forEach((_,i)=>ghostOut(i));S.box=[];S.auto=[];S.step=1;renderStore()}
+function clearBox(){if(!boxN())return;S.shuf=0;S.box.forEach((_,i)=>ghostOut(i));S.box=[];S.auto=[];S.step=1;renderStore()}
 function scrollToEl(el){
   const go=()=>{const fl=$("#flash"),head=$(".top").getBoundingClientRect().height+(fl.hidden||fl.parentNode===$(".top")?0:fl.getBoundingClientRect().height);
     const y=el.getBoundingClientRect().top+window.scrollY-head-16;
@@ -1229,7 +1236,13 @@ $("#customBox").addEventListener("change",e=>{if(e.target.id==="cvIn")setCustom(
 $("#customBox").addEventListener("keydown",e=>{if(e.target.id==="cvIn"&&e.key==="Enter"){e.preventDefault();e.target.blur()}});
 $("#sizes").addEventListener("click",e=>{const b=e.target.closest("[data-size]");if(b)setSize(+b.dataset.size)});
 $("#menuGrid").addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)return;const card=b.closest(".card"),id=card.dataset.id;b.dataset.act==="inc"?add(id,card):removeOne(id,card)});
-$("#slots").addEventListener("click",e=>{const b=e.target.closest("[data-slot]");if(b)removeAt(+b.dataset.slot)});
+// taking a cookie out needs two quick taps (or Delete on the keyboard), so it can't happen by accident; the spot then stays empty
+let slotArm={i:-1,t:0,timer:0};
+function clearSlotArm(){clearTimeout(slotArm.timer);document.querySelectorAll(".slot.armed").forEach(e=>e.classList.remove("armed"));slotArm.i=-1}
+$("#slots").addEventListener("click",e=>{const b=e.target.closest("[data-slot]");if(!b)return;const i=+b.dataset.slot,now=Date.now();
+  if(slotArm.i===i&&now-slotArm.t<=900){clearSlotArm();removeAt(i);return}
+  clearSlotArm();slotArm={i,t:now,timer:setTimeout(clearSlotArm,900)};b.classList.add("armed")});
+$("#slots").addEventListener("keydown",e=>{const b=e.target.closest("[data-slot]");if(b&&(e.key==="Delete"||e.key==="Backspace")){e.preventDefault();clearSlotArm();removeAt(+b.dataset.slot)}});
 $("#fillRest").addEventListener("click",fillRest);
 $("#randBtn").addEventListener("click",()=>guardBox("shuf",randomFill));
 $("#barRand").addEventListener("click",()=>guardBox("shuf",()=>{randomFill();if(DB.settings.rbScroll!==false)setTimeout(showMyBox,260)}));

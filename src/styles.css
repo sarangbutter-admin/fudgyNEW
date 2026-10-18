@@ -1337,3 +1337,10 @@ tr.justadded td{background:rgba(0,0,150,.07)}
 /* a small dice on spots the shuffle picked (hand-picked spots are never changed by shuffle) */
 .slot{position:relative}
 .autodie{position:absolute;right:-2px;top:-2px;width:20px;height:20px;border-radius:50%;background:#FFD43B;display:grid;place-items:center;font-size:12px;line-height:1;box-shadow:0 2px 5px rgba(0,0,40,.35);pointer-events:none}
+
+/* double-tap to remove: the first tap shows a ring and "tap again"; no double-tap zoom on the box */
+.slot{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.slot.armed{outline:3px solid #FFD43B;outline-offset:2px;animation:slotArm .35s ease-out}
+.slot.armed::after{content:"Tap again to remove";position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);white-space:nowrap;background:#0B0B45;color:#fff;font:700 10px/1 var(--body);padding:4px 7px;border-radius:99px;z-index:3;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,40,.4)}
+@keyframes slotArm{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.slot.armed{animation:none}}
