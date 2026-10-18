@@ -565,7 +565,7 @@ function renderStore(){
     return `<button class="size" type="button" data-size="${s.n}" aria-pressed="${s.n===S.size}">${sale?`<span class="saletag">${sale.type==="percent"?"−"+sale.value+"%":"Sale"}</span>`:""}${giftPlan(s.n).length?`<span class="saletag gifttag${sale?" l":""}">🎁<b class="gt"> Gift</b></span>`:""}<strong>${s.n}</strong><small>COOKIES</small><span class="num">${sale?`<s>${money(s.price)}</s>`:""}${money(now)}</span></button>`}).join("");
   renderGiftHint();renderBarExtras();renderFab();
   document.querySelectorAll(".card").forEach(c=>{const st=c.querySelector(".stepper");if(!st)return;const n=countOf(c.dataset.id);st.querySelector("output").textContent=n;c.classList.toggle("has",n>0);
-    st.querySelector('[data-act="dec"]').disabled=n===0;st.querySelector('[data-act="inc"]').disabled=full()||n>=stockLeft(prod(c.dataset.id))});
+    st.querySelector('[data-act="dec"]').disabled=n===0;const inc=st.querySelector('[data-act="inc"]'),lim=n>=stockLeft(prod(c.dataset.id));inc.disabled=lim;inc.classList.toggle("off",!lim&&full());inc.setAttribute("aria-disabled",String(lim||full()))});
   $("#fillRest").disabled=full();
   $("#step1").hidden=S.step!==1; $("#step2").hidden=S.step!==2;
   $("#tab1").setAttribute("aria-current",S.step===1?"step":"false");
@@ -787,9 +787,18 @@ $("#cpn").addEventListener("click",e=>{const u=e.target.closest("[data-cpnuse]")
 $("#menuGrid").addEventListener("click",e=>{
   if(e.target.closest("button,a,.stepper"))return;
   const w=e.target.closest(".pwrap, h4");if(!w)return;const card=w.closest(".card");if(!card||card.classList.contains("out"))return;
-  const id=card.dataset.id;if(full()){toast(`Your box is full. Remove a cookie to add another.`);return}add(id,card)});
+  add(card.dataset.id,card)});
+// box already full: a small bubble right on the tapped flavor (not the toast at the bottom)
+function fullMsg(card){
+  const w=card&&card.querySelector(".pwrap");if(!w){toast("Your box is full. Double-tap a cookie in your box to take it out.");return}
+  let b=w.querySelector(".fullmsg");if(b)b.remove();
+  b=document.createElement("div");b.className="fullmsg";b.setAttribute("role","status");
+  b.innerHTML=`<b>Your box is full!</b><span>Double-tap a cookie in your box to take it out first.</span>`;w.appendChild(b);
+  const r=b.getBoundingClientRect(),vw=document.documentElement.clientWidth,dx=r.left<8?8-r.left:r.right>vw-8?vw-8-r.right:0;if(dx){b.style.left=`calc(50% + ${dx}px)`;b.style.setProperty("--ax",-dx+"px")}
+  if(!RM){shake(w.querySelector(".plate")||w);b.animate([{opacity:0,transform:"translate(-50%,8px) scale(.7)"},{opacity:1,transform:"translate(-50%,0) scale(1.06)",offset:.6},{opacity:1,transform:"translate(-50%,0) scale(1)"}],{duration:320,easing:"ease-out"})}
+  clearTimeout(b._t);b._t=setTimeout(()=>{if(RM){b.remove();return}b.animate([{opacity:1},{opacity:0,transform:"translate(-50%,-10px)"}],{duration:300,easing:"ease-in"}).onfinish=()=>b.remove()},2400)}
 function add(id,card){
-  if(full())return;
+  if(full()){fullMsg(card);return}
   if(countOf(id)>=stockLeft(prod(id))){toast(`That's all we have of ${prod(id).name} right now`);return}
   const idx=firstEmpty();if(idx<0)return;S.box[idx]=id;S.auto=S.auto||[];S.auto[idx]=false;
   if(!card||RM)pop.set(idx,0);
