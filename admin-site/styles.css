@@ -1387,3 +1387,8 @@ tr.justadded td{background:rgba(0,0,150,.07)}
 .dsale-t{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0;flex:1}.dsale-t b{font-size:15px}.dsale-t small{flex-basis:100%;color:var(--muted)}
 .dsale-n{display:grid;justify-items:end;text-align:right}.dsale-n span{font-size:12px;color:var(--muted)}.dsale-n strong{font-size:18px;font-variant-numeric:tabular-nums}.dsale-n small{font-size:12px;color:var(--muted)}
 .dome .hero-ctas{align-items:center}
+/* banner carousel: swipe + dots */
+.dome.swipe{touch-action:pan-y}
+.dome .hdots{position:absolute!important;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:7px;z-index:3;padding:5px 8px;border-radius:999px;background:rgba(0,0,0,.22)}
+.dome .hdots button{width:8px;height:8px;padding:0;border:0;border-radius:999px;background:rgba(255,255,255,.55);transition:width .25s ease,background .25s ease;cursor:pointer}
+.dome .hdots button[aria-current="true"]{width:20px;background:#fff}

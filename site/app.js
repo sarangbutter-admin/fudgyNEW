@@ -1796,7 +1796,7 @@ function mqBuild(el){
 function mqFit(){document.querySelectorAll(".marq").forEach(el=>{if(el._m&&!el.hidden)mqBuild(el);else if(el._ai&&!el.hidden)anMqBuild(el)})}
 const LP_DEFAULT_SVG=`<svg viewBox="0 0 30 24" aria-hidden="true"><path d="M3 21a12 12 0 0 1 24 0Z" fill="currentColor"/><circle cx="15" cy="5" r="2.6" fill="currentColor"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="currentColor"/></svg>`;
 function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
-  hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
+  hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,waitVideo:true,swipe:true,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
   build:{title:"Build your box",intro:"Choose a size, fill every spot, then tell us when you want it. Each box is baked the morning it leaves the oven room."},
   blocks:[],
@@ -1841,14 +1841,14 @@ function lpFamily(key,pg,role){const fb=LP_STACK[role==="head"?"display":"body"]
 const ytId=s=>(String(s||"").match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/)||[])[1]||"";
 const vimeoId=s=>(String(s||"").match(/vimeo\.com\/(?:video\/)?(\d+)/)||[])[1]||"";
 const isVideoSrc=s=>/^data:video\//i.test(s)||/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(s)||!!ytId(s)||!!vimeoId(s);
-function videoHTML(src,{bg=false}={}){
+function videoHTML(src,{bg=false,loop=true}={}){
   src=safeMedia(src);if(!src)return "";
   if(/^data:video\//i.test(src)||/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src))
-    return bg?`<video src="${esc(src)}" ${RM?"":"autoplay"} muted loop playsinline preload="metadata"></video>`:`<video src="${esc(src)}" controls playsinline preload="metadata"></video>`;
+    return bg?`<video src="${esc(src)}" ${RM?"":"autoplay"} muted${loop?" loop":""} playsinline preload="metadata"></video>`:`<video src="${esc(src)}" controls playsinline preload="metadata"></video>`;
   // YouTube / Vimeo links play muted and looping behind the words (no controls)
   if(bg){const ifr=(u,tall)=>`<div class="vbg${tall?" v916":""}"><iframe src="${u}" title="" tabindex="-1" aria-hidden="true" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`;
-    const y=ytId(src);if(y)return ifr(`https://www.youtube-nocookie.com/embed/${y}?autoplay=${RM?0:1}&mute=1&loop=1&playlist=${y}&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3`,/shorts\//i.test(src));
-    const v=vimeoId(src);if(v)return ifr(`https://player.vimeo.com/video/${v}?background=1&autoplay=${RM?0:1}&muted=1&loop=1&dnt=1`);
+    const y=ytId(src);if(y)return ifr(`https://www.youtube-nocookie.com/embed/${y}?autoplay=${RM?0:1}&mute=1${loop?`&loop=1&playlist=${y}`:""}&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`,/shorts\//i.test(src));
+    const v=vimeoId(src);if(v)return ifr(`https://player.vimeo.com/video/${v}?background=1&autoplay=${RM?0:1}&muted=1&loop=${loop?1:0}&dnt=1`);
     return ""}
   let m=src.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
   if(m)return `<div class="vf"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}" title="Video" loading="lazy" allow="fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
@@ -1875,14 +1875,17 @@ function heroFill(dome,h){
   ey.textContent=h.eyebrow;ey.hidden=!h.eyebrow;ti.textContent=h.title;le.textContent=h.lede;le.hidden=!h.lede;
   ab[0].textContent=h.btn1;ab[0].hidden=!h.btn1;ab[1].textContent=h.btn2;ab[1].hidden=!h.btn2;
   dome.style.background=h.bg||"";dome.style.color=h.color||"";dome.classList.toggle("nofloat",!h.floats);
-  const hm=q(".hm");hm.innerHTML="";hm.style.backgroundImage="";clearInterval(dome._car);
+  const hm=q(".hm");hm.innerHTML="";hm.style.backgroundImage="";clearInterval(dome._car);clearTimeout(dome._car);
   let list=heroList(h);if(!(h.carousel!==false))list=list.slice(0,1);
+  const multi=list.length>1,waitV=multi&&h.waitVideo!==false;
   list.forEach((m,i)=>{const src=safeMedia(m.src),sl=document.createElement("div");sl.className="hs"+(i?"":" on");
-    if(m.type==="video"||isVideoSrc(src)){const v=videoHTML(src,{bg:true});if(!v)return;sl.innerHTML=v}
+    if(m.type==="video"||isVideoSrc(src)){const v=videoHTML(src,{bg:true,loop:!waitV});if(!v)return;sl.innerHTML=v;sl.dataset.vid="1";
+      // a linked video only loads while its slide is showing (it starts from the beginning each time)
+      const f=sl.querySelector("iframe");if(f&&multi){f.dataset.src=f.src;f.removeAttribute("src")}}
     else sl.style.backgroundImage=`url("${imgOk(src).replace(/["()\\\s]/g,c=>encodeURIComponent(c))}")`;
     hm.appendChild(sl)});
   const sls=hm.querySelectorAll(".hs"),hasM=sls.length>0;
-  if(sls.length>1){let k=0;dome._car=setInterval(()=>{if(!dome.isConnected){clearInterval(dome._car);return}sls[k].classList.remove("on");k=(k+1)%sls.length;sls[k].classList.add("on")},Math.max(2,Math.min(30,+h.carouselSec||5))*1000)}
+  heroCar(dome,h,[...sls]);
   const shp=heroShapes().some(x=>x[0]===h.shape)?h.shape:"dome";heroShapes().forEach(x=>dome.classList.remove("shape-"+x[0]));dome.classList.add("shape-"+shp);dome.classList.toggle("nomedia",!hasM);
   if(shp==="none"){dome.style.background=hasM?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
   q(".ho").style.opacity=hasM?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
@@ -1897,6 +1900,31 @@ function heroFill(dome,h){
   heroLayout(dome);
 }
 const HERO_BP=640,HR_RATIO=new Map();
+function heroCar(dome,h,sls){
+  const n=sls.length,old=dome.querySelector(".hdots");if(old)old.remove();dome._go=null;dome._cur=null;dome.classList.remove("swipe");
+  if(!n)return;
+  const wait=h.waitVideo!==false,sec=Math.max(2,Math.min(30,+h.carouselSec||5))*1000;let k=0,dots=null;
+  const vEl=sl=>sl.querySelector("video"),fEl=sl=>sl.querySelector("iframe");
+  const wake=sl=>{const v=vEl(sl),f=fEl(sl);if(v){try{v.currentTime=0}catch(e){}if(!RM)v.play().catch(()=>{})}if(f&&f.dataset.src)f.src=f.dataset.src};
+  const sleep=sl=>{const v=vEl(sl),f=fEl(sl);if(v)v.pause();if(f&&f.dataset.src)f.removeAttribute("src")};
+  if(n<2)return;
+  const arm=()=>{clearTimeout(dome._car);if(!dome.isConnected)return;dome._car=setTimeout(()=>go(1),wait&&sls[k].dataset.vid?300000:sec)};
+  const go=d=>{if(!dome.isConnected){clearTimeout(dome._car);return}sls[k].classList.remove("on");sleep(sls[k]);k=(k+d+n)%n;sls[k].classList.add("on");wake(sls[k]);dome._cur=sls[k];
+    if(dots)[...dots.children].forEach((b,i)=>b.setAttribute("aria-current",i===k?"true":"false"));arm()};
+  sls.forEach((sl,i)=>{const v=vEl(sl);if(v){if(i)v.removeAttribute("autoplay");v.addEventListener("ended",()=>{if(wait&&sls[k]===sl)go(1)});v.addEventListener("error",()=>{if(sls[k]===sl){clearTimeout(dome._car);dome._car=setTimeout(()=>go(1),sec)}})}
+    const f=fEl(sl);if(f)f.addEventListener("load",()=>{if(!f.getAttribute("src"))return;try{f.contentWindow.postMessage(JSON.stringify(/vimeo/.test(f.src)?{method:"addEventListener",value:"ended"}:{event:"listening",id:i,channel:"widget"}),"*")}catch(e){}})});
+  dome._end=f=>{if(wait&&dome._cur&&fEl(dome._cur)===f)go(1)};
+  dome._cur=sls[0];wake(sls[0]);arm();
+  if(h.swipe!==false){dome._go=go;dome.classList.add("swipe");
+    dots=document.createElement("div");dots.className="hdots";dots.innerHTML=sls.map((_,i)=>`<button type="button" aria-label="Show slide ${i+1}" aria-current="${i===0}"></button>`).join("");
+    dots.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const i=[...dots.children].indexOf(b);if(i!==k)go(i-k)});dome.appendChild(dots);
+    if(!dome._sw){dome._sw=1;let x0=null,y0=0;
+      dome.addEventListener("pointerdown",e=>{if(!dome._go||e.target.closest("a,button,.hero-ctas"))return;x0=e.clientX;y0=e.clientY});
+      dome.addEventListener("pointerup",e=>{if(x0===null||!dome._go)return;const dx=e.clientX-x0,dy=e.clientY-y0;x0=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.3)dome._go(dx<0?1:-1)});
+      dome.addEventListener("pointercancel",()=>{x0=null})}}}
+const heroMsg=e=>{if(!/^https:\/\/(www\.youtube-nocookie\.com|player\.vimeo\.com)$/.test(e.origin))return;let d=e.data;try{if(typeof d==="string")d=JSON.parse(d)}catch(x){return}if(!d)return;
+  const ended=d.event==="ended"||(d.event==="onStateChange"&&d.info===0)||(d.event==="infoDelivery"&&d.info&&d.info.playerState===0);if(!ended)return;
+  document.querySelectorAll(".dome .hm iframe").forEach(f=>{if(f.contentWindow===e.source){const dm=f.closest(".dome");if(dm&&dm._end)dm._end(f)}})};addEventListener("message",heroMsg);
 const HB_SHAPES=[["pill","Pill"],["rounded","Rounded box"],["square","Square box"],["circle","Circle"]];
 const HB_FX=[["none","Still"],["pulse","Pulse"],["bounce","Bounce"],["shine","Shine"],["glow","Glow"],["wiggle","Wiggle"]];
 function heroRatio(m,cb){const src=safeMedia(m&&m.src);if(!src)return;if(HR_RATIO.has(src)){cb(HR_RATIO.get(src));return}

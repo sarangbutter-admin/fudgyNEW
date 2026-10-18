@@ -16,7 +16,7 @@ const TAIL0=CH.find(c=>/^\/\* --- routing between shop and admin --- \*\/$/.test
 const inAdm=c=>c.from>=ADM0&&c.from<TAIL0;
 const KEEP=new Set(['toast','armed','stLabel','NF_TYPES','nfIcon','bcActive','activeBroadcasts','VIS_KEY','VIS','trackVisit',
  'msgText','logMsg','chanList','MQ_FONTS','MQ_SIZE','mqFace','mqEnsureFont','mqFamily','mqSeq','renderMarquee','mqBuild','mqFit',
- 'LP_DEFAULT_SVG','defaultPage','deepFill','LP_STACK','SOC_KINDS','SOC_SVG','SOC_NAME','socialUrl','socialsHTML','safeUrl','safeMedia','lpFaces','lpEnsureFonts','lpFamily','videoHTML','HERO_SPOTS','HERO_FX','heroCkShow','heroCkN','heroCkx','heroFloats','heroFill','heroShapes','heroList','heroNorm','ytId','vimeoId','isVideoSrc','HERO_BP','HR_RATIO','HB_SHAPES','HB_FX','heroRatio','heroLayout','heroRz','favKey','lpFavicon','renderLanding','sig','lastSig']);
+ 'LP_DEFAULT_SVG','defaultPage','deepFill','LP_STACK','SOC_KINDS','SOC_SVG','SOC_NAME','socialUrl','socialsHTML','safeUrl','safeMedia','lpFaces','lpEnsureFonts','lpFamily','videoHTML','HERO_SPOTS','HERO_FX','heroCkShow','heroCkN','heroCkx','heroFloats','heroFill','heroShapes','heroList','heroNorm','ytId','vimeoId','isVideoSrc','HERO_BP','HR_RATIO','HB_SHAPES','HB_FX','heroCar','heroMsg','heroRatio','heroLayout','heroRz','favKey','lpFavicon','renderLanding','sig','lastSig']);
 const decl=t=>{let m;if((m=t.match(/^(?:async\s+)?function\s*\*?\s*(\w+)/)))return[m[1]];
   if((m=t.match(/^(?:const|let|var)\s+([^=;]+?)\s*=/m)))return m[1].match(/[\w$]+/g)||[];return[]};
 const shopClock=`let lastSig=sig();\nsetInterval(()=>{const now=Date.now(),s=sig(now);if(s!==lastSig)renderStore();else updateFlash(now);lastSig=s},1000);`;

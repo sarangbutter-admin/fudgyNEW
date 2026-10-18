@@ -1113,3 +1113,8 @@ body.pcd-fx .bell-pay{animation:pcdGlow 1.6s ease-in-out infinite}
 /* dashboard: flash sales */
 .dsale.live{border-color:#FFB800;background:#FFF8E1}
 .dome .hero-ctas{align-items:center}
+/* banner carousel: swipe + dots */
+.dome.swipe{touch-action:pan-y}
+.dome .hdots{position:absolute!important;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:7px;z-index:3;padding:5px 8px;border-radius:999px;background:rgba(0,0,0,.22)}
+.dome .hdots button{width:8px;height:8px;padding:0;border:0;border-radius:999px;background:rgba(255,255,255,.55);transition:width .25s ease,background .25s ease;cursor:pointer}
+.dome .hdots button[aria-current="true"]{width:20px;background:#fff}
