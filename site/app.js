@@ -480,8 +480,8 @@ function badgesOf(p,best){const ids=[...(p.badges||[])];if((best||bestIds()).inc
 function badgeHTML(b){const f=(BADGE_FONTS[b.font]||BADGE_FONTS.display)[1],fx=BADGE_FX[b.fx]?b.fx:"shine";
   const css=`color:${HEX6.test(b.color||"")?b.color:"#FFFFFF"};background:${HEX6.test(b.bg||"")?b.bg:"#C8102E"};font-family:${f}`;
   return `<span class="bdg fx-${fx}" style="${esc(css)}">${esc(String(b.text||"").slice(0,24))}</span>`}
-function menuOrder(list){const by=DB.settings.menuSort||"popular",sold=soldMap(),pos=new Map(DB.products.map((p,i)=>[p.id,i]));
-  return list.slice().sort((a,b)=>(isOut(a)-isOut(b))||(by==="popular"?(sold[b.id]||0)-(sold[a.id]||0):0)||(pos.get(a.id)-pos.get(b.id)))}
+function menuOrder(list){const by=DB.settings.menuSort||"popular",sold=soldMap(),pos=new Map(DB.products.map((p,i)=>[p.id,i])),best=bestIds(),bd=p=>badgesOf(p,best).length?1:0;
+  return list.slice().sort((a,b)=>(isOut(a)-isOut(b))||(bd(b)-bd(a))||(by==="popular"?(sold[b.id]||0)-(sold[a.id]||0):0)||(pos.get(a.id)-pos.get(b.id)))}
 function renderMenu(){
   const vis=DB.products.filter(p=>p.status!=="hidden");
   const groups=DB.categories.map(c=>({id:c.id,name:c.name,n:vis.filter(p=>p.cat===c.id).length})).filter(g=>g.n);
@@ -1887,12 +1887,18 @@ function heroFill(dome,h){
   if(shp==="none"){dome.style.background=hasM?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
   q(".ho").style.opacity=hasM?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
   heroFloats(dome,h);
+  [h.b1,h.b2].forEach((st,i)=>{const a=ab[i];[...a.classList].filter(c=>/^hb/.test(c)).forEach(c=>a.classList.remove(c));if(!st)return;
+    a.classList.add("hbc","hb-"+fxOk(st.shape,HB_SHAPES.map(x=>x[0]),"pill"),"hbz-"+fxOk(st.size,["S","M","L"],"M"),"hbfx-"+fxOk(st.fx,HB_FX.map(x=>x[0]),"none"));
+    a.style.setProperty("--hb-bg",st.fill===false?"transparent":hexOk(st.bg,"#ffffff"));a.style.setProperty("--hb-ink",hexOk(st.ink,"#000096"));
+    a.style.setProperty("--hb-line",hexOk(st.line,"#ffffff"));a.style.setProperty("--hb-glow",hexOk(st.fill===false?st.line:st.bg,"#ffffff"))});
   dome.classList.toggle("fit-contain",h.fit==="contain");
   dome._h=h;dome._ratio=null;
   if(hasM&&(h.size||"auto")==="auto")heroRatio(list[0],r=>{if(dome._h===h){dome._ratio=r;heroLayout(dome)}});
   heroLayout(dome);
 }
 const HERO_BP=640,HR_RATIO=new Map();
+const HB_SHAPES=[["pill","Pill"],["rounded","Rounded box"],["square","Square box"],["circle","Circle"]];
+const HB_FX=[["none","Still"],["pulse","Pulse"],["bounce","Bounce"],["shine","Shine"],["glow","Glow"],["wiggle","Wiggle"]];
 function heroRatio(m,cb){const src=safeMedia(m&&m.src);if(!src)return;if(HR_RATIO.has(src)){cb(HR_RATIO.get(src));return}
   const done=r=>{if(r>0&&isFinite(r)){r=Math.max(.4,Math.min(4,r));HR_RATIO.set(src,r);cb(r)}};
   if(ytId(src)){done(/shorts\//i.test(src)?9/16:16/9);return}

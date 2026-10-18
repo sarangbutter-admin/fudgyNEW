@@ -1364,3 +1364,26 @@ tr.justadded td{background:rgba(0,0,150,.07)}
 #hrPrev .hero-ctas{cursor:grab;touch-action:none;outline:2px dashed rgba(255,255,255,.75);outline-offset:6px;border-radius:999px}
 #hrPrev.dragging .hero-ctas{cursor:grabbing;outline-color:#FFD43B}
 #hrPrev .hero-ctas a{pointer-events:none}
+/* top banner buttons: own colors, shape, size and effect */
+.dome .hero-ctas .btn.hbc{background:var(--hb-bg);color:var(--hb-ink);border-color:var(--hb-line);position:relative;overflow:hidden}
+.btn.hbz-S{font-size:13px;padding:9px 16px}.btn.hbz-L{font-size:17px;padding:16px 30px}
+.btn.hb-pill{border-radius:999px}.btn.hb-rounded{border-radius:14px}.btn.hb-square{border-radius:3px}
+.btn.hb-circle{border-radius:50%;width:var(--hb-c,104px);height:var(--hb-c,104px);padding:10px;white-space:normal!important;text-align:center;line-height:1.15}
+.btn.hb-circle.hbz-S{--hb-c:84px;padding:8px}.btn.hb-circle.hbz-L{--hb-c:128px}
+.btn.hbfx-pulse{animation:hbPulse 1.6s ease-in-out infinite}
+.btn.hbfx-bounce{animation:hbBounce 2s ease-in-out infinite}
+.btn.hbfx-wiggle{animation:hbWig 2.4s ease-in-out infinite}
+.btn.hbfx-glow{animation:hbGlow 1.8s ease-in-out infinite}
+.btn.hbfx-shine::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.7),transparent);animation:bdgShine 2.6s ease-in-out infinite;pointer-events:none}
+.hero-ctas .btn+.btn{animation-delay:.35s}.hero-ctas .btn+.btn::after{animation-delay:.9s}
+@keyframes hbPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes hbBounce{0%,55%,100%{transform:translateY(0)}65%{transform:translateY(-9px)}75%{transform:translateY(0)}83%{transform:translateY(-4px)}}
+@keyframes hbWig{0%,70%,100%{transform:rotate(0)}75%{transform:rotate(-5deg)}82%{transform:rotate(5deg)}89%{transform:rotate(-3deg)}95%{transform:rotate(2deg)}}
+@keyframes hbGlow{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--hb-glow) 70%,transparent)}50%{box-shadow:0 0 0 9px color-mix(in srgb,var(--hb-glow) 0%,transparent),0 0 22px 2px color-mix(in srgb,var(--hb-glow) 55%,transparent)}}
+/* dashboard: flash sales */
+.dsales{display:grid;gap:8px;margin-top:10px}
+.dsale{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px 12px;flex-wrap:wrap}
+.dsale.live{border-color:#FFB800;background:#FFF8E1}
+.dsale-t{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0;flex:1}.dsale-t b{font-size:15px}.dsale-t small{flex-basis:100%;color:var(--muted)}
+.dsale-n{display:grid;justify-items:end;text-align:right}.dsale-n span{font-size:12px;color:var(--muted)}.dsale-n strong{font-size:18px;font-variant-numeric:tabular-nums}.dsale-n small{font-size:12px;color:var(--muted)}
+.dome .hero-ctas{align-items:center}

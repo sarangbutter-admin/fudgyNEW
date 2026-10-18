@@ -489,8 +489,8 @@ function badgesOf(p,best){const ids=[...(p.badges||[])];if((best||bestIds()).inc
 function badgeHTML(b){const f=(BADGE_FONTS[b.font]||BADGE_FONTS.display)[1],fx=BADGE_FX[b.fx]?b.fx:"shine";
   const css=`color:${HEX6.test(b.color||"")?b.color:"#FFFFFF"};background:${HEX6.test(b.bg||"")?b.bg:"#C8102E"};font-family:${f}`;
   return `<span class="bdg fx-${fx}" style="${esc(css)}">${esc(String(b.text||"").slice(0,24))}</span>`}
-function menuOrder(list){const by=DB.settings.menuSort||"popular",sold=soldMap(),pos=new Map(DB.products.map((p,i)=>[p.id,i]));
-  return list.slice().sort((a,b)=>(isOut(a)-isOut(b))||(by==="popular"?(sold[b.id]||0)-(sold[a.id]||0):0)||(pos.get(a.id)-pos.get(b.id)))}
+function menuOrder(list){const by=DB.settings.menuSort||"popular",sold=soldMap(),pos=new Map(DB.products.map((p,i)=>[p.id,i])),best=bestIds(),bd=p=>badgesOf(p,best).length?1:0;
+  return list.slice().sort((a,b)=>(isOut(a)-isOut(b))||(bd(b)-bd(a))||(by==="popular"?(sold[b.id]||0)-(sold[a.id]||0):0)||(pos.get(a.id)-pos.get(b.id)))}
 function renderMenu(){
   const vis=DB.products.filter(p=>p.status!=="hidden");
   const groups=DB.categories.map(c=>({id:c.id,name:c.name,n:vis.filter(p=>p.cat===c.id).length})).filter(g=>g.n);
@@ -1935,6 +1935,16 @@ function hrDraw(){
   const d=hrDirty();["hrDirty"].forEach(i=>{const n=document.getElementById(i);if(n)n.hidden=!d});
   ["hrSave","hrDisc"].forEach(i=>{const n=document.getElementById(i);if(n)n.disabled=!d});
 }
+const HB_DEF=i=>i===1?{fill:true,bg:"#ffffff",ink:hexOk(DB.page.brand,"#000096"),line:"#ffffff",shape:"pill",size:"M",fx:"none"}:{fill:false,bg:"#ffffff",ink:"#ffffff",line:"#ffffff",shape:"pill",size:"M",fx:"none"};
+function hbEditor(h,i){const st=Object.assign(HB_DEF(i),h["b"+i]||{});
+  const cin=(l,k)=>`<label class="af" style="font-size:12px;margin:0">${l}<input type="color" data-hrb="${i}.${k}" value="${hexOk(st[k],"#ffffff")}" style="width:100%;height:36px"></label>`;
+  const chips=(k,opts)=>`<div class="chips" style="gap:6px">${opts.map(([v,l])=>`<button class="fchip" type="button" data-hrbset="${i}.${k}.${v}" aria-pressed="${st[k]===v}" style="padding:5px 10px;font-size:12.5px">${l}</button>`).join("")}</div>`;
+  return `<div class="pmcard" style="gap:10px;text-align:left"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b>Button ${i} look</b>${h["b"+i]?`<button class="ghost" type="button" data-hrbreset="${i}" style="padding:3px 10px;font-size:12px">Back to default</button>`:`<span class="note" style="margin:0">Default</span>`}</div>
+    <div style="display:flex;gap:10px;align-items:center"><label class="sw"><input type="checkbox" data-hrb="${i}.fill" ${st.fill!==false?"checked":""} aria-label="Filled background"><span></span></label><span class="stlabel">Filled background</span></div>
+    <div class="grid2" style="gap:8px">${st.fill!==false?cin("Background","bg"):""}${cin("Text","ink")}${cin("Border","line")}</div>
+    <div class="af" style="margin:0;font-size:12px">Shape</div>${chips("shape",HB_SHAPES)}
+    <div class="af" style="margin:0;font-size:12px">Size</div>${chips("size",[["S","Small"],["M","Medium"],["L","Large"]])}
+    <div class="af" style="margin:0;font-size:12px">Lively effect</div>${chips("fx",HB_FX)}</div>`}
 function viewHero(){
   const pg=DB.page,h=hrDraft(),prods=DB.products.filter(p=>p.status!=="hidden"&&hasImage(p)).slice(0,6);
   const inp=(label,path,max,rows)=>`<label class="af">${label}${rows?`<textarea class="in" rows="${rows}" data-hr="${path}" maxlength="${max}">${esc(h[path])}</textarea>`:`<input class="in" data-hr="${path}" maxlength="${max}" value="${esc(h[path])}">`}</label>`;
@@ -1962,6 +1972,7 @@ function viewHero(){
       <div class="grid2" style="margin-top:10px">${inp("Small line above the title","eyebrow",60)}${inp("Title","title",90)}</div>
       <div style="margin-top:10px">${inp("Intro text","lede",240,3)}</div>
       <div class="grid2" style="margin-top:10px">${inp("Button 1 label (empty hides it)","btn1",30)}${inp("Button 2 label (empty hides it)","btn2",30)}</div>
+      <div class="grid2" style="margin-top:10px">${hbEditor(h,1)}${hbEditor(h,2)}</div>
       <div class="grid2" style="margin-top:10px">${col("Banner color","bg",h.bg||pg.brand)}${col("Text color","color",h.color||"#ffffff")}</div>
     </section>
     <section class="panel"><h2>Shape</h2><p class="sub">The shape of the banner. Its color is the Banner color above. "No shape" removes it.</p>
@@ -2202,6 +2213,14 @@ function viewDashPerf(){
     </div>
     <p class="note" style="margin:12px 0 0">Orders by order date · complaints and reviews by the date they were sent. Payment rate = paid ÷ placed. Completion rate = delivered or picked up ÷ placed. Complaint rate = complaints ÷ delivered or picked up.${P?" Green = better than before, red = worse. pts = percentage points.":""}</p></section></div>`;
 }
+// live and upcoming flash sales / promos, with orders placed while each one runs
+function dashSalesHTML(){const now=Date.now(),live=DB.sales.filter(s=>saleStatus(s,now)==="live").sort((a,b)=>a.end-b.end),soon=DB.sales.filter(s=>saleStatus(s,now)==="scheduled").sort((a,b)=>a.start-b.start).slice(0,3);
+  const row=s=>{const on=saleStatus(s,now)==="live",os=on?DB.orders.filter(o=>o.status!=="cancelled"&&o.createdAt>=s.start&&o.createdAt<now):[];
+    return `<div class="dsale ${on?"live":"soon"}"><div class="dsale-t"><span class="spill ${on?"live":"scheduled"}">${on?"Live":"Coming up"}</span>${isFD(s)?` <span class="spill" style="background:#0A6B34;color:#fff">🚚 Free delivery</span>`:""}${isGift(s)?` <span class="spill" style="background:#C8102E;color:#fff">🎁 ${esc(s.tag||"Gifts")}</span>`:""}<b>${esc(s.name)}</b>
+      <small>${isGift(s)?giftSummary(s):`${saleOffText(s)} ${saleAppliesText(s)}`}</small></div>
+      <div class="dsale-n"><span>${on?"Ends in":"Starts in"}</span><strong data-exp="${on?s.end:s.start}">${fmtLeft((on?s.end:s.start)-now)}</strong>${on?`<small>${os.length} order${os.length===1?"":"s"} · ${money(os.reduce((a,o)=>a+o.total,0))}</small>`:`<small>${fmtDT(s.start)}</small>`}</div></div>`};
+  return `<section class="panel"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2>⚡ Flash sales</h2><button class="ghost" type="button" data-gotab="sales">Manage</button></div>
+    ${live.length||soon.length?`<div class="dsales">${live.map(row).join("")}${soon.map(row).join("")}</div>`:`<p class="note" style="margin:8px 0 0">No flash sale running or coming up. <button class="linkbtn" type="button" data-gotab="sales">Start one</button></p>`}</section>`}
 function viewDashboard(){
   if(A.dt==="sales")return viewDashSales();if(A.dt==="perf")return viewDashPerf();
   A.dsig=dashSig();
@@ -2250,6 +2269,7 @@ function viewDashboard(){
         <button class="db-k" type="button" data-dashgo="complaints"><strong>${cps}</strong><small>Open complaints</small></button>
       </div>
     </section>
+    ${dashSalesHTML()}
     ${ROLE()==="owner"?`<section class="panel">
       <h2>👥 Visitors</h2>
       <div class="chips" style="margin-top:10px">${[["today","Today"],["week","This week"],["month","This month"]].map(([k,l])=>`<button class="fchip" type="button" data-vr="${k}" aria-pressed="${A.vr===k}">${l}</button>`).join("")}</div>
@@ -3541,11 +3561,13 @@ am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
 function hrSetX(el){const h=hrDraft(),[i,k]=el.dataset.hrx.split("."),n=+i;if(!Array.isArray(h.ckx))h.ckx=[];while(h.ckx.length<=n)h.ckx.push({});
   const x=h.ckx[n]=h.ckx[n]||{};x[k]=k==="op"?+el.value:k==="show"?el.checked:el.value;hrDraw();if(k==="show"){renderAdmin();return}
   if(k==="op"){const l=el.closest("label");if(l&&l.firstChild)l.firstChild.textContent=`Opacity: ${x.op}%`}}
-am.addEventListener("input",e=>{const el=e.target;if(el.dataset.hrx){hrSetX(el);return}if(!el.dataset.hr)return;hrSet(el)});
+function hrSetB(el){const [i,k]=el.dataset.hrb.split("."),h=hrDraft(),key="b"+i;h[key]=Object.assign(HB_DEF(+i),h[key]||{});h[key][k]=el.type==="checkbox"?el.checked:el.value;if(el.type==="checkbox")renderAdmin();else hrDraw()}
+am.addEventListener("input",e=>{const el=e.target;if(el.dataset.hrb){if(el.type!=="checkbox")hrSetB(el);return}if(el.dataset.hrx){hrSetX(el);return}if(!el.dataset.hr)return;hrSet(el)});
 function hrSet(el){const h=hrDraft(),k=el.dataset.hr;h[k]=el.type==="checkbox"?el.checked:el.dataset.hrnum?+el.value:el.value;
   if(k==="src"&&!el.value)h.src="";hrDraw();if(el.dataset.hrlbl){const l=el.closest("label");if(l&&l.firstChild)l.firstChild.textContent=el.dataset.hrlbl.replace("#",el.value);return}if(el.dataset.hrrr)renderAdmin();else if(k==="overlay"){const l=el.closest("label");if(l&&l.firstChild)l.firstChild.textContent=`Darken the picture: ${h.overlay}%`}}
 am.addEventListener("change",async e=>{const el=e.target;
   if(el.dataset.hrx){hrSetX(el);return}
+  if(el.dataset.hrb){hrSetB(el);return}
   if(el.dataset.hr){hrSet(el);return}
   if(el.dataset.hrck!==undefined){const f=el.files[0];if(!f)return;try{{const h=hrDraft();while(h.cookies.length<=+el.dataset.hrck)h.cookies.push("");h.cookies[+el.dataset.hrck]=await lpResize(f,360,true)}renderAdmin();toast("Added to the preview. Press Save to publish.")}catch(err){toast(err.message)}return}
   if(el.dataset.hradd){const f=el.files[0];if(!f)return;const h=hrDraft(),ty=el.dataset.hradd;el.value="";
@@ -3563,6 +3585,8 @@ am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   else if(d.hrmediarm!==undefined){hrDraft().src="";renderAdmin()}
   else if(d.hrshape){hrDraft().shape=d.hrshape;renderAdmin()}
   else if(d.hrsize){hrDraft().size=d.hrsize;renderAdmin()}
+  else if(d.hrbset){const [i,k,v]=d.hrbset.split("."),h=hrDraft();h["b"+i]=Object.assign(HB_DEF(+i),h["b"+i]||{});h["b"+i][k]=v;renderAdmin()}
+  else if(d.hrbreset){delete hrDraft()["b"+d.hrbreset];renderAdmin()}
   else if(d.hrfit){hrDraft().fit=d.hrfit;renderAdmin()}
   else if(d.hrdev){A.hrDev=d.hrdev;renderAdmin()}
   else if(d.hrbtnreset!==undefined){hrDraft()[hrDev()==="pc"?"btnPc":"btnPh"]=null;renderAdmin()}
@@ -4044,6 +4068,10 @@ function heroFill(dome,h){
   if(shp==="none"){dome.style.background=hasM?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
   q(".ho").style.opacity=hasM?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
   heroFloats(dome,h);
+  [h.b1,h.b2].forEach((st,i)=>{const a=ab[i];[...a.classList].filter(c=>/^hb/.test(c)).forEach(c=>a.classList.remove(c));if(!st)return;
+    a.classList.add("hbc","hb-"+fxOk(st.shape,HB_SHAPES.map(x=>x[0]),"pill"),"hbz-"+fxOk(st.size,["S","M","L"],"M"),"hbfx-"+fxOk(st.fx,HB_FX.map(x=>x[0]),"none"));
+    a.style.setProperty("--hb-bg",st.fill===false?"transparent":hexOk(st.bg,"#ffffff"));a.style.setProperty("--hb-ink",hexOk(st.ink,"#000096"));
+    a.style.setProperty("--hb-line",hexOk(st.line,"#ffffff"));a.style.setProperty("--hb-glow",hexOk(st.fill===false?st.line:st.bg,"#ffffff"))});
   dome.classList.toggle("fit-contain",h.fit==="contain");
   dome._h=h;dome._ratio=null;
   if(hasM&&(h.size||"auto")==="auto")heroRatio(list[0],r=>{if(dome._h===h){dome._ratio=r;heroLayout(dome)}});
@@ -4052,6 +4080,8 @@ function heroFill(dome,h){
 /* banner height and button position. Phones (up to 640px wide) and computers each keep their own button spot.
    dome._dev forces one of them (the admin preview). */
 const HERO_BP=640,HR_RATIO=new Map();
+const HB_SHAPES=[["pill","Pill"],["rounded","Rounded box"],["square","Square box"],["circle","Circle"]];
+const HB_FX=[["none","Still"],["pulse","Pulse"],["bounce","Bounce"],["shine","Shine"],["glow","Glow"],["wiggle","Wiggle"]];
 function heroRatio(m,cb){const src=safeMedia(m&&m.src);if(!src)return;if(HR_RATIO.has(src)){cb(HR_RATIO.get(src));return}
   const done=r=>{if(r>0&&isFinite(r)){r=Math.max(.4,Math.min(4,r));HR_RATIO.set(src,r);cb(r)}};
   if(ytId(src)){done(/shorts\//i.test(src)?9/16:16/9);return}
