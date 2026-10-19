@@ -1880,14 +1880,19 @@ function drawDraftBar(){
   const pend=draftPendTabs(),onTab=SBH.admin&&DRAFT_ALL.includes(A.tab),mine=onTab?draftMine(A.tab):[],busy=mine.length>0,others=pend.filter(t=>t!==A.tab);
   document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("pend",pend.includes(b.dataset.tab)));
   let bar=$("#draftBar");
+  document.body.classList.toggle("dd-draft",busy);
   if(!onTab&&!others.length){if(bar)bar.remove();return}
   const oth=others.length?`<span class="db-oth">Not published yet on other pages: ${others.map(t=>`<button class="linkbtn sm" type="button" data-dbgo="${t}">${esc(DRAFT_TAB_NAME[t])}</button>`).join(", ")} (each page is published on its own)</span>`:"";
   const html=busy?`<div class="db-tx"><b>Not published yet</b><span>Your changes on ${esc(DRAFT_TAB_NAME[A.tab])}. Customers still see the old version.</span>${oth}</div><div class="db-act"><button class="btn btn-blue" type="button" data-dbpub>Save &amp; publish</button><button class="ghost" type="button" data-dbdisc>Discard changes</button></div>`
     :onTab?`<div class="db-tx"><b>✓ Everything on this page is published</b><span>Changes you make here go live only after you press Save &amp; publish.</span>${oth}</div><div class="db-act"><button class="btn btn-blue" type="button" disabled>Save &amp; publish</button><button class="ghost" type="button" disabled>Discard changes</button></div>`
     :`<div class="db-tx">${oth}</div>`;
   if(!bar){bar=document.createElement("div");bar.id="draftBar";bar.setAttribute("role","status");am.prepend(bar)}
-  bar.className="draftbar"+(busy?"":" idle");
+  const was=bar.classList.contains("busy");
+  bar.className="draftbar"+(busy?" busy":" idle");
   if(bar.dataset.sig!==html){bar.dataset.sig=html;bar.innerHTML=html}
+  // first unpublished change: the bar pops up at the bottom of the screen so Save & publish is always in reach
+  if(busy&&!was&&!RM)bar.animate([{transform:"translateY(30px)",opacity:0},{transform:"none",opacity:1}],{duration:260,easing:"ease-out"});
+  const sy=$("#syncSt");if(sy&&sy.dataset.st==="saved")sy.textContent=pend.length?"Draft saved · not published yet":"All changes saved";
 }
 function afterSave(){if(SBH.on&&SBH.admin)requestAnimationFrame(()=>{try{drawDraftBar()}catch(e){}})}
 function toastHook(msg){return msg==="Saved"&&SBH.admin&&SBH.changed&&DRAFT_ALL.includes(A.tab)&&(draftScan(A.tab),draftMine(A.tab).length)?"Draft kept. Press Save & publish to show it in the shop.":msg}
@@ -4282,7 +4287,7 @@ function lpRender(){const y=scrollY;renderAdmin();scrollTo(0,y)}
 function viewLanding(){
   const pg=DB.page,h=pg.hero;
   const sec=(title,body,open,key)=>{key=key||title.replace(/ \(\d+\)$/,"");const o=LPOPEN[key]===undefined?open:LPOPEN[key];return `<details class="panel lpsec" data-sec="${esc(key)}" ${o?"open":""}><summary>${title}</summary><div class="lpbody">${body}</div></details>`};
-  return head("Landing page","Edit the words, photos, videos, fonts and colors of your shop's front page. Changes show in the shop straight away.")+MOCK+`
+  return head("Landing page",`Edit the words, photos, videos, fonts and colors of your shop's front page. ${SBH.on?"Your changes go live in the shop when you press Save & publish.":"Changes show in the shop straight away."}`)+MOCK+`
   <div class="stack">
   ${sec("Brand, colors and fonts",`
     <div class="grid2">${lpIn("Brand name","name",{max:30})}

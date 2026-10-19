@@ -1433,3 +1433,7 @@ tr.justadded td{background:rgba(0,0,150,.07)}
 .tool.openbox{background:#FFD43B;color:#000096;border-color:#FFD43B;font-weight:800}
 .closecta{background:#FFD43B!important;color:#000096!important;border-color:#FFD43B!important}
 @media (prefers-reduced-motion:reduce){.boxlid .bow,.boxlid .lidlock{animation:none}}
+/* unpublished changes: the publish bar floats at the bottom of the screen until you publish or discard */
+.draftbar.busy{position:fixed!important;top:auto;left:auto;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(640px,calc(100vw - 24px));margin:0;z-index:70;box-shadow:0 12px 32px rgba(0,0,40,.28)}
+body.dd-draft #amain{padding-bottom:150px}
+body.dd-draft .toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))!important}

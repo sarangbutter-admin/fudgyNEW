@@ -299,7 +299,7 @@
   /* ================= owner: save ================= */
   function setSync(st, msg) {
     var e = $q("#syncSt"); if (!e) return;
-    e.textContent = st === "saving" ? "Saving…" : st === "error" ? "Not saved, retrying…" : "All changes saved";
+    e.textContent = st === "saving" ? "Saving…" : st === "error" ? "Not saved, retrying…" : (H.pending && H.pending().length ? "Draft saved · not published yet" : "All changes saved");
     e.title = msg || ""; e.dataset.st = st;
   }
   H.save = function () { if (!H.admin) return true; dirty = true; setSync("saving"); schedule(); return true; };
