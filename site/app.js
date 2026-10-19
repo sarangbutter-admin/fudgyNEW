@@ -1142,13 +1142,15 @@ function bsPinSet(lat,lng){
 }
 async function bsMapShow(){
   const box=$("#bsMap");if(!box||box.hidden&&!(BSD.lat||BSD.area||BSD.mapOpen))return;
-  let L;try{L=await bsLoadLeaflet()}catch(e){box.hidden=true;$("#bsMapHint").hidden=true;return}
+  let L;try{L=await bsLoadLeaflet()}catch(e){box.hidden=true;const h=$("#bsMapHint");h.hidden=false;h.textContent="The map couldn't load. Please type your address above, or try again in a moment.";return}
   box.hidden=false;$("#bsMapHint").hidden=false;
   const has=BSD.lat&&BSD.lng,ll=has?[+BSD.lat,+BSD.lng]:[-6.2,106.75];
   if(!bsMapObj){
     L.Icon.Default.imagePath="vendor/leaflet/images/";
     bsMapObj=L.map(box,{zoomControl:true,attributionControl:true}).setView(ll,has?17:11);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}).addTo(bsMapObj);
+    // OpenStreetMap tiles; if they fail (blocked or busy) switch once to the CARTO copy of the same map
+    const osm=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}).addTo(bsMapObj);
+    let bad=0;osm.on("tileerror",()=>{if(++bad!==3)return;bsMapObj.removeLayer(osm);L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",{maxZoom:19,subdomains:"abcd",attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'}).addTo(bsMapObj)});
     bsMapObj.on("click",e=>{if(!bsPin)bsPin=L.marker(e.latlng,{draggable:true}).addTo(bsMapObj).on("dragend",ev=>{const p=ev.target.getLatLng();bsPinSet(p.lat,p.lng)});else bsPin.setLatLng(e.latlng);bsPinSet(e.latlng.lat,e.latlng.lng)});
   }else{setTimeout(()=>bsMapObj.invalidateSize(),50)}
   if(has){
