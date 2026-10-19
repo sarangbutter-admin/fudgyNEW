@@ -3495,9 +3495,12 @@ function viewSettings(){
   <div class="stack">
     <section class="panel"><h2>Top bar</h2><p class="sub">The bar at the top of the shop with your logo, the bell and My orders.</p>
       <div style="display:flex;gap:10px;align-items:center;margin:10px 0"><label class="sw"><input type="checkbox" data-k="settings::hdrOn" ${s.hdrOn?"checked":""} aria-label="Use my own top bar look"><span></span></label><span class="stlabel">Use my own top bar look${s.hdrOn?"":" (off: the standard white bar)"}</span></div>
-      ${s.hdrOn?`<div class="grid3">${hc("Bar background","hdrBg","#ffffff")}${hc("Logo background","hdrLogoBg","#ffffff")}${hc("Logo text color","hdrLogoInk","#000096")}</div>
+      ${s.hdrOn?`<div class="grid3">${hsel("Bar shape","hdrShape",[["flat","Straight (full width)"],["rounded","Rounded bottom corners"],["float","Floating rounded bar"]],"flat")}${hc("Bar border color","hdrLine","#D9DCFA")}</div>
+      <div class="grid3" style="margin-top:10px">${hc("Bar background","hdrBg","#ffffff")}${hc("Logo background","hdrLogoBg","#ffffff")}${hc("Logo text color","hdrLogoInk","#000096")}</div>
       <div class="grid3" style="margin-top:10px">${hsel("Logo shape","hdrLogoShape",[["none","No box"],["pill","Pill"],["rounded","Rounded box"],["square","Square box"]],"none")}${hsel("Bell and My orders shape","hdrIconShape",[["circle","Circle"],["rounded","Rounded box"],["square","Square box"]],"circle")}</div>
-      <div class="grid3" style="margin-top:10px">${hc("Bell and My orders background","hdrIconBg","#ffffff")}${hc("Icon color","hdrIconInk","#000096")}${hc("Icon border","hdrIconLine","#D9DCFA")}</div>`:""}
+      <div class="grid3" style="margin-top:10px">${hc("Bell and My orders background","hdrIconBg","#ffffff")}${hc("Icon color","hdrIconInk","#000096")}${hc("Icon border","hdrIconLine","#D9DCFA")}</div>
+      <div class="grid3" style="margin-top:10px">${hc("\"Your box\" button background","hdrPillBg","#000096")}${hc("\"Your box\" text","hdrPillInk","#ffffff")}${hc("\"Your box\" border","hdrPillLine","#000096")}</div>
+      <div class="grid3" style="margin-top:10px">${hc("Count circle (0/6) background","hdrNumBg","#ffffff")}${hc("Count circle text","hdrNumInk","#000096")}</div>`:""}
     </section>
     <section class="panel">
       <h2>Ordering</h2><p class="sub">Customers can order up to 7 days ahead.</p>
@@ -4226,11 +4229,11 @@ function lpFavicon(pg){
   const im=new Image();im.onload=()=>{try{const c=document.createElement("canvas");c.width=c.height=64;const x=c.getContext("2d"),k=Math.min(64/im.naturalWidth,64/im.naturalHeight),w=im.naturalWidth*k,h=im.naturalHeight*k;x.drawImage(im,(64-w)/2,(64-h)/2,w,h);l.type="image/png";l.href=c.toDataURL("image/png")}catch(e){dflt()}};im.onerror=dflt;im.src=lg;
 }
 // shop top bar: background, logo box and the round icon buttons (Shop settings > Top bar)
-const HDR_SHAPES=["none","pill","rounded","square"],HDR_ISHAPES=["circle","rounded","square"];
+const HDR_SHAPES=["none","pill","rounded","square"],HDR_ISHAPES=["circle","rounded","square"],HDR_BAR=["flat","rounded","float"];
 function applyHeader(){const t=DB.settings,top=$(".top"),lg=$(".top .logo"),on=!!t.hdrOn;if(!top)return;
-  top.classList.toggle("hdc",on);lg.className="logo"+(on?" lgs-"+fxOk(t.hdrLogoShape,HDR_SHAPES,"none"):"");
+  top.classList.toggle("hdc",on);HDR_BAR.forEach(k=>top.classList.remove("hbs-"+k));if(on)top.classList.add("hbs-"+fxOk(t.hdrShape,HDR_BAR,"flat"));lg.className="logo"+(on?" lgs-"+fxOk(t.hdrLogoShape,HDR_SHAPES,"none"):"");
   const ic=["#bellBtn","#moBtn"].map(x=>$(x)).filter(Boolean);ic.forEach(b=>{HDR_ISHAPES.forEach(k=>b.classList.remove("ics-"+k));if(on)b.classList.add("ics-"+fxOk(t.hdrIconShape,HDR_ISHAPES,"circle"))});
-  const v={"--hd-bg":t.hdrBg,"--lg-bg":t.hdrLogoBg,"--lg-ink":t.hdrLogoInk,"--ic-bg":t.hdrIconBg,"--ic-ink":t.hdrIconInk,"--ic-line":t.hdrIconLine};
+  const v={"--hd-bg":t.hdrBg,"--lg-bg":t.hdrLogoBg,"--lg-ink":t.hdrLogoInk,"--ic-bg":t.hdrIconBg,"--ic-ink":t.hdrIconInk,"--ic-line":t.hdrIconLine,"--hd-line":t.hdrLine,"--pl-bg":t.hdrPillBg,"--pl-ink":t.hdrPillInk,"--pl-line":t.hdrPillLine,"--pn-bg":t.hdrNumBg,"--pn-ink":t.hdrNumInk};
   for(const k in v){if(on&&HEX_OK.test(v[k]||""))top.style.setProperty(k,v[k]);else top.style.removeProperty(k)}}
 function renderLanding(){
   const pg=DB.page,sv=$("#storeView");if(!pg||!sv)return;

@@ -2022,11 +2022,11 @@ function lpFavicon(pg){
   if(!lg){dflt();return}
   const im=new Image();im.onload=()=>{try{const c=document.createElement("canvas");c.width=c.height=64;const x=c.getContext("2d"),k=Math.min(64/im.naturalWidth,64/im.naturalHeight),w=im.naturalWidth*k,h=im.naturalHeight*k;x.drawImage(im,(64-w)/2,(64-h)/2,w,h);l.type="image/png";l.href=c.toDataURL("image/png")}catch(e){dflt()}};im.onerror=dflt;im.src=lg;
 }
-const HDR_SHAPES=["none","pill","rounded","square"],HDR_ISHAPES=["circle","rounded","square"];
+const HDR_SHAPES=["none","pill","rounded","square"],HDR_ISHAPES=["circle","rounded","square"],HDR_BAR=["flat","rounded","float"];
 function applyHeader(){const t=DB.settings,top=$(".top"),lg=$(".top .logo"),on=!!t.hdrOn;if(!top)return;
-  top.classList.toggle("hdc",on);lg.className="logo"+(on?" lgs-"+fxOk(t.hdrLogoShape,HDR_SHAPES,"none"):"");
+  top.classList.toggle("hdc",on);HDR_BAR.forEach(k=>top.classList.remove("hbs-"+k));if(on)top.classList.add("hbs-"+fxOk(t.hdrShape,HDR_BAR,"flat"));lg.className="logo"+(on?" lgs-"+fxOk(t.hdrLogoShape,HDR_SHAPES,"none"):"");
   const ic=["#bellBtn","#moBtn"].map(x=>$(x)).filter(Boolean);ic.forEach(b=>{HDR_ISHAPES.forEach(k=>b.classList.remove("ics-"+k));if(on)b.classList.add("ics-"+fxOk(t.hdrIconShape,HDR_ISHAPES,"circle"))});
-  const v={"--hd-bg":t.hdrBg,"--lg-bg":t.hdrLogoBg,"--lg-ink":t.hdrLogoInk,"--ic-bg":t.hdrIconBg,"--ic-ink":t.hdrIconInk,"--ic-line":t.hdrIconLine};
+  const v={"--hd-bg":t.hdrBg,"--lg-bg":t.hdrLogoBg,"--lg-ink":t.hdrLogoInk,"--ic-bg":t.hdrIconBg,"--ic-ink":t.hdrIconInk,"--ic-line":t.hdrIconLine,"--hd-line":t.hdrLine,"--pl-bg":t.hdrPillBg,"--pl-ink":t.hdrPillInk,"--pl-line":t.hdrPillLine,"--pn-bg":t.hdrNumBg,"--pn-ink":t.hdrNumInk};
   for(const k in v){if(on&&HEX_OK.test(v[k]||""))top.style.setProperty(k,v[k]);else top.style.removeProperty(k)}}
 function renderLanding(){
   const pg=DB.page,sv=$("#storeView");if(!pg||!sv)return;

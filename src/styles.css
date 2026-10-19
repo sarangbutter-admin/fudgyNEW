@@ -1444,3 +1444,10 @@ body.dd-draft .toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))!import
 .top.hdc .logo{color:var(--lg-ink,var(--blue))}
 .top.hdc .bagbtn{background:var(--ic-bg,var(--white));color:var(--ic-ink,var(--blue));border-color:var(--ic-line,var(--line))}
 .top .bagbtn.ics-rounded{border-radius:12px}.top .bagbtn.ics-square{border-radius:3px}
+.top.hdc{border-bottom:2px solid var(--hd-line,var(--ice-2))}
+.top.hbs-rounded{border-radius:0 0 22px 22px;overflow:hidden}
+.top.hbs-float{margin:8px 8px 0;border-radius:22px;border:2px solid var(--hd-line,var(--ice-2));overflow:hidden;top:calc(env(safe-area-inset-top,0px) + 8px)}
+.top.hdc .pill{background:var(--pl-bg,var(--blue));color:var(--pl-ink,var(--white));border-color:var(--pl-line,var(--pl-bg,var(--blue)))}
+.top.hdc .pill b{background:var(--pn-bg,var(--white));color:var(--pn-ink,var(--blue))}
+/* pop-ups follow the page background (Landing page > Page background) */
+body.in-store .sheet-card,body.in-store .bell-pop,body.in-store .gs-card{background:var(--pagebg,#fff)}
