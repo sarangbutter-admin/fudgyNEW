@@ -1181,3 +1181,8 @@ body.dd-draft .toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))!import
 .top.hdc .pill b{background:var(--pn-bg,var(--white));color:var(--pn-ink,var(--blue))}
 /* pop-ups follow the page background (Landing page > Page background) */
 body.in-store .sheet-card,body.in-store .bell-pop,body.in-store .gs-card{background:var(--pagebg,#fff)}
+/* affiliates */
+.afk.hot{border-color:#2FBF71;background:#EAF8F0}
+body.aff-on #adminView,body.aff-on #storeView{display:none}
+.afhdr .logo{color:#fff;font-size:18px}.afhdr .logo small{font-size:12px;opacity:.8;font-family:var(--body);font-weight:600;margin-left:6px}
+.card.affhl{animation:cardhl 2.4s ease-out}

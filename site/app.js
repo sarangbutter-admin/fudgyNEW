@@ -1804,7 +1804,21 @@ const bcActive=b=>!b.until||b.until>=ymd(today0());
 const activeBroadcasts=()=>(DB.broadcasts||[]).filter(bcActive);
 const VIS_KEY="delidome-visits-v1",VID_KEY="delidome-vid-v1",LASTV_KEY="delidome-lastv-v1";
 let VIS=[];const loadVis=()=>{try{VIS=JSON.parse(localStorage.getItem(VIS_KEY)||"[]")||[]}catch(e){VIS=[]}};loadVis();
-function trackVisit(){
+const AFF_KEY="delidome-aff-v1";let affDone=false;
+function affCapture(){if(affDone)return;affDone=true;try{
+  const q=new URLSearchParams(location.search),code=(q.get("ref")||"").trim().toUpperCase(),to=q.get("to")||"",cp=(q.get("cp")||"").trim().toUpperCase().slice(0,30);
+  if(code&&/^[A-Z0-9_-]{2,20}$/.test(code)&&!(navigator.webdriver||/bot|crawl|spider|slurp|headless|preview/i.test(navigator.userAgent))){
+    let src=(q.get("src")||"").toLowerCase().replace(/[^a-z0-9.-]/g,"").slice(0,40);
+    if(!src){let h="";try{h=document.referrer?new URL(document.referrer).hostname.replace(/^www\./,""):""}catch(e){}
+      src=!h||h===location.hostname?"direct":/instagram/.test(h)?"ig":/tiktok/.test(h)?"tt":/whatsapp|wa\.me/.test(h)?"wa":/facebook|fb\.com|fb\.me/.test(h)?"fb":/youtube|youtu\.be/.test(h)?"yt":/(^|\.)t\.co$|twitter|x\.com/.test(h)?"x":/google/.test(h)?"google":h.slice(0,40)}
+    let vid=localStorage.getItem(VID_KEY);if(!vid){vid=uid()+uid();localStorage.setItem(VID_KEY,vid)}
+    localStorage.setItem(AFF_KEY,JSON.stringify({code,src,at:Date.now()}));
+    if(SBH.on&&SBH.affHit)SBH.affHit(code,vid,src)}
+  if(to)setTimeout(()=>{const c=document.querySelector(`.card[data-id="${CSS.escape(to)}"]`);if(c){c.scrollIntoView({block:"center",behavior:RM?"auto":"smooth"});c.classList.add("affhl");setTimeout(()=>c.classList.remove("affhl"),2600)}},900);
+  if(cp){const i=document.getElementById("cpnIn");if(i&&!i.value)i.value=cp}
+  if(code||to||cp)history.replaceState(null,"",location.pathname+location.hash);
+}catch(e){}}
+function trackVisit(){affCapture();
   try{
     if(navigator.webdriver||/bot|crawl|spider|slurp|headless|preview/i.test(navigator.userAgent))return;
     const now=Date.now(),last=+localStorage.getItem(LASTV_KEY)||0;if(now-last<30*60e3)return;

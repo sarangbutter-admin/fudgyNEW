@@ -113,8 +113,12 @@
     if (r.token) { TOK[r.order.id] = r.token; saveTok(); }
     setOrderIn(DB.orders, r.order);
     lastOrdSig = "";
+    // affiliate link: credit the new order to the link the customer came from (within 30 days; a matching coupon wins on the server)
+    if (!existing && r.token) { try { var af = JSON.parse(localStorage.getItem("delidome-aff-v1") || "null");
+      if (af && af.code && Date.now() - af.at < 30 * 864e5) K.rpc("aff_claim", { p_id: r.order.id, p_token: r.token, p_code: af.code, p_src: af.src || "", p_at: af.at }).catch(function () {}); } catch (e) {} }
     return DB.orders.find(function (x) { return x.id === r.order.id; });
   };
+  H.affHit = function (code, vid, src) { K.rpc("aff_hit", { p_code: code, p_vid: vid, p_src: src }).catch(function () {}); };
   function tk(id) { return TOK[id] || ""; }
   H.cancel = async function (id) { var d = await K.rpc("cancel_order", { p_id: id, p_token: tk(id) }); setOrderIn(DB.orders, d); lastOrdSig = ""; };
   H.track = async function (code, phone) {
@@ -176,7 +180,7 @@
     var el = $q("#adLogin");
     if (el) el.remove();
     el = document.createElement("div"); el.id = "adLogin";
-    el.innerHTML = '<form class="adl-card" novalidate><h2>Team sign in</h2><p class="adl-sub">For the owner and staff.</p>' +
+    el.innerHTML = '<form class="adl-card" novalidate><h2>Team sign in</h2><p class="adl-sub">For the owner, staff and affiliators.</p>' +
       '<label>Username or email<input class="in" id="adlEmail" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>' +
       '<label>Password<input class="in" id="adlPass" type="password" autocomplete="current-password" required></label>' +
       '<p class="adl-err" id="adlErr" role="alert" hidden></p>' +
@@ -273,7 +277,13 @@
     if (starting) return; starting = true;
     try {
       var me = await K.rpc("admin_me", {}, true);
-      if (!me || !me.admin) { K.logout(); throw new Error("This account isn't on the team. Ask the owner to add your email."); }
+      if (!me || !me.admin) {
+        // an affiliator signs in here too and gets only their own dashboard
+        var af = await K.rpc("aff_me", {}, true).catch(function () { return null; });
+        if (af && af.aff && typeof window.affStart === "function") { H.aff = af; var l0 = $q("#adLogin"); if (l0) l0.remove(); window.affStart(af); return; }
+        K.logout();
+        throw new Error(af && af.disabled ? "This affiliate account is switched off. Please contact the shop." : "This account isn't on the team. Ask the owner to add your email.");
+      }
       H.role = me.role === "staff" ? "staff" : "owner"; H.email = me.email || K.email() || "";
       H.perms = Array.isArray(me.perms) ? me.perms : []; H.title = me.title || ""; H.username = me.username || ""; H.name = me.name || "";
       var r = await K.rpc("admin_load", {}, true);

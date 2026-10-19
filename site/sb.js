@@ -112,8 +112,12 @@
     if (r.token) { TOK[r.order.id] = r.token; saveTok(); }
     setOrderIn(DB.orders, r.order);
     lastOrdSig = "";
+    // affiliate link: credit the new order to the link the customer came from (within 30 days; a matching coupon wins on the server)
+    if (!existing && r.token) { try { var af = JSON.parse(localStorage.getItem("delidome-aff-v1") || "null");
+      if (af && af.code && Date.now() - af.at < 30 * 864e5) K.rpc("aff_claim", { p_id: r.order.id, p_token: r.token, p_code: af.code, p_src: af.src || "", p_at: af.at }).catch(function () {}); } catch (e) {} }
     return DB.orders.find(function (x) { return x.id === r.order.id; });
   };
+  H.affHit = function (code, vid, src) { K.rpc("aff_hit", { p_code: code, p_vid: vid, p_src: src }).catch(function () {}); };
   function tk(id) { return TOK[id] || ""; }
   H.cancel = async function (id) { var d = await K.rpc("cancel_order", { p_id: id, p_token: tk(id) }); setOrderIn(DB.orders, d); lastOrdSig = ""; };
   H.track = async function (code, phone) {
