@@ -1353,6 +1353,9 @@ $("#giftNote").addEventListener("input",e=>{S.note=e.target.value;saveCart()});
 $("#coForm").addEventListener("input",saveCust);$("#coForm").addEventListener("change",saveCust);
 $("#panelCta").addEventListener("click",e=>cta(e.currentTarget.dataset.go));
 $("#barCta").addEventListener("click",e=>cta(e.currentTarget.dataset.go));
+// affiliators sign in on the shop address: /#partner
+addEventListener("hashchange",()=>{if(location.hash==="#partner"&&SBH.partner)SBH.partner()});
+if(location.hash==="#partner")setTimeout(()=>{if(SBH.partner)SBH.partner()},0);
 $("#pillBtn").addEventListener("click",()=>{const b=$("#pillBtn");b.classList.add("tapped");clearTimeout(b._t);b._t=setTimeout(()=>b.classList.remove("tapped"),1400);scrollToEl($("#build"))});
 $("#closeSheet").addEventListener("click",closeSheet);
 $("#sheet").addEventListener("click",e=>{if(e.target.id==="sheet")closeSheet()});
@@ -5326,11 +5329,12 @@ function viewAffiliates(){
     <label class="af" style="margin-top:10px">Private note<input class="in" data-aff="note" maxlength="300" value="${esc(F.note||"")}"></label>
     ${AF.ferr?`<p class="adl-err" style="margin-top:8px">${esc(AF.ferr)}</p>`:""}
     <div class="colin" style="margin-top:12px"><button class="btn btn-blue" type="button" data-afsave>${F.id?"Save changes":"Create affiliator"}</button><button class="ghost" type="button" data-afcancel>Cancel</button></div>
-    ${F.id?"":`<p class="note" style="margin:8px 0 0">They sign in on this team site with the username and password. They only see their own dashboard.</p>`}</section>`:"";
+    ${F.id?"":`<p class="note" style="margin:8px 0 0">They sign in at the affiliator sign-in page above with this username and password, and only see their own dashboard.</p>`}</section>`:"";
   return h+`<div class="stack">
     <section class="panel"><div class="afhead"><h2 style="margin:0">Overview</h2>${F?"":`<button class="btn btn-blue btn-sm" type="button" data-afnew>+ Add affiliator</button>`}</div>${afPeriodHTML()}
       ${afKpis({views:sum("views"),uniq:sum("uniq"),orders:sum("orders"),coupon:sum("coupon"),sales:sum("sales"),pending:sum("pending"),approved:sum("approved"),paid:sum("paid"),void:sum("void"),waiting:sum("waiting")})}
-      ${AF.err?`<p class="adl-err" style="margin-top:8px">${esc(AF.err)}</p>`:""}</section>
+      ${AF.err?`<p class="adl-err" style="margin-top:8px">${esc(AF.err)}</p>`:""}
+      <div class="af" style="margin-top:12px">Affiliator sign-in page (send them this with their username and password)<div class="colin"><input class="in" id="afLoginUrl" readonly value="${esc(afShop()+"/#partner")}"><button class="btn btn-blue btn-sm" type="button" data-afcopyurl>Copy</button></div></div></section>
     ${form}
     <section class="panel"><h2>Affiliators (${L.length})</h2>
       ${L.length?`<div class="aflist">${L.map(x=>`<div class="afcard${x.status!=="active"?" off":""}"><div class="afhead"><div><b>${esc(x.name||x.username)}</b> ${afChip(AF_STATUS,x.status)}<small>@${esc(x.username)} · code ${esc(x.code)} · ${+x.rate}%${x.coupon?` · coupon ${esc(x.coupon)}`:""}</small></div>
@@ -5355,6 +5359,7 @@ function afLinkUpd(root){const r=AF.rep;if(!r)return;const to=root.querySelector
 function afDate(el,mine){AF[el.dataset.afd]=el.value;if(AF.from){mine?affLoadRep(SBH.aff.id,true):AF.sel?affLoadRep(AF.sel):affLoadList()}}
 am.addEventListener("click",async e=>{if(A.tab!=="affiliates")return;const b=e.target.closest("button");if(!b)return;const d=b.dataset;
   afClick(e,am,false);
+  if(d.afcopyurl!==undefined){const i=document.getElementById("afLoginUrl");try{navigator.clipboard.writeText(i.value).then(()=>toast("Address copied"),()=>i.select())}catch(x){i.select()}return}
   if(d.afnew!==undefined){AF.form={rate:10,status:"active"};AF.ferr="";renderAdmin();showNew("#afForm")}
   else if(d.afcancel!==undefined){AF.form=null;renderAdmin()}
   else if(d.afsave!==undefined)affSave();
@@ -5375,7 +5380,7 @@ function affRender(){let v=document.getElementById("affView");
   v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><span class="afwho">@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
-window.affStart=function(me){SBH.aff=me;AF.rep=null;affRender();affLoadRep(me.id,true)};
+const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;affRender();affLoadRep(me.id,true)};
 function viewSecurity(){
   const h=head("Security","Limits that protect your shop from abuse, bots and surprise bills. Only owners can see this.");
   if(!SBH.on)return h+MOCK+`<section class="panel"><div class="empty">Security works once the site is connected to Supabase.</div></section>`;

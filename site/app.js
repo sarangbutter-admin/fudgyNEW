@@ -1338,6 +1338,9 @@ $("#giftNote").addEventListener("input",e=>{S.note=e.target.value;saveCart()});
 $("#coForm").addEventListener("input",saveCust);$("#coForm").addEventListener("change",saveCust);
 $("#panelCta").addEventListener("click",e=>cta(e.currentTarget.dataset.go));
 $("#barCta").addEventListener("click",e=>cta(e.currentTarget.dataset.go));
+// affiliators sign in on the shop address: /#partner
+addEventListener("hashchange",()=>{if(location.hash==="#partner"&&SBH.partner)SBH.partner()});
+if(location.hash==="#partner")setTimeout(()=>{if(SBH.partner)SBH.partner()},0);
 $("#pillBtn").addEventListener("click",()=>{const b=$("#pillBtn");b.classList.add("tapped");clearTimeout(b._t);b._t=setTimeout(()=>b.classList.remove("tapped"),1400);scrollToEl($("#build"))});
 $("#closeSheet").addEventListener("click",closeSheet);
 $("#sheet").addEventListener("click",e=>{if(e.target.id==="sheet")closeSheet()});
@@ -2082,6 +2085,69 @@ function renderLanding(){
   $("#lpBottom").innerHTML=pg.blocks.filter(b=>b.pos!=="top").map(blk).join("");
 }
 const HEX_OK=/^(#[0-9a-f]{6}|transparent)$/i;
+const AF={list:null,loading:false,err:"",range:"30d",from:"",to:"",group:"day",sel:null,rep:null,repLoading:false,form:null,ferr:"",prods:null};
+const AF_SRC={ig:"Instagram",tt:"TikTok",wa:"WhatsApp",fb:"Facebook",ads:"Ads",x:"X / Twitter",yt:"YouTube",google:"Google",direct:"Direct / unknown",coupon:"Coupon code",web:"Website"};
+const AF_ST={pending:["Pending","#8A5A00","#FFF4D6"],approved:["Approved","#0A6B34","#E3F6EA"],paid:["Paid","#000096","#E5E8FF"],void:["Cancelled (complaint / refund)","#9B1C1C","#FDE2E2"],none:["Waiting for payment","#5A5F86","#EEF0F7"]};
+const AF_STATUS={active:["Active","#0A6B34","#E3F6EA"],paused:["Paused","#8A5A00","#FFF4D6"],disabled:["Switched off","#9B1C1C","#FDE2E2"]};
+const afChip=(m,k)=>{const x=m[k]||m[Object.keys(m)[0]];return `<span class="afchip" style="color:${x[1]};background:${x[2]}">${x[0]}</span>`};
+function afRange(){const n=Date.now(),d0=today0().getTime();
+  if(AF.range==="today")return [d0,n+864e5];if(AF.range==="7d")return [d0-6*864e5,n+864e5];if(AF.range==="30d")return [d0-29*864e5,n+864e5];
+  if(AF.range==="month"){const d=today0();d.setDate(1);return [d.getTime(),n+864e5]}
+  if(AF.range==="custom"&&AF.from){const f=fromYmd(AF.from).getTime(),t=AF.to?fromYmd(AF.to).getTime()+864e5:n+864e5;return [f,t]}
+  return [0,n+864e5]}
+const afShop=()=>String((window.DELIDOME_CONFIG||{}).shopUrl||location.origin).replace(/\/+$/,"");
+function afLink(code,to,ch,cp){const q=new URLSearchParams({ref:code});if(ch)q.set("src",ch);if(to)q.set("to",to);if(cp)q.set("cp",cp);return afShop()+"/?"+q.toString()}
+function afPeriodHTML(){return `<div class="chips" style="margin-top:4px">${[["today","Today"],["7d","Last 7 days"],["30d","Last 30 days"],["month","This month"],["all","All time"],["custom","Custom"]].map(([k,l])=>`<button class="fchip" type="button" data-afr="${k}" aria-pressed="${AF.range===k}">${l}</button>`).join("")}</div>
+  ${AF.range==="custom"?`<div class="colin" style="margin-top:8px;gap:8px;flex-wrap:wrap"><label class="af" style="margin:0">From<input class="in" type="date" data-afd="from" value="${esc(AF.from)}"></label><label class="af" style="margin:0">To<input class="in" type="date" data-afd="to" value="${esc(AF.to)}"></label></div>`:""}`}
+function afKpis(t){const k=(v,l,hot)=>`<div class="afk${hot?" hot":""}"><strong>${v}</strong><small>${l}</small></div>`;
+  return `<div class="afkpis">${k(t.views,"Link views")}${k(t.uniq,"Unique visitors")}${k(t.orders,"Paid orders")}${k(t.coupon,"Coupon uses")}${k(money(t.sales),"Sales (no delivery fee)")}${k(money(t.pending),"Commission pending")}${k(money(t.approved),"Approved, ready to pay",t.approved>0)}${k(money(t.paid),"Paid out")}</div>
+  ${t.void>0||t.waiting>0?`<p class="note" style="margin:6px 0 0">${t.waiting?`${t.waiting} order${t.waiting===1?"":"s"} still waiting for payment (no commission yet). `:""}${t.void>0?`${money(t.void)} commission cancelled because of a complaint or refund.`:""}</p>`:""}`}
+function afDashHTML(r,owner){
+  const a=r.aff,t=r.tot,mx=Math.max(1,...r.series.map(x=>Math.max(x.views,x.orders))),gl={day:"Daily",week:"Weekly",month:"Monthly"};
+  const lbl=b=>AF.group==="month"?new Date(b+"-01T00:00:00").toLocaleDateString("en-US",{month:"long",year:"numeric"}):AF.group==="week"?"Week of "+fmtDay(b):fmtDay(b);
+  const prods=(AF.prods||[]).filter(p=>p.status!=="hidden");
+  return `${a.status==="paused"?`<div class="afwarn">⏸️ ${owner?"This affiliator is paused":"Your account is paused"}: links and the coupon don't earn commission right now.</div>`:""}
+  <section class="panel"><div class="afhead"><div><h2 style="margin:0">${esc(a.name||a.username)} ${afChip(AF_STATUS,a.status)}</h2>
+    <p class="sub" style="margin:4px 0 0">Code <b>${esc(a.code)}</b> · ${+a.rate}% commission${a.coupon?` · Coupon <b>${esc(a.coupon)}</b>`:""}${owner&&a.phone?` · ${esc(a.phone)}`:""}</p></div></div>
+    ${afPeriodHTML()}${afKpis(t)}
+    <p class="note" style="margin:8px 0 0">Commission is ${+a.rate}% of each order without the delivery fee. It stays pending until the order is completed and ${+r.win} hours pass with no complaint, refund or return. Then it's approved and can be paid.</p></section>
+  <section class="panel"><div class="afhead"><h2 style="margin:0">Performance</h2><div class="chips">${["day","week","month"].map(k=>`<button class="fchip" type="button" data-afg="${k}" aria-pressed="${AF.group===k}">${gl[k]}</button>`).join("")}</div></div>
+    ${r.series.length?`<div class="aftable"><div class="afrow afth"><span>Period</span><span>Views</span><span>Unique</span><span>Orders</span><span>Sales</span><span>Commission</span></div>${r.series.slice().reverse().map(x=>`<div class="afrow"><span>${esc(lbl(x.b))}<i class="afbar" style="width:${Math.round(Math.max(x.views,x.orders)/mx*100)}%"></i></span><span>${x.views}</span><span>${x.uniq}</span><span>${x.orders}</span><span>${money(x.sales)}</span><span>${money(x.com)}</span></div>`).join("")}</div>`:`<p class="note">No visits or orders in this period yet.</p>`}</section>
+  <section class="panel"><h2>Where visitors came from</h2>
+    ${r.sources.length?`<div class="aftable"><div class="afrow afth"><span>Source</span><span>Views</span><span>Orders</span><span>Sales</span></div>${r.sources.map(x=>`<div class="afrow"><span>${esc(AF_SRC[x.src]||x.src)}</span><span>${x.views}</span><span>${x.orders}</span><span>${money(x.sales)}</span></div>`).join("")}</div>`:`<p class="note">Nothing yet. Share your links below.</p>`}
+    <p class="note" style="margin:8px 0 0">WhatsApp, TikTok and Instagram apps often hide where a visit came from. Use the link made for each place so it's counted correctly.</p></section>
+  <section class="panel"><h2>Your share links</h2><p class="sub">Pick what to open and where you'll share it, then copy the link.</p>
+    <div class="grid2" style="margin-top:10px"><label class="af">Opens<select class="in" id="afTo"><option value="">The shop</option>${a.coupon?`<option value="__cp">The shop with coupon ${esc(a.coupon)} filled in</option>`:""}${prods.map(p=>`<option value="${esc(p.id)}">Flavor: ${esc(p.name)}</option>`).join("")}</select></label>
+    <label class="af">Shared on<select class="in" id="afCh">${[["ig","Instagram"],["tt","TikTok"],["wa","WhatsApp"],["fb","Facebook"],["yt","YouTube"],["x","X / Twitter"],["ads","Ads"],["web","Website / blog"],["","Other"]].map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></label></div>
+    <div class="colin" style="margin-top:8px"><input class="in" id="afLinkOut" readonly value="${esc(afLink(a.code,"","ig",""))}"><button class="btn btn-blue btn-sm" type="button" data-afcopy>Copy</button></div></section>
+  <section class="panel"><h2>Orders</h2>
+    ${r.orders.length?`<div class="aftable"><div class="afrow afth"><span>Order</span><span>Date</span><span>Amount</span><span>Commission</span><span>Status</span></div>${r.orders.map(o=>`<div class="afrow"><span><b>${esc(o.code)}</b><small>${esc(AF_SRC[o.src]||o.src||"")}</small></span><span>${fmtDT(o.at)}</span><span>${money(o.amt)}</span><span>${o.st==="none"?"–":money(o.com)}</span><span>${afChip(AF_ST,o.st)}</span></div>`).join("")}</div>`:`<p class="note">No orders in this period yet.</p>`}</section>
+  <section class="panel"><h2>Payouts</h2>${r.payouts.length?r.payouts.map(p=>`<div class="afrow" style="grid-template-columns:1fr auto"><span>${fmtDT(p.at)} · ${p.n} order${p.n===1?"":"s"}${p.note?` · ${esc(p.note)}`:""}</span><b>${money(p.amount)}</b></div>`).join(""):`<p class="note">No payouts yet.</p>`}
+    ${owner&&t.approved>0?`<div class="colin" style="margin-top:10px"><input class="in" id="afPayNote" maxlength="200" placeholder="Note, e.g. BCA transfer 20 Oct"><button class="btn btn-blue" type="button" data-afpay="${esc(a.id)}">Mark ${money(t.approved)} as paid</button></div>`:""}</section>`}
+async function affLoadRep(id,mine){const [f,t]=afRange();AF.repLoading=true;
+  try{AF.rep=await SBH.rpc("aff_report",{p_id:id,p_from:f,p_to:t,p_group:AF.group});AF.err=""}catch(e){AF.err=e.message}
+  AF.repLoading=false;if(!AF.prods)affLoadProds();mine?affRender():(A.tab==="affiliates"&&(()=>{const y=scrollY;renderAdmin();scrollTo(0,y)})())}
+async function affLoadProds(){try{const r=await SBH.rpc("shop_public",{});AF.prods=(r.products||[]).map(p=>({id:p.id,name:p.name,status:p.status}))}catch(e){AF.prods=[]}
+  if(AF.rep){if(document.getElementById("affView"))affRender();else if(A.tab==="affiliates")renderAdmin()}}
+function afClick(e,root,mine){
+  const b=e.target.closest("button");if(!b)return;const d=b.dataset;
+  const reload=()=>{if(mine)affLoadRep(SBH.aff.id,true);else if(AF.sel)affLoadRep(AF.sel);else affLoadList()};
+  if(d.afr){AF.range=d.afr;if(d.afr!=="custom")reload();else mine?affRender():renderAdmin()}
+  else if(d.afg){AF.group=d.afg;reload()}
+  else if(d.afcopy!==undefined){const i=root.querySelector("#afLinkOut");try{navigator.clipboard.writeText(i.value).then(()=>toast("Link copied"),()=>{i.select();toast("Select and copy the link")})}catch(x){i.select()}}
+}
+function afLinkUpd(root){const r=AF.rep;if(!r)return;const to=root.querySelector("#afTo"),ch=root.querySelector("#afCh"),o=root.querySelector("#afLinkOut");if(!to||!o)return;
+  o.value=afLink(r.aff.code,to.value==="__cp"?"":to.value,ch.value,to.value==="__cp"?r.aff.coupon:"")}
+function afDate(el,mine){AF[el.dataset.afd]=el.value;if(AF.from){mine?affLoadRep(SBH.aff.id,true):AF.sel?affLoadRep(AF.sel):affLoadList()}}
+function affRender(){let v=document.getElementById("affView");
+  if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
+    v.addEventListener("click",e=>{afClick(e,v,true);if(e.target.closest("[data-afout]"))SBH.signOut()});
+    v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true)})}
+  const me=SBH.aff;
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><span class="afwho">@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
+  afLinkUpd(v)}
+const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;affRender();affLoadRep(me.id,true)};
 const sig = (now=Date.now()) => DB.sales.map(s=>saleStatus(s,now)).join();
 let view=null;
 function route(){

@@ -14,7 +14,7 @@ const SRC=rd('src/app.js'),CH=chunks(SRC);
 const ADM0=CH.find(c=>/^\/\* =+ ADMIN =+ \*\/$/.test(c.text.trim())).from;
 const TAIL0=CH.find(c=>/^\/\* --- routing between shop and admin --- \*\/$/.test(c.text.trim())).from;
 const inAdm=c=>c.from>=ADM0&&c.from<TAIL0;
-const KEEP=new Set(['toast','armed','stLabel','NF_TYPES','nfIcon','bcActive','activeBroadcasts','VIS_KEY','VIS','trackVisit','AFF_KEY','affDone','affCapture',
+const KEEP=new Set(['toast','armed','stLabel','NF_TYPES','nfIcon','bcActive','activeBroadcasts','VIS_KEY','VIS','trackVisit','AFF_KEY','affDone','affCapture','AF','AF_SRC','AF_ST','AF_STATUS','afChip','afRange','afShop','afLink','afPeriodHTML','afKpis','afDashHTML','affLoadRep','affLoadProds','afClick','afLinkUpd','afDate','affRender','AFF_START',
  'msgText','logMsg','chanList','MQ_FONTS','MQ_SIZE','mqFace','mqEnsureFont','mqFamily','mqSeq','renderMarquee','mqBuild','mqFit',
  'LP_DEFAULT_SVG','defaultPage','deepFill','LP_STACK','SOC_KINDS','SOC_SVG','SOC_NAME','socialUrl','socialsHTML','safeUrl','safeMedia','lpFaces','lpEnsureFonts','lpFamily','videoHTML','HERO_SPOTS','HERO_FX','heroCkShow','heroCkN','heroCkx','heroFloats','heroFill','heroShapes','heroList','heroNorm','ytId','vimeoId','isVideoSrc','HERO_BP','HR_RATIO','HB_SHAPES','HB_FX','heroCar','heroMsg','heroRatio','heroLayout','heroRz','HEX_OK','HDR_SHAPES','HDR_ISHAPES','HDR_BAR','applyHeader','favKey','lpFavicon','renderLanding','sig','lastSig']);
 const decl=t=>{let m;if((m=t.match(/^(?:async\s+)?function\s*\*?\s*(\w+)/)))return[m[1]];
@@ -86,16 +86,8 @@ wr('admin-site/sb.js',SB);
 /* ---------------- backend.js ---------------- */
 const BK=rd('src/backend.js');
 wr('admin-site/backend.js',BK);
-{ // customer: public calls only (no sign-in, no uploads)
-  const a=BK.indexOf('  var SKEY');const b=BK.indexOf('  function nice');
-  const c=BK.indexOf('  async function refresh()');const d=BK.indexOf('  // admin = true');
-  const e=BK.indexOf('  async function rpc');const f=BK.indexOf('  window.SBK = {');
-  if([a,b,c,d,e,f].some(x=>x<0))throw new Error('backend.js markers');
-  let rpcSrc=BK.slice(e,BK.indexOf('  async function login'));
-  rpcSrc=rpcSrc.replace(/    var tok = null;\n    if \(admin\)[^\n]*\n/g,'    var tok = null;\n').replace(/\n    try \{ return await attempt\(tok\); \}\n    catch \(e\) \{[\s\S]*?\n    \}\n  \}\n/,'\n    return attempt(tok);\n  }\n').replace('async function rpc(name, args, admin)','async function rpc(name, args)');
-  const head=BK.slice(0,a).replace(/   - login\(\)[^\n]*\n/,'').replace(/   - upload\(\)[^\n]*\n/,'');
-  wr('site/backend.js',head+BK.slice(b,c)+rpcSrc+'  window.SBK = { on: on, url: URL_, rpc: rpc, fn: fn };\n})();\n');
-}
+// customer site gets the same file: affiliators sign in on the shop at /#partner (the server only lets affiliator accounts see their own numbers)
+wr('site/backend.js',BK);
 
 /* ---------------- html / css / misc ---------------- */
 let html=rd('src/index.html');

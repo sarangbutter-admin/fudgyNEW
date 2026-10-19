@@ -171,6 +171,38 @@
   // Edge Functions (courier prices etc.); admin = true sends the team sign-in
   H.fn = function (name, body, admin) { return K.fn(name, body, !!admin); };
 
+  // affiliators: their own sign-in on the shop address (/#partner); a team account is turned away here
+  if (!H.rpc) H.rpc = function (name, args) { return K.rpc(name, args, true); };
+  if (!H.signOut) H.signOut = function () { K.logout(); location.reload(); };
+  H.partner = function (msg) {
+    if (H.aff) return;
+    var go = async function () {
+      var af = await K.rpc("aff_me", {}, true);
+      if (af && af.aff && typeof window.affStart === "function") { var l = $q("#adLogin"); if (l) l.remove(); H.aff = af; window.affStart(af); return; }
+      K.logout(); throw new Error(af && af.disabled ? "This affiliate account is switched off. Please contact the shop." : "This isn't an affiliate account.");
+    };
+    if (K.signedIn && K.signedIn() && !msg) { go().catch(function (e) { H.partner(e.message); }); return; }
+    var el = $q("#adLogin"); if (el) el.remove();
+    el = document.createElement("div"); el.id = "adLogin";
+    el.innerHTML = '<form class="adl-card" novalidate><h2>Affiliate sign in</h2><p class="adl-sub">Use the username and password the shop gave you.</p>' +
+      '<label>Username<input class="in" id="adlEmail" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>' +
+      '<label>Password<input class="in" id="adlPass" type="password" autocomplete="current-password" required></label>' +
+      '<p class="adl-err" id="adlErr" role="alert" hidden></p><button class="btn btn-blue" type="submit" id="adlGo">Sign in</button>' +
+      '<p class="adl-sub" style="margin-top:12px"><a href="./">← Back to the shop</a></p></form>';
+    document.body.appendChild(el);
+    var err = $q("#adlErr"); if (msg) { err.textContent = msg; err.hidden = false; }
+    el.querySelector("a").addEventListener("click", function () { el.remove(); });
+    el.querySelector("form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var em = $q("#adlEmail").value.trim(), pw = $q("#adlPass").value, b = $q("#adlGo");
+      if (!em || !pw) { err.textContent = "Enter your username and password."; err.hidden = false; return; }
+      if (em.indexOf("@") < 0) em = em.toLowerCase() + "@team.delidome.local";
+      b.disabled = true; b.textContent = "Signing in…"; err.hidden = true;
+      try { await K.login(em, pw); await go(); }
+      catch (ex) { err.textContent = ex.message; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; }
+    });
+  };
+
   /* ================= owner: sign-in ================= */
   var DOCS = ["settings", "page", "marquee", "announcer", "thanks", "proofpop", "payMethods", "alerts", "label", "badges"];
   var COLLS = { sizes: function (o) { return String(o.n); }, categories: function (o) { return o.id; }, addons: function (o) { return o.id; }, sales: function (o) { return o.id; }, coupons: function (o) { return o.id; }, broadcasts: function (o) { return o.id; } };
