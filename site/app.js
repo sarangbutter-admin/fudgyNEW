@@ -2060,7 +2060,7 @@ const sig = (now=Date.now()) => DB.sales.map(s=>saleStatus(s,now)).join();
 let view=null;
 function route(){
   if(view===null&&SBH.on&&!SBH.loaded){view="store";SBH.loadShop();return}
-  view="store";
+  view="store";document.body.classList.add("in-store");
   trackVisit();closeReviews();expireOrders();sanitizeCart();renderBag();renderEditBar();renderStoreStatic();renderStore();
   if(location.hash==="#shop")window.scrollTo(0,0);
 }
