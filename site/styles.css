@@ -1118,3 +1118,10 @@ body.pcd-fx .bell-pay{animation:pcdGlow 1.6s ease-in-out infinite}
 .dome .hdots{position:absolute!important;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:7px;z-index:3;padding:5px 8px;border-radius:999px;background:rgba(0,0,0,.22)}
 .dome .hdots button{width:8px;height:8px;padding:0;border:0;border-radius:999px;background:rgba(255,255,255,.55);transition:width .25s ease,background .25s ease;cursor:pointer}
 .dome .hdots button[aria-current="true"]{width:20px;background:#fff}
+/* Shuffle / Clear box: first tap arms, second tap acts */
+.bp-tools .tool{position:relative}
+.tool.armed2,.barrand.armed2{box-shadow:0 0 0 3px #E8384F;animation:armShake .35s ease-out}
+.armtip{position:absolute;left:50%;bottom:calc(100% + 9px);transform:translateX(-50%);background:#FFD43B;color:#000096;box-shadow:0 4px 12px rgba(0,0,40,.35);font-size:12px;font-weight:800;line-height:1.2;padding:6px 11px;border-radius:999px;white-space:nowrap;pointer-events:none;z-index:6;animation:armTipIn .18s ease-out}
+.armtip::after{content:"";position:absolute;left:50%;top:100%;margin-left:-5px;border:5px solid transparent;border-top-color:#FFD43B}
+@keyframes armTipIn{from{opacity:0;transform:translate(-50%,6px) scale(.85)}}
+@keyframes armShake{0%,100%{transform:none}30%{transform:translateX(-3px) rotate(-3deg)}65%{transform:translateX(3px) rotate(3deg)}}

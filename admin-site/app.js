@@ -1253,9 +1253,14 @@ $("#slots").addEventListener("click",e=>{const b=e.target.closest("[data-slot]")
   clearSlotArm();slotArm={i,t:now,timer:setTimeout(clearSlotArm,900)};b.classList.add("armed")});
 $("#slots").addEventListener("keydown",e=>{const b=e.target.closest("[data-slot]");if(b&&(e.key==="Delete"||e.key==="Backspace")){e.preventDefault();clearSlotArm();removeAt(+b.dataset.slot)}});
 $("#fillRest").addEventListener("click",fillRest);
-$("#randBtn").addEventListener("click",()=>guardBox("shuf",randomFill));
-$("#barRand").addEventListener("click",()=>guardBox("shuf",()=>{randomFill();if(DB.settings.rbScroll!==false)setTimeout(showMyBox,260)}));
-$("#clearBtn").addEventListener("click",()=>guardBox("clear",clearBox));
+// Shuffle (full box) and Clear box need a second tap within 1.5 s, so a stray tap can't undo a box
+let armBtn={el:null,t:0,timer:0};
+function disarmBtn(){clearTimeout(armBtn.timer);if(armBtn.el){armBtn.el.classList.remove("armed2");armBtn.el.querySelectorAll(".armtip").forEach(x=>x.remove())}armBtn.el=null}
+function dblTap(el,msg,fn){const now=Date.now();if(armBtn.el===el&&now-armBtn.t<=1500){disarmBtn();fn();return}
+  disarmBtn();armBtn={el,t:now,timer:setTimeout(disarmBtn,1500)};el.classList.add("armed2");const tip=document.createElement("span");tip.className="armtip";tip.setAttribute("role","status");tip.textContent=msg;el.appendChild(tip)}
+$("#randBtn").addEventListener("click",()=>{if(!full()){disarmBtn();guardBox("shuf",randomFill);return}dblTap($("#randBtn"),"Tap again to shuffle",()=>guardBox("shuf",randomFill))});
+$("#barRand").addEventListener("click",()=>{const go=()=>guardBox("shuf",()=>{randomFill();if(DB.settings.rbScroll!==false)setTimeout(showMyBox,260)});if(!full()){disarmBtn();go();return}dblTap($("#barRand"),"Tap again to shuffle",go)});
+$("#clearBtn").addEventListener("click",()=>{if(!boxN())return;dblTap($("#clearBtn"),"Tap again to clear",()=>guardBox("clear",clearBox))});
 $("#tab1").addEventListener("click",()=>goStep(1));
 $("#tab2").addEventListener("click",()=>goStep(2));
 $("#backBtn").addEventListener("click",()=>goStep(1));
