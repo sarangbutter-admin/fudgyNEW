@@ -1140,3 +1140,27 @@ body.pcd-fx .bell-pay{animation:pcdGlow 1.6s ease-in-out infinite}
 .tiertip.out{opacity:0;transform:translateY(-4px)}
 @keyframes tierTipIn{from{opacity:0;transform:translateY(6px) scale(.9)}}
 .tierempty{grid-column:1/-1;text-align:center;color:var(--muted);padding:24px 8px}
+/* closed box: lid with the logo, ribbon, bow and lock */
+.slotwrap{position:relative;margin-top:16px}
+.slotwrap .slots{margin-top:0}
+.boxlid{position:absolute;inset:-6px;z-index:4;cursor:pointer;-webkit-tap-highlight-color:transparent;transform-origin:50% 100%}
+.boxlid[hidden]{display:none}
+.boxlid .lidin{position:absolute;inset:0;border-radius:20px;background:#fff;overflow:hidden;box-shadow:0 12px 26px rgba(0,0,40,.4),inset 0 -8px 0 #e6e9ff}
+.boxlid .lg{position:absolute;left:0;width:70%;top:50%;transform:translateY(-50%);display:grid;justify-items:center;gap:4px;color:var(--blue)}
+.boxlid .lg svg,.boxlid .lg img{width:56px;height:auto;max-height:46px;object-fit:contain}
+.boxlid .lg b{font:800 clamp(16px,4.6vw,22px)/1 var(--display);letter-spacing:-.01em}
+.boxlid .rib{position:absolute;background:linear-gradient(90deg,#B81E3A,#E8384F 25%,#F45B6E 50%,#E8384F 75%,#B81E3A)}
+.boxlid .rv{top:0;bottom:0;left:78%;width:18px;margin-left:-9px;transform-origin:50% 0}
+.boxlid .rh{left:0;right:0;top:32%;height:18px;margin-top:-9px;transform-origin:0 50%;background:linear-gradient(180deg,#B81E3A,#E8384F 25%,#F45B6E 50%,#E8384F 75%,#B81E3A)}
+.boxlid .shine{position:absolute;top:-20px;bottom:-20px;left:-40%;width:60px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent);transform:skewX(-18deg);pointer-events:none}
+.boxlid .bow{position:absolute;left:78%;top:32%;width:74px;height:56px;margin:-27px 0 0 -37px;transform-origin:50% 55%;overflow:visible;animation:bowSway 3.2s ease-in-out infinite}
+.boxlid .lidlock{position:absolute;right:10px;bottom:10px;width:36px;height:36px;border-radius:50%;background:#FFD43B;display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,40,.3),0 0 0 4px rgba(255,212,59,.35);animation:lockGlow 2.4s ease-in-out infinite}
+.boxlid .lidlock svg{width:20px;height:20px}
+@keyframes bowSway{0%,100%{rotate:-3deg}50%{rotate:3deg}}
+@keyframes lockGlow{0%,100%{box-shadow:0 4px 10px rgba(0,0,40,.3),0 0 0 4px rgba(255,212,59,.35)}50%{box-shadow:0 4px 10px rgba(0,0,40,.3),0 0 0 9px rgba(255,212,59,.1)}}
+.bpdone{background:#2FBF71;color:#fff!important;opacity:1!important;border-radius:999px;padding:3px 10px;font-weight:800;font-size:12px!important}
+.bpdone[hidden]{display:none}
+.tool.lockedout,.barrand.lockedout{opacity:.42;filter:grayscale(1);border-style:dashed}
+.tool.openbox{background:#FFD43B;color:#000096;border-color:#FFD43B;font-weight:800}
+.closecta{background:#FFD43B!important;color:#000096!important;border-color:#FFD43B!important}
+@media (prefers-reduced-motion:reduce){.boxlid .bow,.boxlid .lidlock{animation:none}}

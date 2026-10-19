@@ -356,7 +356,7 @@ const fresh = () => ({size:6, box:[], auto:[], step:1, mode:"pickup", speed:"sch
 let S = fresh(), hadCart=false;
 try{const s=JSON.parse(localStorage.getItem(CART_KEY)||"null");if(s&&Array.isArray(s.box)){S={...S,...s,step:s.step===2?2:1};hadCart=true;
   }}catch(e){}
-const saveCart = () => {try{localStorage.setItem(CART_KEY,JSON.stringify({size:S.size,box:S.box,auto:S.auto,mode:S.mode,speed:S.speed,note:S.note,addons:S.addons,editId:S.editId||null,day:S.day,time:S.time,step:S.step,coupon:S.coupon||""}))}catch(e){}};
+const saveCart = () => {try{localStorage.setItem(CART_KEY,JSON.stringify({size:S.size,box:S.box,auto:S.auto,mode:S.mode,speed:S.speed,note:S.note,addons:S.addons,editId:S.editId||null,day:S.day,time:S.time,step:S.step,coupon:S.coupon||"",closed:!!S.closed}))}catch(e){}};
 const activeSizes = () => DB.sizes.filter(s=>s.active).sort((a,b)=>a.n-b.n);
 const heldOwn = id => {if(!S.editId||view!=="store")return 0;const o=DB.orders.find(x=>x.id===S.editId);return o&&o.holds&&o.status==="awaiting"?(o.items[id]||0):0};
 const stockLeft = p => p&&p.track?Math.max(0,p.stock+heldOwn(p.id)):Infinity;
@@ -377,7 +377,8 @@ function sanitizeCart(){
     S.box=nb;S.auto=au}
   S.addons=(S.addons||[]).filter(id=>DB.addons.find(a=>a.id===id&&a.active));
   if(S.editId){const eo=DB.orders.find(x=>x.id===S.editId);if(!eo||eo.status!=="awaiting")S.editId=null}
-  if(!full())S.step=1;
+  if(!full())S.closed=false;else if(S.step===2)S.closed=true;
+  if(!full()||!S.closed)S.step=1;
 }
 // the box keeps its spots: a removed cookie leaves an empty spot (null) that is filled again later, nothing moves up
 const boxN = () => S.box.filter(Boolean).length;
@@ -540,7 +541,7 @@ function renderStoreStatic(){
 }
 function ctaState(){
   const left=S.size-boxN();
-  if(S.step===1) return left>0?{label:`Pick ${left} more`,dis:false,go:"pick"}:{label:"Choose a day",dis:false,go:"step2"};
+  if(S.step===1) return left>0?{label:`Pick ${left} more`,dis:false,go:"pick"}:!S.closed?{label:"🔒 Close the box",dis:false,go:"close"}:{label:"Choose a day",dis:false,go:"step2"};
   if(!S.day||!S.time) return {label:"Pick a day and time",dis:false,go:"when"};
   if(bsPending(S))return {label:`Checkout (${money(total())})`,dis:false,go:"needcourier"};
   return {label:`Checkout (${money(total())})`,dis:false,go:"checkout"};
@@ -568,7 +569,8 @@ function renderStore(){
   $("#tab1").setAttribute("aria-current",S.step===1?"step":"false");
   $("#tab2").setAttribute("aria-current",S.step===2?"step":"false");
   $("#tab1").classList.toggle("done",S.step===2&&full());
-  $("#tab2").disabled=!full();
+  $("#tab2").disabled=!(full()&&S.closed);
+  renderLid();
   document.querySelectorAll("[data-opt]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.opt===optOf(S)));
   {const k=optOf(S),st=DB.settings;const fdp=k!=="pickup"?freeDelSale(S.size):null;$("#modeHint").textContent=(fdp?`🚚 Free delivery promo is on: ${fdp.name}. `:"")+(k==="sameday"?`Sameday shipment adds ${money(st.samedayFee??st.deliveryFee)}. Order before ${fmtHour(st.samedayCutoff)} and we ship about ${fmtLead(optLead("sameday"))} after your payment is confirmed. We deliver within ${st.deliveryKm} km of the shop.`:k==="scheduled"?`Scheduled delivery adds ${money(st.deliveryFee)}. Pick a day and time. We deliver within ${st.deliveryKm} km of the shop.`:"Free pickup at the front counter. Pick a day and time.");}
   document.querySelectorAll(".day").forEach(b=>b.setAttribute("aria-pressed",b.dataset.day===S.day));
@@ -599,7 +601,7 @@ function renderStore(){
   renderCoupon(q);renderGiftBox();
   $("#total").textContent=money(total());
   const c=ctaState();
-  for(const b of [$("#panelCta"),$("#barCta")]){b.textContent=c.label;b.disabled=c.dis;b.dataset.go=c.go||"";b.classList.toggle("ready",!c.dis&&c.go!=="when"&&c.go!=="needcourier");b.classList.toggle("pickmore",c.go==="pick")}
+  for(const b of [$("#panelCta"),$("#barCta")]){b.textContent=c.label;b.disabled=c.dis;b.dataset.go=c.go||"";b.classList.toggle("ready",!c.dis&&c.go!=="when"&&c.go!=="needcourier");b.classList.toggle("pickmore",c.go==="pick");b.classList.toggle("closecta",c.go==="close")}
   if(c.go!=="needcourier"){const m=$("#ctaMsg");if(m)m.hidden=true}
   $("#clearBtn").disabled=!boxN();
   $("#randBtn").disabled=!availProducts().length;
@@ -722,7 +724,7 @@ function celebrate(){if(RM)return;const p=$(".boxpanel");
   if(inView(p.getBoundingClientRect()))crumbs(p.querySelector(".slots"),{dough:"#FFFFFF",edge:"#D9DCFA",chips:["#FFFFFF","#EEF0FF"]})}
 /* --- box actions --- */
 // a smaller box: the cookies move up to fit
-function setSize(n){S.size=n;if(S.box.slice(0,n).filter(Boolean).length<boxN()||S.box.length>n){const keep=S.box.map((id,i)=>[id,!!(S.auto&&S.auto[i])]).filter(x=>x[0]).slice(0,n);S.box=keep.map(x=>x[0]);S.auto=keep.map(x=>x[1])}if(!full())S.step=1;renderStore()}
+function setSize(n){if(S.closed&&n!==S.size){S.closed=false;toast("Box opened so you can change the size")}S.size=n;if(S.box.slice(0,n).filter(Boolean).length<boxN()||S.box.length>n){const keep=S.box.map((id,i)=>[id,!!(S.auto&&S.auto[i])]).filter(x=>x[0]).slice(0,n);S.box=keep.map(x=>x[0]);S.auto=keep.map(x=>x[1])}if(!full())S.step=1;renderStore()}
 function cpMsg(t,ok){const m=$("#cpnMsg");if(!m)return;m.textContent=t||"";m.hidden=!t;m.classList.toggle("ok",!!ok);clearTimeout(cpMsg.t);if(t)cpMsg.t=setTimeout(()=>{m.hidden=true},6000)}
 function renderGiftHint(){
   const el=$("#giftHint");if(!el)return;const pl=giftPlan(S.size);
@@ -783,15 +785,17 @@ $("#menuGrid").addEventListener("click",e=>{
   const w=e.target.closest(".pwrap, h4");if(!w)return;const card=w.closest(".card");if(!card||card.classList.contains("out"))return;
   add(card.dataset.id,card)});
 // box already full: a small bubble right on the tapped flavor (not the toast at the bottom)
-function fullMsg(card){
-  const w=card&&card.querySelector(".pwrap");if(!w){toast("Your box is full. Double-tap a cookie in your box to take it out.");return}
+function fullMsg(card,closed){
+  const ttl=closed?"Your box is closed":"Your box is full!",sub=closed?"Please open it to change your cookies.":"Double-tap a cookie in your box to take it out first.";
+  const w=card&&card.querySelector(".pwrap");if(!w){toast(`${ttl} ${sub}`);return}
   let b=w.querySelector(".fullmsg");if(b)b.remove();
   b=document.createElement("div");b.className="fullmsg";b.setAttribute("role","status");
-  b.innerHTML=`<b>Your box is full!</b><span>Double-tap a cookie in your box to take it out first.</span>`;w.appendChild(b);
+  b.innerHTML=`<b>${ttl}</b><span>${sub}</span>`;w.appendChild(b);
   const r=b.getBoundingClientRect(),vw=document.documentElement.clientWidth,dx=r.left<8?8-r.left:r.right>vw-8?vw-8-r.right:0;if(dx){b.style.left=`calc(50% + ${dx}px)`;b.style.setProperty("--ax",-dx+"px")}
   if(!RM){shake(w.querySelector(".plate")||w);b.animate([{opacity:0,transform:"translate(-50%,8px) scale(.7)"},{opacity:1,transform:"translate(-50%,0) scale(1.06)",offset:.6},{opacity:1,transform:"translate(-50%,0) scale(1)"}],{duration:320,easing:"ease-out"})}
   clearTimeout(b._t);b._t=setTimeout(()=>{if(RM){b.remove();return}b.animate([{opacity:1},{opacity:0,transform:"translate(-50%,-10px)"}],{duration:300,easing:"ease-in"}).onfinish=()=>b.remove()},2400)}
 function add(id,card){
+  if(S.closed&&full()){fullMsg(card,true);return}
   if(full()){fullMsg(card);return}
   if(countOf(id)>=stockLeft(prod(id))){toast(`That's all we have of ${prod(id).name} right now`);return}
   const idx=firstEmpty();if(idx<0)return;S.box[idx]=id;S.auto=S.auto||[];S.auto[idx]=false;
@@ -806,7 +810,7 @@ function removeAt(i){
   const id=S.box[i];if(id===undefined)return;ghostOut(i);S.box[i]=null;if(S.auto)S.auto[i]=false;S.step=1;renderStore();
   if(!RM){const card=document.querySelector(`.card[data-id="${id}"]`);if(card&&inView(card.getBoundingClientRect())){shake(card.querySelector(".plate")||card.querySelector("h4"));bump(card.querySelector("output"))}}
 }
-function removeOne(id,card){const i=S.box.lastIndexOf(id);if(i<0)return;removeAt(i);if(card&&!RM)tag(card.querySelector(".stepper"),"−1")}
+function removeOne(id,card){if(S.closed&&full()){fullMsg(card,true);return}const i=S.box.lastIndexOf(id);if(i<0)return;removeAt(i);if(card&&!RM)tag(card.querySelector(".stepper"),"−1")}
 const randomId = () => {const a=pickable().filter(tierOk);return a.length?a[Math.floor(Math.random()*a.length)].id:null};
 function fillBox(base){
   S.auto=S.auto||[];let k=0;while(!full()){const id=randomId(),at=firstEmpty();if(!id||at<0)break;S.box[at]=id;S.auto[at]=true;S.shuf=1;pop.set(at,base+k++*80)}
@@ -1004,7 +1008,46 @@ function scrollToEl(el){
     window.scrollTo({top:Math.max(0,y),behavior:"instant"})};
   go();requestAnimationFrame(go);setTimeout(go,120);setTimeout(go,400);
 }
-function goStep(n){if(n===2&&!full())return;S.step=n;renderStore();
+/* closing the box: a full box is closed (lid with the logo, ribbon and bow) before the customer chooses a day.
+   While closed, flavors, Shuffle and Clear box are locked. Open it with the Open box button, or double-tap the lid. */
+function renderLid(){const on=!!(S.closed&&full()),lid=$("#boxLid");
+  if(lid.hidden===on){lid.hidden=!on;lid.classList.remove("anim")}
+  if(on){$("#lidMark").innerHTML=$("#logoMark").innerHTML;$("#lidName").textContent=$("#brandTxt").textContent}
+  $("#bpDone").hidden=!on;$("#bpCount").hidden=on;$("#openBtn").hidden=!on;
+  [$("#randBtn"),$("#clearBtn"),$("#barRand")].forEach(b=>b&&b.classList.toggle("lockedout",on));
+  $(".boxpanel").classList.toggle("isclosed",on)}
+function closeBox(){if(!full())return;
+  const play=()=>{S.closed=true;renderStore();if(RM)return;const lid=$("#boxLid"),q=x=>lid.querySelector(x);
+    lid.classList.add("anim");
+    lid.animate([{transform:"perspective(600px) translateY(-150px) rotateX(-60deg)",opacity:0},{opacity:1,offset:.25},{transform:"perspective(600px) translateY(6px) rotateX(0)",offset:.72},{transform:"perspective(600px) translateY(-6px) scale(1.01,.99)",offset:.86},{transform:"none"}],{duration:620,easing:"cubic-bezier(.5,0,.3,1)"});
+    $("#slotWrap").animate([{transform:"none"},{transform:"scale(1.03,.95)",offset:.5},{transform:"none"}],{duration:300,delay:420,easing:"ease-out"});
+    q(".lg").animate([{transform:"scale(.7)",opacity:0},{transform:"scale(1.08)",opacity:1,offset:.7},{transform:"scale(1)"}],{duration:420,delay:420,easing:"ease-out",fill:"backwards"});
+    q(".rv").animate([{transform:"scaleY(0)"},{transform:"scaleY(1)"}],{duration:300,delay:720,easing:"ease-out",fill:"backwards"});
+    q(".rh").animate([{transform:"scaleX(0)"},{transform:"scaleX(1)"}],{duration:300,delay:900,easing:"ease-out",fill:"backwards"});
+    q(".bow").animate([{transform:"scale(0) rotate(-40deg)"},{transform:"scale(1.25) rotate(8deg)",offset:.6},{transform:"scale(1) rotate(0)"}],{duration:480,delay:1150,easing:"ease-out",fill:"backwards"});
+    q(".lidlock").animate([{transform:"scale(0) rotate(-30deg)"},{transform:"scale(1.25)",offset:.6},{transform:"scale(1)"}],{duration:420,delay:1350,easing:"ease-out",fill:"backwards"});
+    q(".shine").animate([{left:"-40%"},{left:"130%"}],{duration:700,delay:1250,easing:"ease-in-out",fill:"backwards"});
+    $("#bpDone").animate([{transform:"scale(0)"},{transform:"scale(1.2)",offset:.6},{transform:"scale(1)"}],{duration:420,delay:1400,easing:"ease-out",fill:"backwards"});
+    setTimeout(()=>{const b=q(".bow").getBoundingClientRect();boxBurst(b.left+b.width/2,b.top+b.height/2)},1300)};
+  const p=$(".boxpanel"),r=$("#slotWrap").getBoundingClientRect();
+  if(r.top<0||r.bottom>innerHeight){showMyBox();setTimeout(play,450)}else play()}
+function boxBurst(cx,cy){const cols=["#FFD43B","#E8384F","#2FBF71","#4DABF7","#FFFFFF","#F783AC"];
+  for(let i=0;i<26;i++){const c=fx("");const w=5+Math.random()*4;Object.assign(c.style,{width:w+"px",height:w*1.5+"px",borderRadius:"2px",background:cols[i%cols.length]});
+    const a=-Math.PI/2+(Math.random()-.5)*2.6,v=90+Math.random()*110,x=Math.cos(a)*v,y=Math.sin(a)*v,r=Math.random()*720-360;
+    c.animate([{transform:`translate(${cx}px,${cy}px) rotate(0)`,opacity:1},{transform:`translate(${cx+x}px,${cy+y}px) rotate(${r/2}deg)`,opacity:1,offset:.45},{transform:`translate(${cx+x*1.2}px,${cy+y+110}px) rotate(${r}deg)`,opacity:0}],{duration:1300+Math.random()*400,easing:"cubic-bezier(.2,.7,.4,1)"}).onfinish=()=>c.remove()}}
+function openBox(){if(!S.closed)return;const lid=$("#boxLid"),q=x=>lid.querySelector(x);
+  const done=()=>{S.closed=false;if(S.step===2)S.step=1;renderStore()};
+  if(RM||lid.hidden){done();return}
+  q(".bow").animate([{transform:"none",opacity:1},{transform:"translateY(-20px) rotate(90deg) scale(.4)",opacity:0}],{duration:280,easing:"ease-in",fill:"forwards"});
+  q(".rh").animate([{transform:"scaleX(1)"},{transform:"scaleX(0)"}],{duration:240,easing:"ease-in",fill:"forwards"});
+  q(".rv").animate([{transform:"scaleY(1)"},{transform:"scaleY(0)"}],{duration:240,delay:80,easing:"ease-in",fill:"forwards"});
+  q(".lidlock").animate([{transform:"scale(1)"},{transform:"scale(0)"}],{duration:200,fill:"forwards"});
+  lid.animate([{transform:"none",opacity:1},{transform:"perspective(600px) translateY(-140px) rotateX(-55deg) rotate(-6deg)",opacity:0}],{duration:450,delay:260,easing:"ease-in",fill:"forwards"}).onfinish=()=>{lid.getAnimations({subtree:true}).forEach(a=>a.cancel());done()}}
+let lidArm=0;
+$("#boxLid").addEventListener("click",()=>{const now=Date.now(),lid=$("#boxLid");if(now-lidArm<=900){lidArm=0;lid.querySelectorAll(".armtip").forEach(x=>x.remove());openBox();return}
+  lidArm=now;lid.querySelectorAll(".armtip").forEach(x=>x.remove());const t=document.createElement("span");t.className="armtip";t.textContent="Tap again to open";lid.appendChild(t);setTimeout(()=>{t.remove()},900)});
+$("#openBtn").addEventListener("click",openBox);
+function goStep(n){if(n===2&&!(full()&&S.closed))return;S.step=n;renderStore();
   if(document.activeElement)document.activeElement.blur();
   scrollToEl($(n===2?"#step2":"#build"))}
 // point at a field without opening the phone keyboard; the customer taps it when ready
@@ -1021,6 +1064,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeCoWarn()});
 function cta(go){if(go==="pick"){if(document.activeElement)document.activeElement.blur();scrollToEl($("#menuGrid"));return}
   if(go==="when"){if(document.activeElement)document.activeElement.blur();const sd=$("#dayBlock").hidden;scrollToEl($(!sd&&!S.day?"#dayBlock":!sd&&S.day&&!$("#timeBlock").hidden?"#timeBlock":"#step2"));return}
   if(go==="needcourier"){bsNudge();return}
+  if(go==="close"){closeBox();return}
   if(go==="step2")goStep(2);else if(go==="checkout")openCoWarn()}
 /* courier choice in the box panel (delivery + Biteship on): a pop-up that reuses the checkout courier box */
 function bsNudge(){
@@ -1255,16 +1299,17 @@ function clearSlotArm(){clearTimeout(slotArm.timer);document.querySelectorAll(".
 $("#slots").addEventListener("click",e=>{const b=e.target.closest("[data-slot]");if(!b)return;const i=+b.dataset.slot,now=Date.now();
   if(slotArm.i===i&&now-slotArm.t<=900){clearSlotArm();removeAt(i);return}
   clearSlotArm();slotArm={i,t:now,timer:setTimeout(clearSlotArm,900)};b.classList.add("armed")});
-$("#slots").addEventListener("keydown",e=>{const b=e.target.closest("[data-slot]");if(b&&(e.key==="Delete"||e.key==="Backspace")){e.preventDefault();clearSlotArm();removeAt(+b.dataset.slot)}});
+$("#slots").addEventListener("keydown",e=>{const b=e.target.closest("[data-slot]");if(b&&!S.closed&&(e.key==="Delete"||e.key==="Backspace")){e.preventDefault();clearSlotArm();removeAt(+b.dataset.slot)}});
 $("#fillRest").addEventListener("click",fillRest);
 // Shuffle (full box) and Clear box need a second tap within 1.5 s, so a stray tap can't undo a box
 let armBtn={el:null,t:0,timer:0};
 function disarmBtn(){clearTimeout(armBtn.timer);if(armBtn.el){armBtn.el.classList.remove("armed2");armBtn.el.querySelectorAll(".armtip").forEach(x=>x.remove())}armBtn.el=null}
 function dblTap(el,msg,fn){const now=Date.now();if(armBtn.el===el&&now-armBtn.t<=1500){disarmBtn();fn();return}
   disarmBtn();armBtn={el,t:now,timer:setTimeout(disarmBtn,1500)};el.classList.add("armed2");const tip=document.createElement("span");tip.className="armtip";tip.setAttribute("role","status");tip.textContent=msg;el.appendChild(tip)}
-$("#randBtn").addEventListener("click",()=>{if(!full()){disarmBtn();guardBox("shuf",randomFill);return}dblTap($("#randBtn"),"Tap again to shuffle",()=>guardBox("shuf",randomFill))});
-$("#barRand").addEventListener("click",()=>{const go=()=>guardBox("shuf",()=>{randomFill();if(DB.settings.rbScroll!==false)setTimeout(showMyBox,260)});if(!full()){disarmBtn();go();return}dblTap($("#barRand"),"Tap again to shuffle",go)});
-$("#clearBtn").addEventListener("click",()=>{if(!boxN())return;dblTap($("#clearBtn"),"Tap again to clear",()=>guardBox("clear",clearBox))});
+function closedTip(el){disarmBtn();armBtn={el,t:0,timer:setTimeout(disarmBtn,1600)};const tip=document.createElement("span");tip.className="armtip";tip.setAttribute("role","status");tip.textContent="Box is closed. Open it first";el.appendChild(tip);if(!RM)shake(el)}
+$("#randBtn").addEventListener("click",()=>{if(S.closed&&full()){closedTip($("#randBtn"));return}if(!full()){disarmBtn();guardBox("shuf",randomFill);return}dblTap($("#randBtn"),"Tap again to shuffle",()=>guardBox("shuf",randomFill))});
+$("#barRand").addEventListener("click",()=>{if(S.closed&&full()){closedTip($("#barRand"));return}const go=()=>guardBox("shuf",()=>{randomFill();if(DB.settings.rbScroll!==false)setTimeout(showMyBox,260)});if(!full()){disarmBtn();go();return}dblTap($("#barRand"),"Tap again to shuffle",go)});
+$("#clearBtn").addEventListener("click",()=>{if(S.closed&&full()){closedTip($("#clearBtn"));return}if(!boxN())return;dblTap($("#clearBtn"),"Tap again to clear",()=>guardBox("clear",clearBox))});
 $("#tab1").addEventListener("click",()=>goStep(1));
 $("#tab2").addEventListener("click",()=>goStep(2));
 $("#backBtn").addEventListener("click",()=>goStep(1));
@@ -1644,7 +1689,7 @@ function renderEditBar(){
 }
 function startEdit(id){
   const o=DB.orders.find(x=>x.id===id);if(!o||o.status!=="awaiting"){toast("This order can't be edited any more");return}
-  S.editId=id;S.size=o.size;S.box=Object.entries(o.items).flatMap(([pid,n])=>Array(n).fill(pid));S.auto=[];S.mode=o.mode;S.speed=o.speed==="sameday"?"sameday":"scheduled";S.note=o.note||"";S.addons=[...o.addons];S.coupon=o.coupon||"";
+  S.editId=id;S.size=o.size;S.box=Object.entries(o.items).flatMap(([pid,n])=>Array(n).fill(pid));S.auto=[];S.closed=true;S.mode=o.mode;S.speed=o.speed==="sameday"?"sameday":"scheduled";S.note=o.note||"";S.addons=[...o.addons];S.coupon=o.coupon||"";
   S.day=dayOptions().some(d=>ymd(d)===o.day)?o.day:null;S.time=S.day?o.time:null;S.step=1;fixWhen();
   closeMO();sanitizeCart();renderStoreStatic();renderStore();renderEditBar();saveCart();scrollToEl($("#build"));toast(`Editing ${o.code}`);
 }

@@ -112,13 +112,20 @@
       </div>
 
       <aside class="boxpanel" aria-label="Your box">
-        <div class="bp-head"><h3 id="bpTitle">Box of 6</h3><span id="bpCount" class="num">0 of 6</span></div>
-        <div class="slots" id="slots"></div>
-        <p class="bp-hint">Double-tap a cookie in the box to take it out. Its spot stays empty for you to fill again. Shuffle and Clear box also need a double-tap.</p>
+        <div class="bp-head"><h3 id="bpTitle">Box of 6</h3><span class="bpdone" id="bpDone" hidden>✓ Box completed</span><span id="bpCount" class="num">0 of 6</span></div>
+        <div class="slotwrap" id="slotWrap"><div class="slots" id="slots"></div>
+          <div class="boxlid" id="boxLid" role="button" tabindex="-1" aria-label="Your box is closed. Double-tap to open it." hidden><div class="lidin">
+            <div class="lg"><span class="lgm" id="lidMark"></span><b id="lidName">delidome</b></div>
+            <i class="rib rv"></i><i class="rib rh"></i><span class="shine"></span>
+            <svg class="bow" viewBox="0 0 86 64" aria-hidden="true"><path d="M40 34 L26 62 L33 58 L38 63 L44 36Z" fill="#D02A44"/><path d="M46 34 L60 62 L53 58 L48 63 L42 36Z" fill="#D02A44"/><path d="M43 30 C30 6 4 4 6 22 C8 38 30 36 43 30Z" fill="#E8384F" stroke="#B81E3A" stroke-width="2"/><path d="M43 30 C56 6 82 4 80 22 C78 38 56 36 43 30Z" fill="#E8384F" stroke="#B81E3A" stroke-width="2"/><circle cx="43" cy="31" r="8" fill="#F45B6E" stroke="#B81E3A" stroke-width="2"/></svg>
+            <span class="lidlock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="#000096"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="#000096" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="15.5" r="1.6" fill="#FFD43B"/></svg></span>
+          </div></div></div>
+        <p class="bp-hint">Double-tap a cookie in the box to take it out. Its spot stays empty for you to fill again. Shuffle and Clear box also need a double-tap. When it's full, close the box to choose a day.</p>
         <p class="bp-note"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 9v5M10 6.2v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Your box may be split into smaller or bigger boxes for delivery safety.</span></p>
         <div class="bp-tools">
           <button class="tool" id="randBtn" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/><circle cx="13" cy="13" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/></svg><span id="randLabel">Random fill</span></button>
           <button class="tool" id="clearBtn" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l1 11h6l1-11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Clear box</button>
+          <button class="tool openbox" id="openBtn" type="button" hidden>🔓 Open box</button>
         </div>
         <dl class="lines" id="lines"></dl>
         <div class="giftwrap" id="giftBox" hidden></div>
