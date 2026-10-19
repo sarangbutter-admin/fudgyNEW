@@ -1399,3 +1399,13 @@ tr.justadded td{background:rgba(0,0,150,.07)}
 .armtip::after{content:"";position:absolute;left:50%;top:100%;margin-left:-5px;border:5px solid transparent;border-top-color:#FFD43B}
 @keyframes armTipIn{from{opacity:0;transform:translate(-50%,6px) scale(.85)}}
 @keyframes armShake{0%,100%{transform:none}30%{transform:translateX(-3px) rotate(-3deg)}65%{transform:translateX(3px) rotate(3deg)}}
+/* flavor filter: All / Premium / No extra cost */
+.tierseg{position:relative;display:flex;background:var(--ice,#EEF0FF);border-radius:999px;padding:3px;margin:0 0 12px;max-width:420px}
+.tierseg[hidden]{display:none}
+.tierseg button{flex:1;border:0;background:transparent;color:var(--blue);font:700 13px/1 var(--body);padding:9px 6px;border-radius:999px;white-space:nowrap;cursor:pointer;transition:background .2s ease,color .2s ease,box-shadow .2s ease}
+.tierseg button[aria-pressed="true"]{background:var(--blue);color:#fff;box-shadow:0 3px 8px rgba(0,0,90,.25)}
+.tiertip{position:absolute;bottom:calc(100% + 9px);background:#FFD43B;color:#000096;font:800 12px/1.25 var(--body);padding:6px 11px;border-radius:12px;max-width:min(300px,100%);width:max-content;text-align:center;pointer-events:none;z-index:6;box-shadow:0 4px 12px rgba(0,0,40,.25);animation:tierTipIn .2s ease-out;transition:opacity .25s ease,transform .25s ease}
+.tiertip::after{content:"";position:absolute;left:var(--ax,50%);top:100%;margin-left:-5px;border:5px solid transparent;border-top-color:#FFD43B}
+.tiertip.out{opacity:0;transform:translateY(-4px)}
+@keyframes tierTipIn{from{opacity:0;transform:translateY(6px) scale(.9)}}
+.tierempty{grid-column:1/-1;text-align:center;color:var(--muted);padding:24px 8px}

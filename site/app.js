@@ -455,6 +455,10 @@ function payDeadlineMs(c){
 const fmtSpan=ms=>{const m=Math.max(1,Math.round(ms/60e3)),h=Math.floor(m/60),r=m%60;return h?`${h} hour${h>1?"s":""}${r?` ${r} min`:""}`:`${r} min`};
 function applyCdLook(){const st=DB.settings,r=document.documentElement;r.style.setProperty("--pcd",st.payCdColor||"#C8102E");r.style.setProperty("--pcdz",({M:1.1,L:1.4,XL:1.8})[st.payCdSize]||1.4);document.body.classList.toggle("pcd-fx",st.payCdFx!==false)}
 let shopCat="all";
+// flavor filter beside "Fill it up": all / premium (extra price) / no extra cost. Also limits Fill the rest and Shuffle.
+let shopTier="all";const TIER_SEEN=new Set();
+const tierOk=p=>shopTier==="all"||(shopTier==="prem"?p.surcharge>0:!(p.surcharge>0));
+const TIER_NAME={prem:"premium",reg:"no-extra-cost"};
 const catName = id => (DB.categories.find(c=>c.id===id)||{}).name||"";
 /* --- badges, best sellers and menu order --- */
 const BADGE_FONTS={display:["Bold display","var(--display)"],body:["Clean","var(--body)"],serif:["Serif",'Georgia,"Times New Roman",serif'],mono:["Typewriter",'ui-monospace,Menlo,Consolas,monospace'],hand:["Handwritten",'"Segoe Script","Bradley Hand","Comic Sans MS",cursive']};
@@ -490,7 +494,9 @@ function renderMenu(){
   if(shopCat!=="all"&&!groups.some(g=>g.id===shopCat))shopCat="all";
   $("#catBar").hidden=groups.length<2;
   $("#catBar").innerHTML=`<button class="fchip" type="button" data-scat="all" aria-pressed="${shopCat==="all"}">All</button>`+groups.map(g=>`<button class="fchip" type="button" data-scat="${g.id}" aria-pressed="${shopCat===g.id}">${esc(g.name)}</button>`).join("");
-  const prods=menuOrder(shopCat==="all"||groups.length<2?vis:vis.filter(p=>shopCat==="none"?!catName(p.cat):p.cat===shopCat)),best=bestIds();
+  const mixed=vis.some(p=>p.surcharge>0)&&vis.some(p=>!(p.surcharge>0));if(!mixed)shopTier="all";
+  const ts=$("#tierSeg");if(ts){ts.hidden=!mixed;ts.querySelectorAll("[data-tier]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.tier===shopTier)))}
+  const prods=menuOrder((shopCat==="all"||groups.length<2?vis:vis.filter(p=>shopCat==="none"?!catName(p.cat):p.cat===shopCat)).filter(tierOk)),best=bestIds();
   $("#menuGrid").innerHTML = prods.map((p,i)=>{const bd=badgesOf(p,best).slice(0,2);
     const out=isOut(p),img=true,badge=p.surcharge>0?`<span class="xtra">+${money(p.surcharge)}</span>`:"",
       low=!out&&p.track&&p.stock<=DB.settings.lowStockAt?`<span class="stk">Only ${p.stock} left</span>`:"";
@@ -499,6 +505,7 @@ function renderMenu(){
       <h4>${esc(p.name)}${img?"":badge}</h4>${(()=>{const r=ratingOf(p);return `<button class="rate${r.n?"":" none"}" type="button" data-reviews="${p.id}" aria-label="${r.n?`${r.avg.toFixed(1)} out of 5 stars, ${r.n} reviews. Read or write a review for ${esc(p.name)}`:`No reviews yet for ${esc(p.name)}`}">${r.n?`<span class="stars">★</span> ${r.avg.toFixed(1)} <span class="cnt">(${r.n})</span>`:"No reviews yet"}</button>`})()}<p>${esc(p.desc)}</p>
       ${out?`<span class="sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:`<div class="stepper"><button type="button" data-act="dec" aria-label="Remove one ${esc(p.name)}">−</button><output aria-live="polite">0</output><button type="button" data-act="inc" aria-label="Add one ${esc(p.name)}">+</button></div>`}
     </div>`}).join("");
+  if(!prods.length)$("#menuGrid").innerHTML=`<p class="tierempty">No ${shopTier==="prem"?"premium":"no-extra-cost"} flavors here. <button class="linkbtn" type="button" data-tierall>Show all flavors</button></p>`;
   $("#xtraHint").hidden=!prods.some(p=>p.surcharge>0&&!isOut(p));
 }
 function renderOpts(){
@@ -800,12 +807,12 @@ function removeAt(i){
   if(!RM){const card=document.querySelector(`.card[data-id="${id}"]`);if(card&&inView(card.getBoundingClientRect())){shake(card.querySelector(".plate")||card.querySelector("h4"));bump(card.querySelector("output"))}}
 }
 function removeOne(id,card){const i=S.box.lastIndexOf(id);if(i<0)return;removeAt(i);if(card&&!RM)tag(card.querySelector(".stepper"),"−1")}
-const randomId = () => {const a=pickable();return a.length?a[Math.floor(Math.random()*a.length)].id:null};
+const randomId = () => {const a=pickable().filter(tierOk);return a.length?a[Math.floor(Math.random()*a.length)].id:null};
 function fillBox(base){
   S.auto=S.auto||[];let k=0;while(!full()){const id=randomId(),at=firstEmpty();if(!id||at<0)break;S.box[at]=id;S.auto[at]=true;S.shuf=1;pop.set(at,base+k++*80)}
-  if(!full())toast("Not enough stock to fill the whole box");
+  if(!full())toast(shopTier==="all"?"Not enough stock to fill the whole box":`Not enough ${TIER_NAME[shopTier]} flavors left to fill the whole box. Switch to All for more.`);
 }
-function fillRest(){if(!pickable().length){toast("Every flavor is out of stock right now");return}fillBox(0);renderStore();if(full())celebrate()}
+function fillRest(){if(!pickable().length){toast("Every flavor is out of stock right now");return}if(!pickable().filter(tierOk).length){toast(`No ${TIER_NAME[shopTier]} flavors left right now. Switch to All.`);return}fillBox(0);renderStore();if(full())celebrate()}
 // shuffle a full box: only the spots the random button filled get new flavors; what the customer picked by hand stays exactly as it is
 function reshuffle(){
   const idx=S.box.map((_,i)=>i).filter(isAuto);
@@ -817,6 +824,7 @@ function reshuffle(){
   S.shuf=1;return true}
 function randomFill(){
   if(!availProducts().length){toast("Every flavor is out of stock right now");return}
+  if(shopTier!=="all"&&!availProducts().filter(tierOk).length){toast(`No ${TIER_NAME[shopTier]} flavors left right now. Switch to All.`);return}
   if(full()){if(!reshuffle())return}
   else fillBox(0);
   renderStore();if(full())celebrate();
@@ -1222,6 +1230,17 @@ $("#rvSheet").addEventListener("submit",e=>{
   rateOrder(o,{[RV.pid]:{n:RV.stars,comment:text}}).then(()=>{RV.stars=0;renderReviews();toast("Thanks for your review");renderMenu();renderStore()}).catch(ex=>{btn.disabled=false;fail(ex.message)});
 });
 $("#catBar").addEventListener("click",e=>{const b=e.target.closest("[data-scat]");if(!b)return;shopCat=b.dataset.scat;renderMenu();renderStore()});
+const TIER_TIP={all:"All flavors",prem:"✨ Special flavors only · Fill & Shuffle use these too",reg:"No extra charge · Fill & Shuffle use these too"};
+function tierTip(seg,btn,text){seg.querySelectorAll(".tiertip").forEach(x=>x.remove());clearTimeout(tierTip.t);
+  const t=document.createElement("span");t.className="tiertip";t.setAttribute("role","status");t.textContent=text;seg.appendChild(t);
+  const sr=seg.getBoundingClientRect(),br=btn.getBoundingClientRect(),tw=t.offsetWidth,bc=br.left+br.width/2-sr.left,left=Math.max(0,Math.min(sr.width-tw,bc-tw/2));
+  t.style.left=left+"px";t.style.setProperty("--ax",(bc-left)+"px");
+  tierTip.t=setTimeout(()=>{t.classList.add("out");setTimeout(()=>t.remove(),250)},2200)}
+$("#menuGrid").addEventListener("click",e=>{if(e.target.closest("[data-tierall]")){shopTier="all";renderMenu();renderStore()}});
+$("#tierSeg").addEventListener("click",e=>{const b=e.target.closest("[data-tier]");if(!b)return;const k=b.dataset.tier,seg=$("#tierSeg");
+  if(k!=="all"&&!availProducts().some(p=>k==="prem"?p.surcharge>0:!(p.surcharge>0))){shopTier="all";renderMenu();renderStore();tierTip(seg,seg.querySelector('[data-tier="all"]'),k==="prem"?"No premium flavors left today":"No no-extra-cost flavors left today");return}
+  if(k===shopTier)return;seg.querySelectorAll(".tiertip").forEach(x=>x.remove());shopTier=k;renderMenu();renderStore();
+  if(!TIER_SEEN.has(k)){TIER_SEEN.add(k);tierTip(seg,seg.querySelector(`[data-tier="${k}"]`),TIER_TIP[k])}});
 function setCustom(n){S.cv=snapCustom(n);if(validCustom(S.size))setSize(S.cv);else renderStore()}
 $("#customBox").addEventListener("click",e=>{const st=e.target.closest("[data-cstep]"),u=e.target.closest("[data-cuse]"),t=DB.settings;
   if(st){const n=(S.cv||t.customMin)+(+st.dataset.cstep)*t.customStep;setCustom(Math.min(Math.max(n,t.customMin),t.customMax))}

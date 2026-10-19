@@ -578,6 +578,9 @@ select.st{border-radius:var(--r-pill);border:0;padding:6px 10px;font-weight:700;
 .in:focus{border-color:var(--blue);outline:none}
 textarea.in{resize:vertical;border-radius:10px}
 .money-in .in{border:0;padding-left:2px}
+.seg{display:inline-flex;background:var(--ice);border-radius:var(--r-pill);padding:3px;flex-wrap:wrap;justify-self:start;width:max-content;max-width:100%}
+.seg button{border:0;background:transparent;border-radius:var(--r-pill);padding:7px 12px;font-weight:600;font-size:13px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--blue);color:var(--white)}
 .danger{border:1.5px solid #F2C2CC;background:var(--white);color:var(--red);border-radius:var(--r-pill);padding:7px 12px;font-weight:600;font-size:13px}
 .danger.armed{background:var(--red);color:var(--white);border-color:var(--red)}
 .ghost{border:1.5px solid var(--line);background:var(--white);color:var(--blue);border-radius:var(--r-pill);padding:7px 12px;font-weight:600;font-size:13px}
@@ -732,6 +735,8 @@ body.pcd-fx .bell-pay{animation:pcdGlow 1.6s ease-in-out infinite}
 .rej-box{display:grid;gap:4px;padding:12px 14px;border-radius:12px;background:#FCE3E8;border:1.5px solid #F2A7B4;color:#7a0018}
 .rej-box b{color:#C8102E;font-size:15px}
 .trk-rej,.bell-rej{color:#C8102E;font-weight:700}
+.oc-b.oc-rejb,.seg .oc-rejb{color:#C8102E;border-color:#C8102E;font-weight:800}
+.oc-b.oc-rejb[aria-pressed="true"],.seg .oc-rejb[aria-pressed="true"]{background:#C8102E;color:#fff;border-color:#C8102E}
 .fchip.fc-rej{color:#C8102E;border-color:#F2A7B4}
 .fchip.fc-rej[aria-pressed="true"]{background:#C8102E;color:#fff;border-color:#C8102E}
 
@@ -1125,3 +1130,13 @@ body.pcd-fx .bell-pay{animation:pcdGlow 1.6s ease-in-out infinite}
 .armtip::after{content:"";position:absolute;left:50%;top:100%;margin-left:-5px;border:5px solid transparent;border-top-color:#FFD43B}
 @keyframes armTipIn{from{opacity:0;transform:translate(-50%,6px) scale(.85)}}
 @keyframes armShake{0%,100%{transform:none}30%{transform:translateX(-3px) rotate(-3deg)}65%{transform:translateX(3px) rotate(3deg)}}
+/* flavor filter: All / Premium / No extra cost */
+.tierseg{position:relative;display:flex;background:var(--ice,#EEF0FF);border-radius:999px;padding:3px;margin:0 0 12px;max-width:420px}
+.tierseg[hidden]{display:none}
+.tierseg button{flex:1;border:0;background:transparent;color:var(--blue);font:700 13px/1 var(--body);padding:9px 6px;border-radius:999px;white-space:nowrap;cursor:pointer;transition:background .2s ease,color .2s ease,box-shadow .2s ease}
+.tierseg button[aria-pressed="true"]{background:var(--blue);color:#fff;box-shadow:0 3px 8px rgba(0,0,90,.25)}
+.tiertip{position:absolute;bottom:calc(100% + 9px);background:#FFD43B;color:#000096;font:800 12px/1.25 var(--body);padding:6px 11px;border-radius:12px;max-width:min(300px,100%);width:max-content;text-align:center;pointer-events:none;z-index:6;box-shadow:0 4px 12px rgba(0,0,40,.25);animation:tierTipIn .2s ease-out;transition:opacity .25s ease,transform .25s ease}
+.tiertip::after{content:"";position:absolute;left:var(--ax,50%);top:100%;margin-left:-5px;border:5px solid transparent;border-top-color:#FFD43B}
+.tiertip.out{opacity:0;transform:translateY(-4px)}
+@keyframes tierTipIn{from{opacity:0;transform:translateY(6px) scale(.9)}}
+.tierempty{grid-column:1/-1;text-align:center;color:var(--muted);padding:24px 8px}
