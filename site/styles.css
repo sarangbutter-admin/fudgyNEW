@@ -1167,3 +1167,10 @@ body.pcd-fx .bell-pay{animation:pcdGlow 1.6s ease-in-out infinite}
 /* unpublished changes: the publish bar floats at the bottom of the screen until you publish or discard */
 .draftbar.busy{position:fixed!important;top:auto;left:auto;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(640px,calc(100vw - 24px));margin:0;z-index:70;box-shadow:0 12px 32px rgba(0,0,40,.28)}
 body.dd-draft .toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))!important}
+/* shop top bar look (Shop settings > Top bar) */
+.top.hdc{background:var(--hd-bg,color-mix(in srgb,var(--white) 92%,transparent))}
+.top .logo.lgs-pill,.top .logo.lgs-rounded,.top .logo.lgs-square{background:var(--lg-bg,#fff);padding:6px 14px 6px 10px}
+.top .logo.lgs-pill{border-radius:999px}.top .logo.lgs-rounded{border-radius:12px}.top .logo.lgs-square{border-radius:3px}
+.top.hdc .logo{color:var(--lg-ink,var(--blue))}
+.top.hdc .bagbtn{background:var(--ic-bg,var(--white));color:var(--ic-ink,var(--blue));border-color:var(--ic-line,var(--line))}
+.top .bagbtn.ics-rounded{border-radius:12px}.top .bagbtn.ics-square{border-radius:3px}

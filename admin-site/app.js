@@ -1860,9 +1860,9 @@ function renderAdmin(){
 /* drafts: each screen publishes (or discards) only the changes made on that screen.
    Shop settings, Boxes & extras, Delivery & courier and Security share one settings document, and Landing page and
    Top banner share the page document, so every changed field remembers the screen it was changed on. */
-const DRAFT_TABS={settings:["settings","boxes","delivery","security"],marquee:["marquee"],page:["landing","hero"]};
-const DRAFT_TAB_NAME={settings:"Shop settings",boxes:"Boxes & extras",delivery:"Delivery & courier",security:"Security",marquee:"Marquee banner",landing:"Landing page",hero:"Top banner"};
-const DRAFT_ALL=Object.values(DRAFT_TABS).flat();
+const DRAFT_TABS={settings:["settings","boxes","delivery","security","badges"],marquee:["marquee"],page:["landing","hero"],thanks:["settings"],proofpop:["settings"],payMethods:["settings"],badges:["badges"]};
+const DRAFT_TAB_NAME={settings:"Shop settings",boxes:"Boxes & extras",delivery:"Delivery & courier",security:"Security",badges:"Badges",marquee:"Marquee banner",landing:"Landing page",hero:"Top banner"};
+const DRAFT_ALL=[...new Set(Object.values(DRAFT_TABS).flat())];
 const DTAG={};   // doc -> {field: screen}
 function draftScan(tab){
   if(!SBH.changed)return;
@@ -3489,8 +3489,16 @@ function viewDelivery(){
 }
 function viewSettings(){
   const s=DB.settings,th=DB.thanks,pp=DB.proofpop,al=DB.alerts;
+  const hc=(l,k,d)=>`<label class="af">${l}<input type="color" data-k="settings::${k}" value="${HEX_OK.test(s[k]||"")?s[k]:d}" style="width:100%;height:42px"></label>`;
+  const hsel=(l,k,opts,d)=>`<label class="af">${l}<select class="in" data-k="settings::${k}">${opts.map(([v,n])=>`<option value="${v}" ${(s[k]||d)===v?"selected":""}>${n}</option>`).join("")}</select></label>`;
   return head("Shop settings","Order cutoff, opening days, payment and the details shown on the shop page. Delivery and couriers are in the Delivery & courier tab.")+MOCK+`
   <div class="stack">
+    <section class="panel"><h2>Top bar</h2><p class="sub">The bar at the top of the shop with your logo, the bell and My orders.</p>
+      <div style="display:flex;gap:10px;align-items:center;margin:10px 0"><label class="sw"><input type="checkbox" data-k="settings::hdrOn" ${s.hdrOn?"checked":""} aria-label="Use my own top bar look"><span></span></label><span class="stlabel">Use my own top bar look${s.hdrOn?"":" (off: the standard white bar)"}</span></div>
+      ${s.hdrOn?`<div class="grid3">${hc("Bar background","hdrBg","#ffffff")}${hc("Logo background","hdrLogoBg","#ffffff")}${hc("Logo text color","hdrLogoInk","#000096")}</div>
+      <div class="grid3" style="margin-top:10px">${hsel("Logo shape","hdrLogoShape",[["none","No box"],["pill","Pill"],["rounded","Rounded box"],["square","Square box"]],"none")}${hsel("Bell and My orders shape","hdrIconShape",[["circle","Circle"],["rounded","Rounded box"],["square","Square box"]],"circle")}</div>
+      <div class="grid3" style="margin-top:10px">${hc("Bell and My orders background","hdrIconBg","#ffffff")}${hc("Icon color","hdrIconInk","#000096")}${hc("Icon border","hdrIconLine","#D9DCFA")}</div>`:""}
+    </section>
     <section class="panel">
       <h2>Ordering</h2><p class="sub">Customers can order up to 7 days ahead.</p>
       <div class="grid3">
@@ -3875,7 +3883,7 @@ am.addEventListener("change",e=>{
     saveDB();toast("Saved");return;
   }
   if(/^settings::(samedayOn|pickupOn|schedOn)$/.test(el.dataset.k||"")&&!el.checked){const t=DB.settings,n=["samedayOn","pickupOn","schedOn"].filter(k=>k!==el.dataset.k.slice(10)&&(k==="samedayOn"?t[k]:t[k]!==false)).length;if(!n){el.checked=true;toast("Keep at least one way to get an order switched on.");return}}
-  if(el.dataset.k&&(el.type==="number"||el.type==="checkbox"||el.tagName==="SELECT")){const {coll,field}=setK(el);saveDB();toast("Saved");if(/^payCd/.test(field))applyCdLook();
+  if(el.dataset.k&&(el.type==="number"||el.type==="checkbox"||el.tagName==="SELECT")){const {coll,field}=setK(el);saveDB();toast("Saved");if(field==="hdrOn"){renderAdmin();return}if(/^payCd/.test(field))applyCdLook();
     if(field==="art"||field==="active"||field==="currency"||field==="track"||field==="stock"||field==="lowStockAt"||field==="cat"||coll==="sizes"||/^custom/.test(field))renderAdmin()}
 });
 /* --- photo upload: auto square-crop + resize to 400px --- */
@@ -4217,6 +4225,13 @@ function lpFavicon(pg){
   if(!lg){dflt();return}
   const im=new Image();im.onload=()=>{try{const c=document.createElement("canvas");c.width=c.height=64;const x=c.getContext("2d"),k=Math.min(64/im.naturalWidth,64/im.naturalHeight),w=im.naturalWidth*k,h=im.naturalHeight*k;x.drawImage(im,(64-w)/2,(64-h)/2,w,h);l.type="image/png";l.href=c.toDataURL("image/png")}catch(e){dflt()}};im.onerror=dflt;im.src=lg;
 }
+// shop top bar: background, logo box and the round icon buttons (Shop settings > Top bar)
+const HDR_SHAPES=["none","pill","rounded","square"],HDR_ISHAPES=["circle","rounded","square"];
+function applyHeader(){const t=DB.settings,top=$(".top"),lg=$(".top .logo"),on=!!t.hdrOn;if(!top)return;
+  top.classList.toggle("hdc",on);lg.className="logo"+(on?" lgs-"+fxOk(t.hdrLogoShape,HDR_SHAPES,"none"):"");
+  const ic=["#bellBtn","#moBtn"].map(x=>$(x)).filter(Boolean);ic.forEach(b=>{HDR_ISHAPES.forEach(k=>b.classList.remove("ics-"+k));if(on)b.classList.add("ics-"+fxOk(t.hdrIconShape,HDR_ISHAPES,"circle"))});
+  const v={"--hd-bg":t.hdrBg,"--lg-bg":t.hdrLogoBg,"--lg-ink":t.hdrLogoInk,"--ic-bg":t.hdrIconBg,"--ic-ink":t.hdrIconInk,"--ic-line":t.hdrIconLine};
+  for(const k in v){if(on&&HEX_OK.test(v[k]||""))top.style.setProperty(k,v[k]);else top.style.removeProperty(k)}}
 function renderLanding(){
   const pg=DB.page,sv=$("#storeView");if(!pg||!sv)return;
   lpEnsureFonts(pg);
@@ -4226,7 +4241,7 @@ function renderLanding(){
   const nm=pg.name||"delidome";document.title=`${nm} Cookie Boxes`;
   $("#brandTxt").textContent=nm;$("#ftBrand").textContent=nm;$(".top .logo").setAttribute("aria-label",`${nm} home`);
   const lg=safeMedia(pg.logo);const mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG;$("#logoMark").innerHTML=mark;$("#ftMark").innerHTML=mark;
-  lpFavicon(pg);
+  lpFavicon(pg);applyHeader();
   heroFill($("#dome"),pg.hero);
   // strip
   const set=DB.settings,closed=set.closedWeekdays.slice().sort().map(d=>DOW_LONG[d]),tok={sizes:listJoin(activeSizes().map(x=>x.n)),cutoff:fmtHour(set.cutoffHour),closed:listJoin(closed).replace(" or "," and ")};
@@ -4788,7 +4803,7 @@ am.addEventListener("change",e=>{const el=e.target;if(A.tab!=="badges")return;if
   const k=el.dataset.bdset;if(!k)return;
   if(k==="autoBest")DB.badges.autoBest=el.checked;
   else if(k==="bestTop")DB.badges.bestTop=Math.max(1,Math.min(10,Math.round(+el.value)||3));
-  else if(k==="menuSort"){DB.settings.menuSort=el.value==="manual"?"manual":"popular";if(SBH.on&&SBH.changed)setTimeout(()=>draftPublish("settings",["menuSort"]),0)}   // the Badges page has no publish bar: the flavor order goes live straight away
+  else if(k==="menuSort"){DB.settings.menuSort=el.value==="manual"?"manual":"popular"}
   saveDB();toast("Saved");renderAdmin()});
 am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||A.tab!=="badges")return;const d=b.dataset;
   if(d.bdnew!==undefined){BD.edit={isNew:true,id:"b"+uid().slice(0,6),text:"⭐ Chef's pick",font:"display",color:"#FFFFFF",bg:"#000096",fx:"shine"};renderAdmin();showNew("#bdForm")}

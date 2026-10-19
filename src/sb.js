@@ -220,7 +220,7 @@
   }
 
   /* ================= owner: load ================= */
-  var HELD = { settings: 1, marquee: 1, page: 1 }, FORCE = {};
+  var HELD = { settings: 1, marquee: 1, page: 1, thanks: 1, proofpop: 1, payMethods: 1, badges: 1 }, FORCE = {};
   var SN = { docs: {}, rows: {}, prods: {}, orders: {} }, SINCE = 0, pollT = null, dirty = false, flushing = false, again = false, flushT = null, failN = 0;
 
   function snapOrder(o) {

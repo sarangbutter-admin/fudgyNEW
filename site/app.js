@@ -2022,6 +2022,12 @@ function lpFavicon(pg){
   if(!lg){dflt();return}
   const im=new Image();im.onload=()=>{try{const c=document.createElement("canvas");c.width=c.height=64;const x=c.getContext("2d"),k=Math.min(64/im.naturalWidth,64/im.naturalHeight),w=im.naturalWidth*k,h=im.naturalHeight*k;x.drawImage(im,(64-w)/2,(64-h)/2,w,h);l.type="image/png";l.href=c.toDataURL("image/png")}catch(e){dflt()}};im.onerror=dflt;im.src=lg;
 }
+const HDR_SHAPES=["none","pill","rounded","square"],HDR_ISHAPES=["circle","rounded","square"];
+function applyHeader(){const t=DB.settings,top=$(".top"),lg=$(".top .logo"),on=!!t.hdrOn;if(!top)return;
+  top.classList.toggle("hdc",on);lg.className="logo"+(on?" lgs-"+fxOk(t.hdrLogoShape,HDR_SHAPES,"none"):"");
+  const ic=["#bellBtn","#moBtn"].map(x=>$(x)).filter(Boolean);ic.forEach(b=>{HDR_ISHAPES.forEach(k=>b.classList.remove("ics-"+k));if(on)b.classList.add("ics-"+fxOk(t.hdrIconShape,HDR_ISHAPES,"circle"))});
+  const v={"--hd-bg":t.hdrBg,"--lg-bg":t.hdrLogoBg,"--lg-ink":t.hdrLogoInk,"--ic-bg":t.hdrIconBg,"--ic-ink":t.hdrIconInk,"--ic-line":t.hdrIconLine};
+  for(const k in v){if(on&&HEX_OK.test(v[k]||""))top.style.setProperty(k,v[k]);else top.style.removeProperty(k)}}
 function renderLanding(){
   const pg=DB.page,sv=$("#storeView");if(!pg||!sv)return;
   lpEnsureFonts(pg);
@@ -2031,7 +2037,7 @@ function renderLanding(){
   const nm=pg.name||"delidome";document.title=`${nm} Cookie Boxes`;
   $("#brandTxt").textContent=nm;$("#ftBrand").textContent=nm;$(".top .logo").setAttribute("aria-label",`${nm} home`);
   const lg=safeMedia(pg.logo);const mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG;$("#logoMark").innerHTML=mark;$("#ftMark").innerHTML=mark;
-  lpFavicon(pg);
+  lpFavicon(pg);applyHeader();
   heroFill($("#dome"),pg.hero);
   // strip
   const set=DB.settings,closed=set.closedWeekdays.slice().sort().map(d=>DOW_LONG[d]),tok={sizes:listJoin(activeSizes().map(x=>x.n)),cutoff:fmtHour(set.cutoffHour),closed:listJoin(closed).replace(" or "," and ")};
@@ -2056,6 +2062,7 @@ function renderLanding(){
   $("#lpTop").innerHTML=pg.blocks.filter(b=>b.pos==="top").map(blk).join("");
   $("#lpBottom").innerHTML=pg.blocks.filter(b=>b.pos!=="top").map(blk).join("");
 }
+const HEX_OK=/^(#[0-9a-f]{6}|transparent)$/i;
 const sig = (now=Date.now()) => DB.sales.map(s=>saleStatus(s,now)).join();
 let view=null;
 function route(){
