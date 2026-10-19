@@ -146,7 +146,7 @@ declare out jsonb := '[]'::jsonb; a record;
 begin
   perform public.assert_owner();
   for a in select id from public.affiliates order by created_at loop
-    out := out || jsonb_build_array((select r -> 'aff' || jsonb_build_object('tot', r -> 'tot') from (select public.aff_report(a.id, p_from, p_to, 'day') r) z));
+    out := out || jsonb_build_array((select r -> 'aff' || jsonb_build_object('tot', r -> 'tot', 'sources', r -> 'sources') from (select public.aff_report(a.id, p_from, p_to, 'day') r) z));
   end loop;
   return out;
 end $$;

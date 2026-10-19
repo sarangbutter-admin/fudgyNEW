@@ -1476,3 +1476,4 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .afmain{max-width:980px;margin:0 auto;padding:16px;display:grid;gap:14px}
 .card.affhl{animation:cardhl 2.4s ease-out}
 @media (max-width:640px){.afrow{grid-template-columns:minmax(110px,1.4fr) repeat(5,minmax(58px,1fr));font-size:12px}}
+.afrow.afsrc{grid-template-columns:minmax(110px,1.3fr) repeat(3,minmax(60px,.8fr)) minmax(90px,1.2fr)}
