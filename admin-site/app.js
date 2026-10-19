@@ -1155,9 +1155,9 @@ function bsPinSet(lat,lng){
   clearTimeout(bsPinT);bsPinT=setTimeout(bsRates,700);
 }
 async function bsMapShow(){
-  const box=$("#bsMap");if(!box||box.hidden&&!(BSD.lat||BSD.area||BSD.mapOpen))return;
+  const box=$("#bsMap");if(!box||!BSD.mapOpen)return;
   let L;try{L=await bsLoadLeaflet()}catch(e){box.hidden=true;const h=$("#bsMapHint");h.hidden=false;h.textContent="The map couldn't load. Please type your address above, or try again in a moment.";return}
-  box.hidden=false;$("#bsMapHint").hidden=false;
+  box.hidden=false;$("#bsMapHint").hidden=false;$("#bsMapDone").hidden=false;
   const has=BSD.lat&&BSD.lng,ll=has?[+BSD.lat,+BSD.lng]:[-6.2,106.75];
   if(!bsMapObj){
     L.Icon.Default.imagePath="vendor/leaflet/images/";
@@ -1175,7 +1175,9 @@ async function bsMapShow(){
 }
 function bsDraw(){
   const o=$("#bsOpts"),er=$("#bsErr"),pl=$("#bsPlace");if(BSD.area||BSD.lat)saveLoc();
-  if(BSD.lat||BSD.mapOpen)bsMapShow();
+  // the map only opens with "Pick on the map" and closes with Done (or once a courier is chosen), so a scroll can't move the pin by accident
+  if(BSD.mapOpen)bsMapShow();else{$("#bsMap").hidden=true;$("#bsMapHint").hidden=true;$("#bsMapDone").hidden=true}
+  $("#bsPick").textContent=BSD.mapOpen?"✓ Done with the map":"🗺️ Pick on the map";
   pl.hidden=!BSD.label;pl.innerHTML=BSD.label?`📍 ${esc(BSD.label)} · <a href="https://www.openstreetmap.org/?mlat=${esc(BSD.lat)}&mlon=${esc(BSD.lng)}#map=17/${esc(BSD.lat)}/${esc(BSD.lng)}" target="_blank" rel="noopener">Check on the map</a>`:"";
   if(BSD.busy){o.innerHTML=`<p class="note">Looking for couriers…</p>`}
   else{o.innerHTML=BSD.opts.map((x,i)=>`<button type="button" class="bsopt" data-bsopt="${i}" aria-pressed="${S.ship&&S.ship.sig===x.sig}"><span><b>${esc(x.courierName||x.courier)}</b> ${esc(x.serviceName||x.service)}${x.eta?`<small>${esc(x.eta)}</small>`:""}</span><span class="num">${money(x.price)}</span></button>`).join("")
@@ -1212,14 +1214,15 @@ $("#bsAreaList").addEventListener("click",e=>{const b=e.target.closest("[data-bs
   BSD.area=a;BSD.lat="";BSD.lng="";BSD.label="";BSD.opts=[];BSD.tried=false;S.ship=null;S.bsSkip=false;$("#bsArea").value=a.name;$("#bsAreaList").hidden=true;
   if($("#coAddr").value.trim().length>=5)bsGeocode();else bsRates()});
 $("#bsFind").addEventListener("click",bsGeocode);
-$("#bsPick").addEventListener("click",()=>{BSD.mapOpen=true;$("#bsMap").hidden=false;bsMapShow()});
+$("#bsPick").addEventListener("click",()=>{BSD.mapOpen=!BSD.mapOpen;bsDraw()});
+$("#bsMapDone").addEventListener("click",()=>{BSD.mapOpen=false;bsDraw();const p=$("#bsPlace");if(p&&!p.hidden)p.scrollIntoView({block:"nearest",behavior:RM?"auto":"smooth"})});
 $("#bsGeo").addEventListener("click",()=>{
   if(!navigator.geolocation){BSD.err="Your browser can't share its location.";bsDraw();return}
   BSD.busy=true;BSD.err="";bsDraw();
   navigator.geolocation.getCurrentPosition(p=>{BSD.busy=false;BSD.lat=p.coords.latitude.toFixed(5);BSD.lng=p.coords.longitude.toFixed(5);BSD.label="Your current location";S.ship=null;BSD.opts=[];bsRates()},
     ()=>{BSD.busy=false;BSD.err="We couldn't get your location. Allow location access, or search your area instead.";bsDraw()},{timeout:12000,maximumAge:60000})});
 $("#bsOpts").addEventListener("click",e=>{
-  const b=e.target.closest("[data-bsopt]");if(b){const x=BSD.opts[+b.dataset.bsopt];if(x){S.ship=x;S.bsSkip=false;bsDraw();renderCoSummary();renderStore();$("#coErr").hidden=true}return}
+  const b=e.target.closest("[data-bsopt]");if(b){const x=BSD.opts[+b.dataset.bsopt];if(x){S.ship=x;S.bsSkip=false;BSD.mapOpen=false;bsDraw();renderCoSummary();renderStore();$("#coErr").hidden=true}return}
   if(e.target.closest("[data-bsskip]")){S.ship=null;S.bsSkip=true;bsDraw();renderCoSummary();renderStore()}});
 function renderCoSummary(){
   const q=quote(S),counts=countItems(S.box);
