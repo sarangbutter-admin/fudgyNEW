@@ -1173,23 +1173,27 @@ function bsDraw(){
 }
 async function bsRates(){
   if(!(BSD.area||BSD.lat)||BSD.busy)return;
+  const who=bsWho();if(!who){BSD.err="Type your WhatsApp number first, then we can show courier prices.";bsDraw();return}
   const my=++BSD.t;BSD.busy=true;BSD.err="";bsDraw();
   try{
-    const r=await SBH.fn("biteship",{action:"rates",size:S.size,dest:{lat:BSD.lat,lng:BSD.lng,postal:BSD.area?BSD.area.postal:"",areaId:BSD.area?BSD.area.id:"",areaName:BSD.area?BSD.area.name:""}});
+    const r=await SBH.fn("biteship",{action:"rates",phone:who.phone,email:who.email,size:S.size,dest:{lat:BSD.lat,lng:BSD.lng,postal:BSD.area?BSD.area.postal:"",areaId:BSD.area?BSD.area.id:"",areaName:BSD.area?BSD.area.name:""}});
     if(my!==BSD.t)return;BSD.opts=r.options||[];BSD.err=BSD.opts.length?"":(r.error||"No courier is available for this address.");
     if(S.ship&&!BSD.opts.some(x=>x.sig===S.ship.sig)){S.ship=null}
-  }catch(e){if(my!==BSD.t)return;BSD.opts=[];BSD.err=e.message}
+  }catch(e){if(my!==BSD.t)return;BSD.opts=[];BSD.err=e.message==="BANNED"?"Courier prices are not available for this order.":e.message;if(e.message==="BANNED")banShow()}
   BSD.busy=false;bsDraw();renderCoSummary();renderStore();
 }
 async function bsGeocode(){
   const addr=$("#coAddr").value.trim(),areaTxt=BSD.area?BSD.area.name:$("#bsArea").value.trim();if(!addr&&!areaTxt){BSD.err="Type your address (and your area) first.";bsDraw();return}
+  const who=bsWho();if(!who){BSD.err="Type your WhatsApp number first, then we can find your address.";bsDraw();return}
   BSD.busy=true;BSD.err="";bsDraw();
-  try{const r=await SBH.fn("biteship",{action:"geocode",address:addr,area:areaTxt});BSD.busy=false;BSD.tried=true;
+  try{const r=await SBH.fn("biteship",{action:"geocode",phone:who.phone,email:who.email,address:addr,area:areaTxt});BSD.busy=false;BSD.tried=true;
     if(r.found){BSD.lat=r.lat;BSD.lng=r.lng;BSD.label=(r.approx?"Near: ":"")+r.label+(r.approx?" (approximate, please check on the map)":"");S.ship=null;BSD.opts=[];await bsRates();return}
     BSD.err="We couldn't find that address on the map. Pick your area from the list, check the spelling, or use your current location.";
-  }catch(e){BSD.busy=false;BSD.err=e.message}
+  }catch(e){BSD.busy=false;BSD.err=e.message==="BANNED"?"Courier prices are not available for this order.":e.message;if(e.message==="BANNED")banShow()}
   bsDraw();
 }
+$("#coPhone").addEventListener("change",()=>{if((BSD.area||BSD.lat)&&!BSD.busy&&!BSD.opts.length&&/WhatsApp number/.test(BSD.err||""))bsRates()});
+const bsWho=()=>{const p=($("#coPhone")||{value:""}).value.trim();return normPhone(p).length>=7?{phone:p,email:($("#coEmail")||{value:""}).value.trim()}:null};
 let bsAreaT=0;
 $("#bsArea").addEventListener("input",e=>{
   clearTimeout(bsAreaT);const q=e.target.value.trim(),list=$("#bsAreaList");BSD.area=null;
@@ -1371,7 +1375,7 @@ $("#coForm").addEventListener("submit",e=>{
       if(pNote||pImg)SBH.placeInfo(o.id,pNote,pImg).catch(err=>toast("Order placed, but the driver note or photo didn't save: "+err.message));
       addMine(o.id);S.editId=null;saveCart();renderDone(o,!!ed);
       S=fresh();$("#coForm").reset();saveCart();sanitizeCart();renderStoreStatic();renderStore();renderEditBar();renderBag();
-    }).catch(err=>{$("#coErr").textContent=err.message;$("#coErr").hidden=false;SBH.loadShop(true)}).finally(()=>{if(btn)btn.disabled=false});
+    }).catch(err=>{if(err.message==="BANNED"){$("#coErr").hidden=true;banShow()}else{$("#coErr").textContent=err.message;$("#coErr").hidden=false}SBH.loadShop(true)}).finally(()=>{if(btn)btn.disabled=false});
     return}
   let o;
   if(ed){releaseHold(ed);Object.assign(ed,fields,{editedAt:Date.now()});o=ed;takeHold(o)}
@@ -1443,6 +1447,19 @@ function ppShow(o,preview){
   if(gl){clearTimeout(gmTimer);gmTimer=setTimeout(gmOpen,1500)}
   setTimeout(()=>{const b=$("#ppCard [data-ppclose]");b&&b.focus()},60);
   return true;
+}
+/* --- a banned customer sees the owner's own message (icon, picture, falling gifts, text, contact button) --- */
+const BANM_DEF={icon:"🚫",title:"We can't take this order",text:"Sorry, we are not able to take orders from this number or email right now. Please contact us and we will be happy to help.",img:"",fx:true,items:[],amount:24,btn:"Chat with us",btnOn:true};
+let BANM=null;
+function banContact(){const s=((DB.page&&DB.page.footer&&DB.page.footer.socials)||[]).find(x=>x.kind==="whatsapp"&&socialUrl(x.url,x.kind));return s?socialUrl(s.url,s.kind):""}
+function banHTML(M,link){return `${M.icon?`<div class="pp-emoji" aria-hidden="true">${esc(M.icon)}</div>`:""}${M.img&&imgOk(M.img)?`<img class="pp-img" src="${esc(M.img)}" alt="">`:""}<h3>${esc(M.title)}</h3><p>${esc(M.text)}</p>${link&&M.btnOn&&M.btn?`<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">${esc(M.btn)}</a>`:""}<button class="ghost" type="button" data-ppclose>Close</button>`}
+async function banShow(preview){
+  let M=preview||BANM;
+  if(!M){try{M=Object.assign({},BANM_DEF,await SBH.banMsg())}catch(e){M=BANM_DEF}BANM=M}
+  const pop=$("#ppPop"),P=DB.proofpop||{};
+  pop.style.setProperty("--pp-bg",P.bg||"#fff");pop.style.setProperty("--pp-acc",P.accent||"#000096");pop.style.setProperty("--pp-ink",P.ink||"#0B0B45");
+  $("#ppCard").innerHTML=banHTML(M,banContact());pop.hidden=false;
+  fxBurst($("#ppFx"),{fx:M.fx!==false,cookies:Array.isArray(M.items)?M.items:[],amount:M.amount},null);
 }
 function ppClose(){const pop=$("#ppPop");if(pop.hidden)return;clearTimeout(gmTimer);pop.hidden=true;$("#ppFx").innerHTML="";endPreview()}
 $("#ppPop").addEventListener("click",e=>{if(e.target.id==="ppPop"||e.target.closest("[data-ppclose]"))ppClose()});
@@ -2225,7 +2242,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 21:02 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 21:11 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

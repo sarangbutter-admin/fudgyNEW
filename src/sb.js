@@ -169,6 +169,7 @@
   document.addEventListener("visibilitychange", function () { if (!document.hidden && !H.admin && H.loaded) { H.refreshOrders(); H.loadShop(true); } });
 
   // Edge Functions (courier prices etc.); admin = true sends the team sign-in
+  H.banMsg = function () { return K.rpc("ban_msg", {}); };
   H.fn = function (name, body, admin) { return K.fn(name, body, !!admin); };
 
   // affiliators: their own sign-in on the shop address (/#partner); a team account is turned away here

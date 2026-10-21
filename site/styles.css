@@ -1259,3 +1259,4 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .dome.framed.framefull{aspect-ratio:auto;width:var(--fw,100%)}
 .afpop .bell-tabs{padding:8px 12px 4px}.afnt{grid-template-columns:auto minmax(0,1fr)}.afntx,.afntx span,.afntx b{overflow-wrap:anywhere;word-break:break-word;white-space:normal}.afnt .afntx{padding-right:14px}
 .afpop{white-space:normal;text-align:left}.afpop .empty{text-align:center;overflow-wrap:anywhere}
+.bmprev .btn,.bmprev .ghost{width:100%}.bmfall{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.bmfall img{height:30px}

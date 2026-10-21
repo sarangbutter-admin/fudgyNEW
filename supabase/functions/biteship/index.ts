@@ -26,6 +26,14 @@ Deno.serve(async (req) => {
       // the owner's Security tab: limits and daily caps (missing = default, 0 = no limit), and an emergency stop
       const L = (k: string, d: number) => { const v = sec[k]; return Number.isInteger(v) && (v as number) >= 0 ? (v as number) : d; };
       if (!set?.biteship?.on || !key || sec.courierOff === true) return json({ error: "Courier prices are not available right now." }, 503);
+      // a banned customer gets no courier prices (they cost money); the shop shows the owner's ban message
+      if (action !== "areas") {
+        const g = await db.rpc("cust_ban_gate", { p_phone: String(body.phone || "").slice(0, 30), p_email: String(body.email || "").slice(0, 120) });
+        if (!g.error) {
+          if (g.data === "banned") return json({ error: "BANNED" }, 403);
+          if (g.data === "nophone") return json({ error: "Type your WhatsApp number first." }, 400);
+        }
+      }
       const ip = ipOf(req);
       if (limited(ip, Math.max(40, L("bsAreasIpM", 40) || 1000), 60_000)) return json({ error: "Too many tries. Please wait a minute." }, 429);
       // limits per visitor, kept in the database so they hold on every server; and a daily cap on the calls that cost money

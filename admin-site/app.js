@@ -1187,23 +1187,27 @@ function bsDraw(){
 }
 async function bsRates(){
   if(!(BSD.area||BSD.lat)||BSD.busy)return;
+  const who=bsWho();if(!who){BSD.err="Type your WhatsApp number first, then we can show courier prices.";bsDraw();return}
   const my=++BSD.t;BSD.busy=true;BSD.err="";bsDraw();
   try{
-    const r=await SBH.fn("biteship",{action:"rates",size:S.size,dest:{lat:BSD.lat,lng:BSD.lng,postal:BSD.area?BSD.area.postal:"",areaId:BSD.area?BSD.area.id:"",areaName:BSD.area?BSD.area.name:""}});
+    const r=await SBH.fn("biteship",{action:"rates",phone:who.phone,email:who.email,size:S.size,dest:{lat:BSD.lat,lng:BSD.lng,postal:BSD.area?BSD.area.postal:"",areaId:BSD.area?BSD.area.id:"",areaName:BSD.area?BSD.area.name:""}});
     if(my!==BSD.t)return;BSD.opts=r.options||[];BSD.err=BSD.opts.length?"":(r.error||"No courier is available for this address.");
     if(S.ship&&!BSD.opts.some(x=>x.sig===S.ship.sig)){S.ship=null}
-  }catch(e){if(my!==BSD.t)return;BSD.opts=[];BSD.err=e.message}
+  }catch(e){if(my!==BSD.t)return;BSD.opts=[];BSD.err=e.message==="BANNED"?"Courier prices are not available for this order.":e.message;if(e.message==="BANNED")banShow()}
   BSD.busy=false;bsDraw();renderCoSummary();renderStore();
 }
 async function bsGeocode(){
   const addr=$("#coAddr").value.trim(),areaTxt=BSD.area?BSD.area.name:$("#bsArea").value.trim();if(!addr&&!areaTxt){BSD.err="Type your address (and your area) first.";bsDraw();return}
+  const who=bsWho();if(!who){BSD.err="Type your WhatsApp number first, then we can find your address.";bsDraw();return}
   BSD.busy=true;BSD.err="";bsDraw();
-  try{const r=await SBH.fn("biteship",{action:"geocode",address:addr,area:areaTxt});BSD.busy=false;BSD.tried=true;
+  try{const r=await SBH.fn("biteship",{action:"geocode",phone:who.phone,email:who.email,address:addr,area:areaTxt});BSD.busy=false;BSD.tried=true;
     if(r.found){BSD.lat=r.lat;BSD.lng=r.lng;BSD.label=(r.approx?"Near: ":"")+r.label+(r.approx?" (approximate, please check on the map)":"");S.ship=null;BSD.opts=[];await bsRates();return}
     BSD.err="We couldn't find that address on the map. Pick your area from the list, check the spelling, or use your current location.";
-  }catch(e){BSD.busy=false;BSD.err=e.message}
+  }catch(e){BSD.busy=false;BSD.err=e.message==="BANNED"?"Courier prices are not available for this order.":e.message;if(e.message==="BANNED")banShow()}
   bsDraw();
 }
+$("#coPhone").addEventListener("change",()=>{if((BSD.area||BSD.lat)&&!BSD.busy&&!BSD.opts.length&&/WhatsApp number/.test(BSD.err||""))bsRates()});
+const bsWho=()=>{const p=($("#coPhone")||{value:""}).value.trim();return normPhone(p).length>=7?{phone:p,email:($("#coEmail")||{value:""}).value.trim()}:null};
 let bsAreaT=0;
 $("#bsArea").addEventListener("input",e=>{
   clearTimeout(bsAreaT);const q=e.target.value.trim(),list=$("#bsAreaList");BSD.area=null;
@@ -1386,7 +1390,7 @@ $("#coForm").addEventListener("submit",e=>{
       if(pNote||pImg)SBH.placeInfo(o.id,pNote,pImg).catch(err=>toast("Order placed, but the driver note or photo didn't save: "+err.message));
       addMine(o.id);S.editId=null;saveCart();renderDone(o,!!ed);
       S=fresh();$("#coForm").reset();saveCart();sanitizeCart();renderStoreStatic();renderStore();renderEditBar();renderBag();
-    }).catch(err=>{$("#coErr").textContent=err.message;$("#coErr").hidden=false;SBH.loadShop(true)}).finally(()=>{if(btn)btn.disabled=false});
+    }).catch(err=>{if(err.message==="BANNED"){$("#coErr").hidden=true;banShow()}else{$("#coErr").textContent=err.message;$("#coErr").hidden=false}SBH.loadShop(true)}).finally(()=>{if(btn)btn.disabled=false});
     return}
   let o;
   if(ed){releaseHold(ed);Object.assign(ed,fields,{editedAt:Date.now()});o=ed;takeHold(o)}
@@ -1459,6 +1463,19 @@ function ppShow(o,preview){
   if(gl){clearTimeout(gmTimer);gmTimer=setTimeout(gmOpen,1500)}
   setTimeout(()=>{const b=$("#ppCard [data-ppclose]");b&&b.focus()},60);
   return true;
+}
+/* --- a banned customer sees the owner's own message (icon, picture, falling gifts, text, contact button) --- */
+const BANM_DEF={icon:"🚫",title:"We can't take this order",text:"Sorry, we are not able to take orders from this number or email right now. Please contact us and we will be happy to help.",img:"",fx:true,items:[],amount:24,btn:"Chat with us",btnOn:true};
+let BANM=null;
+function banContact(){const s=((DB.page&&DB.page.footer&&DB.page.footer.socials)||[]).find(x=>x.kind==="whatsapp"&&socialUrl(x.url,x.kind));return s?socialUrl(s.url,s.kind):""}
+function banHTML(M,link){return `${M.icon?`<div class="pp-emoji" aria-hidden="true">${esc(M.icon)}</div>`:""}${M.img&&imgOk(M.img)?`<img class="pp-img" src="${esc(M.img)}" alt="">`:""}<h3>${esc(M.title)}</h3><p>${esc(M.text)}</p>${link&&M.btnOn&&M.btn?`<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">${esc(M.btn)}</a>`:""}<button class="ghost" type="button" data-ppclose>Close</button>`}
+async function banShow(preview){
+  let M=preview||BANM;
+  if(!M){try{M=Object.assign({},BANM_DEF,await SBH.banMsg())}catch(e){M=BANM_DEF}BANM=M}
+  const pop=$("#ppPop"),P=DB.proofpop||{};
+  pop.style.setProperty("--pp-bg",P.bg||"#fff");pop.style.setProperty("--pp-acc",P.accent||"#000096");pop.style.setProperty("--pp-ink",P.ink||"#0B0B45");
+  $("#ppCard").innerHTML=banHTML(M,banContact());pop.hidden=false;
+  fxBurst($("#ppFx"),{fx:M.fx!==false,cookies:Array.isArray(M.items)?M.items:[],amount:M.amount},null);
 }
 function ppClose(){const pop=$("#ppPop");if(pop.hidden)return;clearTimeout(gmTimer);pop.hidden=true;$("#ppFx").innerHTML="";endPreview()}
 $("#ppPop").addEventListener("click",e=>{if(e.target.id==="ppPop"||e.target.closest("[data-ppclose]"))ppClose()});
@@ -5058,7 +5075,7 @@ const TAB_PERM={dashboard:"dashboard",orders:"orders",complaints:"complaints",cu
   sales:"sales",coupons:"coupons",notify:"notify",announcer:"design",hero:"design",landing:"design",marquee:"design",settings:"settings",delivery:"settings"};
 const myPerms=()=>SBH.on?(SBH.perms||[]):PERMS.map(p=>p[0]);
 const tabAllowed=t=>ROLE()==="owner"||(TAB_PERM[t]&&myPerms().includes(TAB_PERM[t]));
-const CU={list:null,q:"",form:null,err:"",loading:false,stale:false,bf:null,only:false};
+const CU={list:null,q:"",form:null,err:"",loading:false,stale:false,bf:null,only:"",bm:null,bmd:null,bmOpen:false,bmBusy:false};
 const CU_DAYS=[[1,"1 day"],[7,"7 days"],[30,"30 days"],[90,"90 days"],[0,"No end date"]];
 const cuBanTxt=b=>b.until?"until "+fmtDT(b.until):"no end date";
 const TM={list:null,err:"",loading:false};
@@ -5073,16 +5090,18 @@ async function loadCustomers(){
   if(!SBH.on){CU.list=demoCustomers();CU.stale=false;return renderAdmin()}
   if(CU.loading)return;CU.loading=true;CU.stale=false;
   try{CU.list=await SBH.rpc("admin_customers",{});CU.err=""}catch(e){CU.err=e.message;if(CU.list===null)CU.list=[]}
+  if(!CU.bm)try{CU.bm=Object.assign({},BANM_DEF,await SBH.rpc("ban_msg",{}));if(!CU.bmd)CU.bmd=JSON.parse(JSON.stringify(CU.bm))}catch(e){}
   CU.loading=false;if(A.tab==="customers"&&!A.modal)renderAdmin();
 }
 function cuRows(){
   const q=CU.q.trim().toLowerCase(),qd=q.replace(/\D/g,"");
-  const l=(CU.list||[]).filter(c=>(!CU.only||c.ban)&&(!q||c.name.toLowerCase().includes(q)||(qd&&normPhone(c.phone).includes(normPhone(qd)))||String(c.email||"").toLowerCase().includes(q)));
+  const l=(CU.list||[]).filter(c=>(!CU.only||(CU.only==="ban"?c.ban:(c.flags||[]).length))&&(!q||c.name.toLowerCase().includes(q)||(qd&&normPhone(c.phone).includes(normPhone(qd)))||String(c.email||"").toLowerCase().includes(q)));
   if(!l.length)return `<div class="empty">${(CU.list||[]).length?"No customer matches that.":"No customers yet. They are added automatically when someone orders, or you can add one above."}</div>`;
   return l.map(c=>`<div class="pmcard" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><b style="font-size:16px">${esc(c.name)}</b>
     <span class="note" style="margin:0">${c.source==="manual"?"Added by hand":"From an order"}${c.orders?` · ${c.orders} order${c.orders>1?"s":""}`:""}${c.spent>0?` · ${money(c.spent)} paid`:""}</span></div>
     <div><a href="${esc(waLink({customer:{phone:c.phone}},""))}" target="_blank" rel="noopener">${esc(c.phone)}</a>${c.email?` · ${esc(c.email)}`:""}</div>
     ${c.note?`<div class="note" style="margin:0">${esc(c.note)}</div>`:""}
+    ${(c.flags||[]).length?`<div class="cuflag"><b>👀 Needs a look</b>${c.flags.map(f=>`<span>• ${esc(f)}</span>`).join("")}${SBH.on?`<button class="ghost sm" type="button" data-cuchecked="${esc(c.id)}">Mark as checked</button>`:""}</div>`:""}
     ${c.ban?`<div class="cuban"><b>🚫 Banned ${cuBanTxt(c.ban)}</b><span>${esc(c.ban.reason)}</span></div>`:""}
     ${CU.bf&&CU.bf.id===c.id?`<div class="cubf"><label class="af">Why? (only the team sees this)<input class="in" data-cubf="reason" maxlength="200" value="${esc(CU.bf.reason)}" placeholder="e.g. Fake orders, never pays"></label>
       <label class="af">How long<select class="in" data-cubf="days">${CU_DAYS.map(([v,l])=>`<option value="${v}" ${+CU.bf.days===v?"selected":""}>${l}</option>`).join("")}</select></label>
@@ -5090,6 +5109,24 @@ function cuRows(){
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="danger" type="button" data-cubango>Ban this customer</button><button class="ghost" type="button" data-cubanno>Cancel</button></div></div>`:""}
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" type="button" data-cuedit="${esc(c.id)}">Edit</button>${SBH.on?(c.ban?`<button class="ghost" type="button" data-cuunban="${esc(c.id)}">Unban</button>`:`<button class="ghost" type="button" data-cuban="${esc(c.id)}">🚫 Ban</button>`):""}${ROLE()==="owner"?`<button class="danger" type="button" data-cudel="${esc(c.id)}">Delete</button>`:""}</div></div>`).join("");
 }
+const BM_ICONS=["🚫","🙏","🎁","🍪","💙","😢","⚠️","📞"];
+function bmPrev(){const M=CU.bmd||BANM_DEF,P=DB.proofpop||{};return `<div class="bmprev" style="--pp-bg:${esc(P.bg||"#fff")};--pp-acc:${esc(P.accent||"#000096")};--pp-ink:${esc(P.ink||"#0B0B45")}">${banHTML(M,"#")}${M.fx&&(M.items||[]).length?`<div class="bmfall">${M.items.slice(0,4).map(u=>`<img src="${esc(u)}" alt="">`).join("")}</div>`:""}</div>`}
+function bmPanel(){
+  if(!CU.bmd)return "";
+  const M=CU.bmd,dirty=JSON.stringify(M)!==JSON.stringify(CU.bm);
+  return `<section class="panel"><div class="phead"><div><h2>🚫 Message for banned customers</h2><p class="sub">What a banned customer sees when they try to order or look up courier prices. It does not say "banned" unless you write it.</p></div><button class="ghost" type="button" data-bmopen>${CU.bmOpen?"Hide":"Edit message"}</button></div>
+    ${CU.bmOpen?`<div class="grid2" style="margin-top:10px"><div class="stack" style="gap:10px">
+      <div class="af">Icon (any emoji)<div class="chips" style="margin-top:6px">${BM_ICONS.map(i=>`<button class="fchip" type="button" data-bmicon="${i}" aria-pressed="${M.icon===i}">${i}</button>`).join("")}</div><input class="in" data-bm="icon" maxlength="12" value="${esc(M.icon)}" placeholder="Type or paste an emoji" style="margin-top:6px"></div>
+      <label class="af">Title<input class="in" data-bm="title" maxlength="80" value="${esc(M.title)}"></label>
+      <label class="af">Message<textarea class="in" data-bm="text" rows="4" maxlength="400">${esc(M.text)}</textarea></label>
+      <div class="af">Picture (optional)<div class="colin" style="flex-wrap:wrap;gap:8px"><input class="in" id="bmImg" type="file" accept="image/*" style="max-width:260px">${M.img?`<img src="${esc(M.img)}" alt="" style="height:46px;border-radius:10px"><button class="ghost sm" type="button" data-bmimgrm>Remove</button>`:""}</div></div>
+      <label class="secsw"><input type="checkbox" data-bm="fx" ${M.fx?"checked":""}><span><b>Falling gifts</b><span class="note">Little pictures fall down the screen. Upload your own gifts below, or cookies fall if you add none.</span></span></label>
+      ${M.fx?`<div class="af">Gift pictures (up to 6)<div class="colin" style="flex-wrap:wrap;gap:8px"><input class="in" id="bmItems" type="file" accept="image/*" multiple style="max-width:260px">${(M.items||[]).map((u,i)=>`<span class="bmitem"><img src="${esc(u)}" alt=""><button class="ghost sm" type="button" data-bmitemrm="${i}" aria-label="Remove this gift">✕</button></span>`).join("")}</div></div>
+      <label class="af">How many fall: ${+M.amount||24}<input type="range" min="4" max="60" step="2" value="${+M.amount||24}" data-bm="amount"></label>`:""}
+      <label class="secsw"><input type="checkbox" data-bm="btnOn" ${M.btnOn?"checked":""}><span><b>Contact button</b><span class="note">Opens your WhatsApp from Landing page → footer links. Hidden if no WhatsApp link is set there.</span></span></label>
+      ${M.btnOn?`<label class="af">Button text<input class="in" data-bm="btn" maxlength="40" value="${esc(M.btn)}"></label>`:""}
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-blue" type="button" data-bmsave ${dirty&&!CU.bmBusy?"":"disabled"}>${CU.bmBusy?"Saving…":"Save message"}</button><button class="ghost" type="button" data-bmreset>Back to standard text</button></div></div>
+      <div><div class="af">Preview</div><div id="bmPrev">${bmPrev()}</div></div></div>`:""}</section>`}
 function viewCustomers(){
   const F=CU.form||{name:"",phone:"",email:"",note:""};
   return head("Customers","Everyone who ordered is saved here automatically (one entry per WhatsApp number). You can also add a customer yourself.")+MOCK+`<div class="stack">
@@ -5100,8 +5137,9 @@ function viewCustomers(){
         <label class="af">Note (optional)<input class="in" id="cuNote" maxlength="500" value="${esc(F.note)}" autocomplete="off"></label></div>
       <p class="err" id="cuErr" ${CU.err?"":"hidden"}>${esc(CU.err)}</p>
       <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button class="btn btn-blue" type="button" data-cusave>${F.id?"Save changes":"Add customer"}</button>${F.id?`<button class="btn btn-ghost-blue" type="button" data-cucancel>Cancel</button>`:""}</div></section>
+    ${SBH.on?bmPanel():""}
     <section class="panel"><div class="phead"><div><h2>All customers${CU.list?` (${CU.list.length})`:""}</h2></div></div>
-      <div class="chips" style="margin-top:8px"><button class="fchip" type="button" data-cuonly="0" aria-pressed="${!CU.only}">All</button><button class="fchip" type="button" data-cuonly="1" aria-pressed="${CU.only}">🚫 Banned${CU.list&&CU.list.some(c=>c.ban)?` (${CU.list.filter(c=>c.ban).length})`:""}</button></div>
+      <div class="chips" style="margin-top:8px"><button class="fchip" type="button" data-cuonly="" aria-pressed="${!CU.only}">All</button><button class="fchip" type="button" data-cuonly="look" aria-pressed="${CU.only==="look"}">👀 Needs a look${CU.list&&CU.list.some(c=>(c.flags||[]).length)?` (${CU.list.filter(c=>(c.flags||[]).length).length})`:""}</button><button class="fchip" type="button" data-cuonly="ban" aria-pressed="${CU.only==="ban"}">🚫 Banned${CU.list&&CU.list.some(c=>c.ban)?` (${CU.list.filter(c=>c.ban).length})`:""}</button></div>
       <label class="af" style="margin-top:8px">Search<input class="in" id="cuSearch" type="search" placeholder="Name, number or email" value="${esc(CU.q)}" autocomplete="off"></label>
       <div id="cuList" style="margin-top:10px;display:grid;gap:10px">${CU.list===null?`<div class="empty">Loading…</div>`:cuRows()}</div></section></div>`;
 }
@@ -5520,6 +5558,12 @@ am.addEventListener("click",async e=>{if(A.tab!=="affiliates")return;const b=e.t
   else if(d.afnogo!==undefined){AF.act=null;AF.proof="";AF.err="";renderAdmin()}
   else if(d.afgo!==undefined)afGo()});
 am.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.anf;if(k&&AF.annf)AF.annf[k]=e.target.value});
+am.addEventListener("change",async e=>{if(A.tab==="customers"&&CU.bmd){const el=e.target;
+  if(el.dataset.bm&&el.type==="checkbox"){CU.bmd[el.dataset.bm]=el.checked;renderAdmin();return}
+  if(el.id==="bmImg"||el.id==="bmItems"){const fs=[...(el.files||[])];el.value="";if(!fs.length)return;CU.bmBusy=true;renderAdmin();
+    try{if(el.id==="bmImg")CU.bmd.img=await SBK.upload(await lpResize(fs[0],600,true));else for(const f of fs.slice(0,6-(CU.bmd.items||[]).length))CU.bmd.items=[...(CU.bmd.items||[]),await SBK.upload(await lpResize(f,300,true))]}catch(er){toast(er.message||"Couldn't upload that picture.")}
+    CU.bmBusy=false;renderAdmin()}}
+});
 am.addEventListener("change",async e=>{if(A.tab!=="affiliates")return;const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(am);if(el.dataset.afd)afDate(el,false);
   if(el.id==="afProof"){const f=el.files&&el.files[0];el.value="";if(!f||!AF.act)return;AF.busy=true;AF.err="";renderAdmin();
     try{AF.proof=await SBK.upload(await lpResize(f,1400,true))}catch(er){AF.err=er.message||"Couldn't upload that picture."}AF.busy=false;renderAdmin()}});
@@ -5548,7 +5592,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 21:02 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 21:11 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
@@ -5695,11 +5739,18 @@ am.addEventListener("change",e=>{const el=e.target;if(!el.dataset||!el.dataset.k
   needOwner("change a price").then(()=>{el.value=nv;el.dispatchEvent(new Event("change",{bubbles:true}))}).catch(()=>toast("Price not changed"));
 },true);
 
-am.addEventListener("input",e=>{const bk=e.target.dataset&&e.target.dataset.cubf;if(bk&&CU.bf)CU.bf[bk]=e.target.value;if(e.target.id==="cuSearch"){CU.q=e.target.value;const l=$("#cuList");if(l)l.innerHTML=cuRows()}});
+am.addEventListener("input",e=>{const bm=e.target.dataset&&e.target.dataset.bm;if(bm&&CU.bmd&&e.target.type!=="checkbox"){CU.bmd[bm]=bm==="amount"?+e.target.value:e.target.value;const p=$("#bmPrev");if(p)p.innerHTML=bmPrev();const sv=$("[data-bmsave]");if(sv)sv.disabled=JSON.stringify(CU.bmd)===JSON.stringify(CU.bm);if(bm==="amount"){const l=e.target.closest("label");if(l)l.firstChild.textContent="How many fall: "+e.target.value}}const bk=e.target.dataset&&e.target.dataset.cubf;if(bk&&CU.bf)CU.bf[bk]=e.target.value;if(e.target.id==="cuSearch"){CU.q=e.target.value;const l=$("#cuList");if(l)l.innerHTML=cuRows()}});
 am.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;const d=b.dataset;
   if(d.cusave!==undefined)cuSave();
   else if(d.cuedit){const c=(CU.list||[]).find(x=>x.id===d.cuedit);if(c){CU.form=Object.assign({},c);CU.err="";renderAdmin();showNew("#cuForm")}}
-  else if(d.cuonly!==undefined){CU.only=d.cuonly==="1";renderAdmin()}
+  else if(d.bmopen!==undefined){CU.bmOpen=!CU.bmOpen;renderAdmin()}
+  else if(d.bmicon!==undefined&&CU.bmd){CU.bmd.icon=d.bmicon;renderAdmin()}
+  else if(d.bmimgrm!==undefined&&CU.bmd){CU.bmd.img="";renderAdmin()}
+  else if(d.bmitemrm!==undefined&&CU.bmd){CU.bmd.items.splice(+d.bmitemrm,1);renderAdmin()}
+  else if(d.bmreset!==undefined&&CU.bmd){CU.bmd=Object.assign({},JSON.parse(JSON.stringify(BANM_DEF)));renderAdmin()}
+  else if(d.bmsave!==undefined&&CU.bmd){CU.bmBusy=true;renderAdmin();try{CU.bm=Object.assign({},BANM_DEF,await SBH.rpc("admin_ban_msg_save",{p:CU.bmd}));CU.bmd=JSON.parse(JSON.stringify(CU.bm));toast("Ban message saved")}catch(x){toast(x.message)}CU.bmBusy=false;renderAdmin()}
+  else if(d.cuchecked){try{CU.list=await SBH.rpc("admin_cust_reviewed",{p_id:d.cuchecked});toast("Marked as checked")}catch(x){toast(x.message);return}const y=scrollY;renderAdmin();scrollTo(0,y)}
+  else if(d.cuonly!==undefined){CU.only=d.cuonly;renderAdmin()}
   else if(d.cuban){CU.bf={id:d.cuban,reason:"",days:7};renderAdmin()}
   else if(d.cubanno!==undefined){CU.bf=null;renderAdmin()}
   else if(d.cubango!==undefined){const f=CU.bf;if(!f)return;try{CU.list=await SBH.rpc("admin_cust_ban",{p_id:f.id,p_reason:f.reason,p_days:+f.days||null});CU.bf=null;toast("Customer banned")}catch(x){toast(x.message);return}const y=scrollY;renderAdmin();scrollTo(0,y)}

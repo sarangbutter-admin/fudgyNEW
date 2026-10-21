@@ -1537,3 +1537,8 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .afpop{white-space:normal;text-align:left}.afpop .empty{text-align:center;overflow-wrap:anywhere}
 .cuban{display:flex;flex-direction:column;gap:2px;padding:8px 12px;border-radius:12px;background:#fde8ec;color:#a3122f;font-size:13px;overflow-wrap:anywhere}
 .cubf{display:grid;gap:8px;padding:10px 12px;border-radius:12px;background:var(--ice,#f2f5ff)}
+.cuflag{display:flex;flex-direction:column;gap:2px;align-items:flex-start;padding:8px 12px;border-radius:12px;background:#fff4d6;color:#7a5200;font-size:13px;overflow-wrap:anywhere}
+.bmprev{position:relative;background:var(--pp-bg,#fff);color:var(--pp-ink,#0B0B45);border-radius:24px;padding:22px 18px;text-align:center;display:grid;gap:10px;justify-items:center;border:1.5px solid var(--line,#ddd);overflow:hidden}
+.bmprev h3{color:var(--pp-acc,#000096);margin:0;font-size:22px}.bmprev p{margin:0;line-height:1.5}
+.bmprev .btn,.bmprev .ghost{width:100%}.bmfall{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.bmfall img{height:30px}
+.bmitem{display:inline-flex;align-items:center;gap:4px}.bmitem img{height:40px;border-radius:8px}
