@@ -1512,3 +1512,4 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .afpayday{background:#FFF8E1;border:2px solid #FFB800;border-radius:12px;padding:10px 14px;margin-top:10px;color:#4a3300}
 .afkpis .afk em{overflow-wrap:anywhere}
 .size.affhl{animation:cardhl 2.4s ease-out}
+.afhdr .afver{font-size:10px;opacity:.7;margin-left:auto;margin-right:12px}

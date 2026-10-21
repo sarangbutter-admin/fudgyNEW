@@ -53,7 +53,8 @@ out+='\n'+shopClock+'\n';
 out=must(out,'localStorage.getItem(STAFF_KEY)||','','STAFF_KEY use');
 out=must(out,',STAFF_KEY="delidome-staff-v1"','','STAFF_KEY def');
 out=out.replace('/* --- routing between shop and admin --- */\n','');
-wr('site/app.js',out);
+const BUILD=new Date().toISOString().slice(0,16).replace('T',' ')+' UTC';
+wr('site/app.js',out.replace(/__BUILD__/g,BUILD));
 
 /* admin: everything, but always the admin screen */
 let adm=SRC;
@@ -72,7 +73,7 @@ function route(){
 {const v=$("#viewShop"),u=String((window.DELIDOME_CONFIG||{}).shopUrl||"");if(v&&/^https:\\/\\/[^\\s"'<>]+$/.test(u)){v.href=u;v.style.display=""}}
 `+SRC.slice(routeEnd);
 adm=must(adm,'addEventListener("hashchange",route);','','hashchange');
-wr('admin-site/app.js',adm);
+wr('admin-site/app.js',adm.replace(/__BUILD__/g,BUILD));
 
 /* ---------------- sb.js ---------------- */
 const SB=rd('src/sb.js');

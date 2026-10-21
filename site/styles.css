@@ -1240,3 +1240,4 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .afacct .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.03em}
 .afkpis .afk em{overflow-wrap:anywhere}
 .size.affhl{animation:cardhl 2.4s ease-out}
+.afhdr .afver{font-size:10px;opacity:.7;margin-left:auto;margin-right:12px}
