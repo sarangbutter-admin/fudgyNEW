@@ -1258,3 +1258,4 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .afhdr{flex-wrap:wrap}.afwho,.afver{white-space:nowrap}.afwho .ghost{white-space:nowrap}
 .dome.framed.framefull{aspect-ratio:auto;width:var(--fw,100%)}
 .afpop .bell-tabs{padding:8px 12px 4px}.afnt{grid-template-columns:auto minmax(0,1fr)}.afntx,.afntx span,.afntx b{overflow-wrap:anywhere;word-break:break-word;white-space:normal}.afnt .afntx{padding-right:14px}
+.afpop{white-space:normal;text-align:left}.afpop .empty{text-align:center;overflow-wrap:anywhere}
