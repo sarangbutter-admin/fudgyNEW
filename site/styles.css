@@ -1239,3 +1239,4 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .afacct.bad{border-color:#E0A800;background:#FFF8E1}
 .afacct .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.03em}
 .afkpis .afk em{overflow-wrap:anywhere}
+.size.affhl{animation:cardhl 2.4s ease-out}

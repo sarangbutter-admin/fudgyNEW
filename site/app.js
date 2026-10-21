@@ -1817,9 +1817,12 @@ function affCapture(){if(affDone)return;affDone=true;try{
     let vid=localStorage.getItem(VID_KEY);if(!vid){vid=uid()+uid();localStorage.setItem(VID_KEY,vid)}
     localStorage.setItem(AFF_KEY,JSON.stringify({code,src,at:Date.now()}));
     if(SBH.on&&SBH.affHit)SBH.affHit(code,vid,src)}
-  if(to)setTimeout(()=>{const c=document.querySelector(`.card[data-id="${CSS.escape(to)}"]`);if(c){c.scrollIntoView({block:"center",behavior:RM?"auto":"smooth"});c.classList.add("affhl");setTimeout(()=>c.classList.remove("affhl"),2600)}},900);
+  const sz=parseInt(q.get("size"),10),again=(fn,n=20)=>{const t=setInterval(()=>{let ok=false;try{ok=fn()}catch(e){}if(ok||--n<=0)clearInterval(t)},400)};
+  if(to)again(()=>{const c=document.querySelector(`.card[data-id="${CSS.escape(to)}"]`);if(!c)return false;c.scrollIntoView({block:"center",behavior:RM?"auto":"smooth"});c.classList.add("affhl");setTimeout(()=>c.classList.remove("affhl"),2600);return true});
+  if(sz>0&&!to)again(()=>{if(!activeSizes().length)return false;if(!activeSizes().some(x=>x.n===sz))return true;if(!S.editId&&S.size!==sz)setSize(sz);
+    const b=document.querySelector(`.size[data-size="${sz}"]`);if(!b)return false;b.scrollIntoView({block:"center",behavior:RM?"auto":"smooth"});b.classList.add("affhl");setTimeout(()=>b.classList.remove("affhl"),2600);return true});
   if(cp){const i=document.getElementById("cpnIn");if(i&&!i.value)i.value=cp}
-  if(code||to||cp)history.replaceState(null,"",location.pathname+location.hash);
+  if(code||to||cp||sz>0)history.replaceState(null,"",location.pathname+location.hash);
 }catch(e){}}
 function trackVisit(){affCapture();
   try{
@@ -2100,7 +2103,7 @@ function afRange(){const n=Date.now(),d0=today0().getTime();
   if(AF.range==="custom"&&AF.from){const f=fromYmd(AF.from).getTime(),t=AF.to?fromYmd(AF.to).getTime()+864e5:n+864e5;return [f,t]}
   return [0,n+864e5]}
 const afShop=()=>String((window.DELIDOME_CONFIG||{}).shopUrl||location.origin).replace(/\/+$/,"");
-function afLink(code,to,ch,cp){const q=new URLSearchParams({ref:code});if(ch)q.set("src",ch);if(to)q.set("to",to);if(cp)q.set("cp",cp);return afShop()+"/?"+q.toString()}
+function afLink(code,to,ch,cp,size){const q=new URLSearchParams({ref:code});if(ch)q.set("src",ch);if(to)q.set("to",to);if(cp)q.set("cp",cp);if(size)q.set("size",size);return afShop()+"/?"+q.toString()}
 function afPeriodHTML(){return `<div class="chips" style="margin-top:4px">${[["today","Today"],["7d","Last 7 days"],["30d","Last 30 days"],["month","This month"],["all","All time"],["custom","Custom"]].map(([k,l])=>`<button class="fchip" type="button" data-afr="${k}" aria-pressed="${AF.range===k}">${l}</button>`).join("")}</div>
   ${AF.range==="custom"?`<div class="colin" style="margin-top:8px;gap:8px;flex-wrap:wrap"><label class="af" style="margin:0">From<input class="in" type="date" data-afd="from" value="${esc(AF.from)}"></label><label class="af" style="margin:0">To<input class="in" type="date" data-afd="to" value="${esc(AF.to)}"></label></div>`:""}`}
 function afKpis(t,self,cfg){const k=(v,l,cls,sub)=>`<div class="afk${cls?" "+cls:""}"><strong>${v}</strong><small>${l}</small>${sub?`<em>${sub}</em>`:""}</div>`,n=(c,w)=>c?`${c} order${c===1?"":"s"}${w?" "+w:""}`:"";
@@ -2173,14 +2176,14 @@ function afDashHTML(r,owner){
     ${r.sources.length?`<div class="aftable"><div class="afrow afth"><span>Source</span><span>Views</span><span>Orders</span><span>Sales</span></div>${r.sources.map(x=>`<div class="afrow"><span>${esc(AF_SRC[x.src]||x.src)}</span><span>${x.views}</span><span>${x.orders}</span><span>${money(x.sales)}</span></div>`).join("")}</div>`:`<p class="note">Nothing yet. Share your links below.</p>`}
     <p class="note" style="margin:8px 0 0">WhatsApp, TikTok and Instagram apps often hide where a visit came from. Use the link made for each place so it's counted correctly.</p></section>
   <section class="panel"><h2>${owner?"Share links":"Your share links"}</h2><p class="sub">Pick what to open and where it will be shared, then copy the link.</p>
-    <div class="grid2" style="margin-top:10px"><label class="af">Opens<select class="in" id="afTo"><option value="">The shop</option>${a.coupon?`<option value="__cp">The shop with coupon ${esc(a.coupon)} filled in</option>`:""}${prods.map(p=>`<option value="${esc(p.id)}">Flavor: ${esc(p.name)}</option>`).join("")}</select></label>
+    <div class="grid2" style="margin-top:10px"><label class="af">Opens<select class="in" id="afTo"><option value="">The shop</option>${a.coupon?`<option value="__cp">The shop with coupon ${esc(a.coupon)} filled in</option>`:""}${(AF.sizes||[]).map(z=>`<option value="size:${z.n}">Box of ${z.n} cookies</option>`).join("")}${prods.map(p=>`<option value="${esc(p.id)}">Flavor: ${esc(p.name)}</option>`).join("")}</select></label>
     <label class="af">Shared on<select class="in" id="afCh">${[["ig","Instagram"],["tt","TikTok"],["wa","WhatsApp"],["fb","Facebook"],["yt","YouTube"],["x","X / Twitter"],["ads","Ads"],["web","Website / blog"],["","Other"]].map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></label></div>
     <div class="colin" style="margin-top:8px"><input class="in" id="afLinkOut" readonly value="${esc(afLink(a.code,"","ig",""))}"><button class="btn btn-blue btn-sm" type="button" data-afcopy>Copy</button></div></section>
   <section class="panel"><h2>Payouts</h2>${r.payouts.length?r.payouts.map(p=>`<div class="afrow" style="grid-template-columns:1fr auto"><span>${fmtDT(p.at)} · ${p.n} order${p.n===1?"":"s"}${p.note?` · ${esc(p.note)}`:""}${/^https:\/\//.test(p.proof||"")?` · <a class="afproof" href="${esc(p.proof)}" target="_blank" rel="noopener">🧾 proof</a>`:""}</span><b>${money(p.amount)}</b></div>`).join(""):`<p class="note">No payouts yet.</p>`}</section>`}
 async function affLoadRep(id,mine){const [f,t]=afRange();AF.repLoading=true;
   try{const [rep,inf]=await Promise.all([SBH.rpc("aff_report",{p_id:id,p_from:f,p_to:t,p_group:AF.group}),SBH.rpc("aff_pay_info",{p_id:id})]);rep.pay=inf.pay;rep.cfg=inf.cfg;AF.rep=rep;if(!AF.act)AF.err=""}catch(e){AF.err=e.message}
   AF.repLoading=false;if(!AF.prods)affLoadProds();mine?affRender():(A.tab==="affiliates"&&(()=>{const y=scrollY;renderAdmin();scrollTo(0,y)})())}
-async function affLoadProds(){try{const r=await SBH.rpc("shop_public",{});AF.prods=(r.products||[]).map(p=>({id:p.id,name:p.name,status:p.status}))}catch(e){AF.prods=[]}
+async function affLoadProds(){try{const r=await SBH.rpc("shop_public",{});AF.prods=(r.products||[]).map(p=>({id:p.id,name:p.name,status:p.status}));AF.sizes=(r.sizes||[]).filter(z=>z.active!==false).map(z=>({n:z.n})).sort((a,b)=>a.n-b.n)}catch(e){AF.prods=[];AF.sizes=[]}
   if(AF.rep){if(document.getElementById("affView"))affRender();else if(A.tab==="affiliates")renderAdmin()}}
 function afClick(e,root,mine){
   const b=e.target.closest("button");if(!b)return;const d=b.dataset;
@@ -2191,7 +2194,7 @@ function afClick(e,root,mine){
   else if(d.afcopy!==undefined){const i=root.querySelector("#afLinkOut");try{navigator.clipboard.writeText(i.value).then(()=>toast("Link copied"),()=>{i.select();toast("Select and copy the link")})}catch(x){i.select()}}
 }
 function afLinkUpd(root){const r=AF.rep;if(!r)return;const to=root.querySelector("#afTo"),ch=root.querySelector("#afCh"),o=root.querySelector("#afLinkOut");if(!to||!o)return;
-  o.value=afLink(r.aff.code,to.value==="__cp"?"":to.value,ch.value,to.value==="__cp"?r.aff.coupon:"")}
+  const v=to.value,sz=v.startsWith("size:");o.value=afLink(r.aff.code,v==="__cp"||sz?"":v,ch.value,v==="__cp"?r.aff.coupon:"",sz?v.slice(5):"")}
 function afDate(el,mine){AF[el.dataset.afd]=el.value;if(AF.from){mine?affLoadRep(SBH.aff.id,true):AF.sel?affLoadRep(AF.sel):affLoadList()}}
 function affRender(){let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");

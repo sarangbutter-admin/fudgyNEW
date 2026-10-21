@@ -1511,3 +1511,4 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .afacct .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.03em}
 .afpayday{background:#FFF8E1;border:2px solid #FFB800;border-radius:12px;padding:10px 14px;margin-top:10px;color:#4a3300}
 .afkpis .afk em{overflow-wrap:anywhere}
+.size.affhl{animation:cardhl 2.4s ease-out}
