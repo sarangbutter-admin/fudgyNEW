@@ -1981,10 +1981,10 @@ function heroFill(dome,h){
   const sls=hm.querySelectorAll(".hs"),hasM=sls.length>0;
   heroCar(dome,h,[...sls]);
   const shp=heroShapes().some(x=>x[0]===h.shape)?h.shape:"dome";heroShapes().forEach(x=>dome.classList.remove("shape-"+x[0]));dome.classList.add("shape-"+shp);dome.classList.toggle("nomedia",!hasM);
-  const frm=hasM&&HERO_FRAMES[h.frame]!==undefined;
+  const full=!h.frame||h.frame==="full",fw=Math.max(30,Math.min(100,+h.frameW||(full?100:60))),frm=hasM&&(full?(fw<100||h.frameCr==="square"):HERO_FRAMES[h.frame]!==undefined);
   dome.classList.toggle("framed",frm);
-  if(frm){dome.style.setProperty("--far",HERO_FRAMES[h.frame]);dome.style.setProperty("--fw",Math.max(30,Math.min(100,+h.frameW||60))+"%");dome.style.setProperty("--fcr",h.frameCr==="square"?"0px":"22px")}
-  else["--far","--fw","--fcr"].forEach(v=>dome.style.removeProperty(v));
+  if(frm){dome.style.setProperty("--far",full?"auto":HERO_FRAMES[h.frame]);dome.style.setProperty("--fw",fw+"%");dome.classList.toggle("framefull",full);dome.style.setProperty("--fcr",h.frameCr==="square"?"0px":"22px")}
+  else{dome.classList.remove("framefull");["--far","--fw","--fcr"].forEach(v=>dome.style.removeProperty(v))}
   if(shp==="none"){dome.style.background=hasM?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
   q(".ho").style.opacity=hasM?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
   heroFloats(dome,h);
@@ -2222,7 +2222,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 20:37 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 20:42 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

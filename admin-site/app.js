@@ -2060,9 +2060,9 @@ function viewHero(){
     <section class="panel"><h2>Shape</h2><p class="sub">The shape of the banner. Its color is the Banner color above. "No shape" removes it.</p>
       <div class="chips" style="margin-top:10px">${heroShapes().map(([k,l])=>`<button class="fchip" type="button" data-hrshape="${k}" aria-pressed="${(h.shape||"dome")===k}">${l}</button>`).join("")}</div>
     </section>
-    <section class="panel"><h2>Picture and video frame</h2><p class="sub">How big the pictures and videos are. <b>Full banner</b> fills the whole banner behind the words. The other choices show them in a smaller frame under the words.</p>
+    <section class="panel"><h2>Picture and video frame</h2><p class="sub">How big the pictures and videos are. The picture or video always fills the whole banner. <b>Full banner</b> keeps the normal banner shape; the others make the banner Wide, Square, Tall or Story shaped. Every choice can be made narrower with Banner width.</p>
       <div class="chips" style="margin-top:10px">${[["full","Full banner"],["16:9","Wide 16:9"],["1:1","Square 1:1"],["4:5","Tall 4:5"],["9:16","Story 9:16"]].map(([k,l])=>`<button class="fchip" type="button" data-hrframe="${k}" aria-pressed="${(h.frame||"full")===k}">${l}</button>`).join("")}</div>
-      ${HERO_FRAMES[h.frame]!==undefined?`<div class="grid2" style="margin-top:10px"><label class="af">Banner width: ${+h.frameW||60}%<input type="range" min="30" max="100" step="5" value="${+h.frameW||60}" data-hr="frameW" data-hrnum="1" data-hrlbl="Frame size: #%"></label>
+      ${h.media.length?`<div class="grid2" style="margin-top:10px"><label class="af">Banner width: ${+h.frameW||((h.frame||"full")==="full"?100:60)}%<input type="range" min="30" max="100" step="5" value="${+h.frameW||((h.frame||"full")==="full"?100:60)}" data-hr="frameW" data-hrnum="1" data-hrlbl="Banner width: #%"></label>
         <div class="af">Corners<div class="chips" style="margin-top:6px">${[["round","Rounded"],["square","Square"]].map(([k,l])=>`<button class="fchip" type="button" data-hrcorner="${k}" aria-pressed="${(h.frameCr||"round")===k}">${l}</button>`).join("")}</div></div></div>
         <p class="note" style="margin:8px 0 0">The frame never gets taller than the screen. A normal (wide) YouTube video in a Tall or Story frame is cropped on the sides; choose "Show whole picture" under Picture fit to see all of it. YouTube Shorts fit a Story frame exactly.</p>`:""}
     </section>
@@ -3708,7 +3708,7 @@ am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   else if(d.hrbset){const [i,k,v]=d.hrbset.split("."),h=hrDraft();h["b"+i]=Object.assign(HB_DEF(+i),h["b"+i]||{});h["b"+i][k]=v;renderAdmin()}
   else if(d.hrbreset){delete hrDraft()["b"+d.hrbreset];renderAdmin()}
   else if(d.hrfit){hrDraft().fit=d.hrfit;renderAdmin()}
-  else if(d.hrframe){const h=hrDraft();h.frame=d.hrframe;if(d.hrframe!=="full"&&!h.frameW)h.frameW=60;renderAdmin()}
+  else if(d.hrframe){const h=hrDraft();h.frame=d.hrframe;if(d.hrframe!=="full"&&!h.frameW)h.frameW=60;if(d.hrframe==="full"&&h.frameW===60)h.frameW=100;renderAdmin()}
   else if(d.hrcorner){hrDraft().frameCr=d.hrcorner;renderAdmin()}
   else if(d.hrdev){A.hrDev=d.hrdev;renderAdmin()}
   else if(d.hrbtnreset!==undefined){hrDraft()[hrDev()==="pc"?"btnPc":"btnPh"]=null;renderAdmin()}
@@ -4190,10 +4190,10 @@ function heroFill(dome,h){
   const sls=hm.querySelectorAll(".hs"),hasM=sls.length>0;
   heroCar(dome,h,[...sls]);
   const shp=heroShapes().some(x=>x[0]===h.shape)?h.shape:"dome";heroShapes().forEach(x=>dome.classList.remove("shape-"+x[0]));dome.classList.add("shape-"+shp);dome.classList.toggle("nomedia",!hasM);
-  const frm=hasM&&HERO_FRAMES[h.frame]!==undefined;
+  const full=!h.frame||h.frame==="full",fw=Math.max(30,Math.min(100,+h.frameW||(full?100:60))),frm=hasM&&(full?(fw<100||h.frameCr==="square"):HERO_FRAMES[h.frame]!==undefined);
   dome.classList.toggle("framed",frm);
-  if(frm){dome.style.setProperty("--far",HERO_FRAMES[h.frame]);dome.style.setProperty("--fw",Math.max(30,Math.min(100,+h.frameW||60))+"%");dome.style.setProperty("--fcr",h.frameCr==="square"?"0px":"22px")}
-  else["--far","--fw","--fcr"].forEach(v=>dome.style.removeProperty(v));
+  if(frm){dome.style.setProperty("--far",full?"auto":HERO_FRAMES[h.frame]);dome.style.setProperty("--fw",fw+"%");dome.classList.toggle("framefull",full);dome.style.setProperty("--fcr",h.frameCr==="square"?"0px":"22px")}
+  else{dome.classList.remove("framefull");["--far","--fw","--fcr"].forEach(v=>dome.style.removeProperty(v))}
   if(shp==="none"){dome.style.background=hasM?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
   q(".ho").style.opacity=hasM?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
   heroFloats(dome,h);
@@ -5537,7 +5537,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 20:37 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 20:42 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
