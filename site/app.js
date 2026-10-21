@@ -2202,17 +2202,20 @@ function afClick(e,root,mine){
 function afLinkUpd(root){const r=AF.rep;if(!r)return;const to=root.querySelector("#afTo"),ch=root.querySelector("#afCh"),o=root.querySelector("#afLinkOut");if(!to||!o)return;
   const v=to.value,sz=v.startsWith("size:");o.value=afLink(r.aff.code,v==="__cp"||sz?"":v,ch.value,v==="__cp"?r.aff.coupon:"",sz?v.slice(5):"")}
 function afDate(el,mine){AF[el.dataset.afd]=el.value;if(AF.from){mine?affLoadRep(SBH.aff.id,true):AF.sel?affLoadRep(AF.sel):affLoadList()}}
-const AFN={d:null,open:false,was:0,t:0};
+const AFN={d:null,open:false,was:0,t:0,tab:"all"};
+const AFN_TABS=[["all","All"],["com","Commission"],["news","News & Deals"]];
+const afnIn=(x,k)=>k==="all"||(k==="com"?x.kind!=="info"&&x.kind!=="account":x.kind==="info"||x.kind==="account");
 const AFN_IC={order:"🛒",money:"💰",void:"⛔",hold:"⏳",account:"👤",info:"📣"};
 function afBellHTML(){const d=AFN.d,n=d?+d.unseen||0:0;
-  return `<button class="afbell${n?" has":""}" type="button" data-afbell aria-label="Notifications${n?`, ${n} new`:""}" aria-expanded="${AFN.open}">🔔${n?`<i>${n>99?"99+":n}</i>`:""}</button>`+(AFN.open?`<div class="afpop" role="dialog" aria-label="Notifications"><div class="afpoph"><b>Notifications</b><button class="ghost sm" type="button" data-afbell>Close</button></div><div class="afpopl">${d&&d.notes.length?d.notes.map(x=>`<div class="afnt${x.at>AFN.was?" new":""}"><span class="afnic" aria-hidden="true">${AFN_IC[x.kind]||"📣"}</span><span class="afntx"><small>${fmtAgo(x.at)}${x.all?" · from the shop, for everyone":x.kind==="info"?" · from the shop":""}</small><b>${esc(x.title)}</b><span>${esc(x.body)}</span></span></div>`).join(""):`<div class="empty">Nothing yet. You will see your orders, payouts and news from the shop here.</div>`}</div></div>`:"")}
+  return `<button class="afbell${n?" has":""}" type="button" data-afbell aria-label="Notifications${n?`, ${n} new`:""}" aria-expanded="${AFN.open}">🔔${n?`<i>${n>99?"99+":n}</i>`:""}</button>`+(AFN.open?`<div class="afpop" role="dialog" aria-label="Notifications"><div class="afpoph"><b>Notifications</b><button class="ghost sm" type="button" data-afbell>Close</button></div><div class="bell-tabs" role="tablist">${AFN_TABS.map(([k,l])=>`<button type="button" role="tab" data-afntab="${k}" aria-selected="${AFN.tab===k}">${l}</button>`).join("")}</div><div class="afpopl">${d&&d.notes.filter(x=>afnIn(x,AFN.tab)).length?d.notes.filter(x=>afnIn(x,AFN.tab)).map(x=>`<div class="afnt${x.at>AFN.was?" new":""}"><span class="afnic" aria-hidden="true">${AFN_IC[x.kind]||"📣"}</span><span class="afntx"><small>${fmtAgo(x.at)}${x.all?" · from the shop, for everyone":x.kind==="info"?" · from the shop":""}</small><b>${esc(x.title)}</b><span>${esc(x.body)}</span></span></div>`).join(""):`<div class="empty">Nothing yet. You will see your orders, payouts and news from the shop here.</div>`}</div></div>`:"")}
 function afBellDraw(){const b=document.getElementById("afBellBox");if(b)b.innerHTML=afBellHTML()}
 async function afNotesLoad(){if(!document.getElementById("affView"))return;
   try{const d=await SBH.rpc("aff_notes_list",{}),old=AFN.d;AFN.d=d;
     if(AFN.open){if(d.unseen){SBH.rpc("aff_notes_seen",{}).catch(()=>{});d.unseen=0}}
     else{AFN.was=d.seen;if(old&&d.unseen>old.unseen&&d.notes[0])toast("🔔 "+d.notes[0].title)}
     afBellDraw()}catch(e){}}
-function afBellClick(e){if(e.target.closest("[data-afbell]")){AFN.open=!AFN.open;
+function afBellClick(e){const tb=e.target.closest("[data-afntab]");if(tb){AFN.tab=tb.dataset.afntab;afBellDraw();return}
+  if(e.target.closest("[data-afbell]")){AFN.open=!AFN.open;
     if(AFN.open&&AFN.d){AFN.was=AFN.d.seen;if(AFN.d.unseen){AFN.d.unseen=0;SBH.rpc("aff_notes_seen",{}).catch(()=>{})}}
     afBellDraw()}
   else if(AFN.open&&!e.target.closest(".afpop")){AFN.open=false;afBellDraw()}}
@@ -2222,7 +2225,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 20:42 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 20:46 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

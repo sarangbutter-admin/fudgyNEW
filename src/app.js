@@ -5517,17 +5517,20 @@ am.addEventListener("change",async e=>{if(A.tab!=="affiliates")return;const el=e
     try{AF.proof=await SBK.upload(await lpResize(f,1400,true))}catch(er){AF.err=er.message||"Couldn't upload that picture."}AF.busy=false;renderAdmin()}});
 /* the affiliator's own page (shop address /#partner) */
 /* affiliator notification bell */
-const AFN={d:null,open:false,was:0,t:0};
+const AFN={d:null,open:false,was:0,t:0,tab:"all"};
+const AFN_TABS=[["all","All"],["com","Commission"],["news","News & Deals"]];
+const afnIn=(x,k)=>k==="all"||(k==="com"?x.kind!=="info"&&x.kind!=="account":x.kind==="info"||x.kind==="account");
 const AFN_IC={order:"🛒",money:"💰",void:"⛔",hold:"⏳",account:"👤",info:"📣"};
 function afBellHTML(){const d=AFN.d,n=d?+d.unseen||0:0;
-  return `<button class="afbell${n?" has":""}" type="button" data-afbell aria-label="Notifications${n?`, ${n} new`:""}" aria-expanded="${AFN.open}">🔔${n?`<i>${n>99?"99+":n}</i>`:""}</button>`+(AFN.open?`<div class="afpop" role="dialog" aria-label="Notifications"><div class="afpoph"><b>Notifications</b><button class="ghost sm" type="button" data-afbell>Close</button></div><div class="afpopl">${d&&d.notes.length?d.notes.map(x=>`<div class="afnt${x.at>AFN.was?" new":""}"><span class="afnic" aria-hidden="true">${AFN_IC[x.kind]||"📣"}</span><span class="afntx"><small>${fmtAgo(x.at)}${x.all?" · from the shop, for everyone":x.kind==="info"?" · from the shop":""}</small><b>${esc(x.title)}</b><span>${esc(x.body)}</span></span></div>`).join(""):`<div class="empty">Nothing yet. You will see your orders, payouts and news from the shop here.</div>`}</div></div>`:"")}
+  return `<button class="afbell${n?" has":""}" type="button" data-afbell aria-label="Notifications${n?`, ${n} new`:""}" aria-expanded="${AFN.open}">🔔${n?`<i>${n>99?"99+":n}</i>`:""}</button>`+(AFN.open?`<div class="afpop" role="dialog" aria-label="Notifications"><div class="afpoph"><b>Notifications</b><button class="ghost sm" type="button" data-afbell>Close</button></div><div class="bell-tabs" role="tablist">${AFN_TABS.map(([k,l])=>`<button type="button" role="tab" data-afntab="${k}" aria-selected="${AFN.tab===k}">${l}</button>`).join("")}</div><div class="afpopl">${d&&d.notes.filter(x=>afnIn(x,AFN.tab)).length?d.notes.filter(x=>afnIn(x,AFN.tab)).map(x=>`<div class="afnt${x.at>AFN.was?" new":""}"><span class="afnic" aria-hidden="true">${AFN_IC[x.kind]||"📣"}</span><span class="afntx"><small>${fmtAgo(x.at)}${x.all?" · from the shop, for everyone":x.kind==="info"?" · from the shop":""}</small><b>${esc(x.title)}</b><span>${esc(x.body)}</span></span></div>`).join(""):`<div class="empty">Nothing yet. You will see your orders, payouts and news from the shop here.</div>`}</div></div>`:"")}
 function afBellDraw(){const b=document.getElementById("afBellBox");if(b)b.innerHTML=afBellHTML()}
 async function afNotesLoad(){if(!document.getElementById("affView"))return;
   try{const d=await SBH.rpc("aff_notes_list",{}),old=AFN.d;AFN.d=d;
     if(AFN.open){if(d.unseen){SBH.rpc("aff_notes_seen",{}).catch(()=>{});d.unseen=0}}
     else{AFN.was=d.seen;if(old&&d.unseen>old.unseen&&d.notes[0])toast("🔔 "+d.notes[0].title)}
     afBellDraw()}catch(e){}}
-function afBellClick(e){if(e.target.closest("[data-afbell]")){AFN.open=!AFN.open;
+function afBellClick(e){const tb=e.target.closest("[data-afntab]");if(tb){AFN.tab=tb.dataset.afntab;afBellDraw();return}
+  if(e.target.closest("[data-afbell]")){AFN.open=!AFN.open;
     if(AFN.open&&AFN.d){AFN.was=AFN.d.seen;if(AFN.d.unseen){AFN.d.unseen=0;SBH.rpc("aff_notes_seen",{}).catch(()=>{})}}
     afBellDraw()}
   else if(AFN.open&&!e.target.closest(".afpop")){AFN.open=false;afBellDraw()}}
