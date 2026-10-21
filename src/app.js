@@ -36,7 +36,7 @@ const $ = s => document.querySelector(s);
 const imgOk = s => /^(data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+\/=]+|https:\/\/[^\s"'<>\\]+)$/i.test(String(s||"")) ? String(s) : "";
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const r2 = v => Math.round(v*100)/100;
-const money = v => DB.settings.currency + r2(v).toFixed(2);
+const money = v => /^rp/i.test(DB.settings.currency)?DB.settings.currency+Math.ceil(r2(v)).toLocaleString("id-ID"):DB.settings.currency + r2(v).toFixed(2); // rupiah: always rounded up, no decimals, 20.000
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const fromYmd = s => {const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
 const addDays = (d,n) => {const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()+n);return x};
