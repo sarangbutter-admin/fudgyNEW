@@ -2062,7 +2062,7 @@ function viewHero(){
     </section>
     <section class="panel"><h2>Picture and video frame</h2><p class="sub">How big the pictures and videos are. <b>Full banner</b> fills the whole banner behind the words. The other choices show them in a smaller frame under the words.</p>
       <div class="chips" style="margin-top:10px">${[["full","Full banner"],["16:9","Wide 16:9"],["1:1","Square 1:1"],["4:5","Tall 4:5"],["9:16","Story 9:16"]].map(([k,l])=>`<button class="fchip" type="button" data-hrframe="${k}" aria-pressed="${(h.frame||"full")===k}">${l}</button>`).join("")}</div>
-      ${HERO_FRAMES[h.frame]!==undefined?`<div class="grid2" style="margin-top:10px"><label class="af">Frame size: ${+h.frameW||60}%<input type="range" min="30" max="100" step="5" value="${+h.frameW||60}" data-hr="frameW" data-hrnum="1" data-hrlbl="Frame size: #%"></label>
+      ${HERO_FRAMES[h.frame]!==undefined?`<div class="grid2" style="margin-top:10px"><label class="af">Banner width: ${+h.frameW||60}%<input type="range" min="30" max="100" step="5" value="${+h.frameW||60}" data-hr="frameW" data-hrnum="1" data-hrlbl="Frame size: #%"></label>
         <div class="af">Corners<div class="chips" style="margin-top:6px">${[["round","Rounded"],["square","Square"]].map(([k,l])=>`<button class="fchip" type="button" data-hrcorner="${k}" aria-pressed="${(h.frameCr||"round")===k}">${l}</button>`).join("")}</div></div></div>
         <p class="note" style="margin:8px 0 0">The frame never gets taller than the screen. A normal (wide) YouTube video in a Tall or Story frame is cropped on the sides; choose "Show whole picture" under Picture fit to see all of it. YouTube Shorts fit a Story frame exactly.</p>`:""}
     </section>
@@ -2084,7 +2084,7 @@ function viewHero(){
         ${h.carousel!==false?`<div style="display:grid;gap:8px;margin-top:10px">
           <div style="display:flex;gap:10px;align-items:center"><label class="sw"><input type="checkbox" data-hr="waitVideo" data-hrrr="1" ${h.waitVideo!==false?"checked":""} aria-label="Wait for videos to finish"><span></span></label><span class="stlabel">Wait for a video to finish before the next slide${h.waitVideo!==false?"":" (off: videos also move on after the seconds above)"}</span></div>
           <div style="display:flex;gap:10px;align-items:center"><label class="sw"><input type="checkbox" data-hr="swipe" data-hrrr="1" ${h.swipe!==false?"checked":""} aria-label="Customers can swipe"><span></span></label><span class="stlabel">Customers can swipe left or right to change slides (with dots to tap)</span></div></div>`:""}`:""}
-      ${h.media.length&&HERO_FRAMES[h.frame]===undefined?`<label class="af" style="margin-top:10px">Darken the picture: ${h.overlay}%<input type="range" min="0" max="80" step="5" value="${h.overlay}" data-hr="overlay" data-hrnum="1"></label>`:""}
+      ${h.media.length?`<label class="af" style="margin-top:10px">Darken the picture: ${h.overlay}%<input type="range" min="0" max="80" step="5" value="${h.overlay}" data-hr="overlay" data-hrnum="1"></label>`:""}
     </section>
     <section class="panel"><h2>Info line under the banner</h2><div class="stack" style="gap:8px;margin-top:8px">
     <div class="af">Info line under the banner<p class="note" style="margin:0">Each item is a line of text. Tick to show it. <b>{sizes}</b> becomes your box sizes (like "4, 6 or 12"), <b>{cutoff}</b> your order cutoff time, <b>{closed}</b> your closed days.</p></div>
@@ -4194,8 +4194,8 @@ function heroFill(dome,h){
   dome.classList.toggle("framed",frm);
   if(frm){dome.style.setProperty("--far",HERO_FRAMES[h.frame]);dome.style.setProperty("--fw",Math.max(30,Math.min(100,+h.frameW||60))+"%");dome.style.setProperty("--fcr",h.frameCr==="square"?"0px":"22px")}
   else["--far","--fw","--fcr"].forEach(v=>dome.style.removeProperty(v));
-  if(shp==="none"){dome.style.background=hasM&&!frm?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
-  q(".ho").style.opacity=hasM&&!frm?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
+  if(shp==="none"){dome.style.background=hasM?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
+  q(".ho").style.opacity=hasM?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
   heroFloats(dome,h);
   [h.b1,h.b2].forEach((st,i)=>{const a=ab[i];[...a.classList].filter(c=>/^hb/.test(c)).forEach(c=>a.classList.remove(c));if(!st)return;
     a.classList.add("hbc","hb-"+fxOk(st.shape,HB_SHAPES.map(x=>x[0]),"pill"),"hbz-"+fxOk(st.size,["S","M","L"],"M"),"hbfx-"+fxOk(st.fx,HB_FX.map(x=>x[0]),"none"));
@@ -5396,13 +5396,22 @@ function afDashHTML(r,owner){
     <div class="colin" style="margin-top:8px"><input class="in" id="afLinkOut" readonly value="${esc(afLink(a.code,"","ig",""))}"><button class="btn btn-blue btn-sm" type="button" data-afcopy>Copy</button></div></section>
   <section class="panel"><h2>Payouts</h2>${r.payouts.length?r.payouts.map(p=>`<div class="afrow" style="grid-template-columns:1fr auto"><span>${fmtDT(p.at)} · ${p.n} order${p.n===1?"":"s"}${p.note?` · ${esc(p.note)}`:""}${/^https:\/\//.test(p.proof||"")?` · <a class="afproof" href="${esc(p.proof)}" target="_blank" rel="noopener">🧾 proof</a>`:""}</span><b>${money(p.amount)}</b></div>`).join(""):`<p class="note">No payouts yet.</p>`}</section>`}
 async function affLoadList(){if(!SBH.on)return;AF.loading=true;AF.err="";const [f,t]=afRange();
-  try{const [l,o,c]=await Promise.all([SBH.rpc("admin_aff_list",{p_from:f,p_to:t}),SBH.rpc("admin_aff_orders",{p_from:f,p_to:t}),SBH.rpc("admin_aff_cfg",{p:{}})]);AF.list=l;AF.orders=o;AF.cfg=c}catch(e){AF.err=e.message;AF.list=AF.list||[];AF.orders=AF.orders||[]}
+  try{const [l,o,c,an]=await Promise.all([SBH.rpc("admin_aff_list",{p_from:f,p_to:t}),SBH.rpc("admin_aff_orders",{p_from:f,p_to:t}),SBH.rpc("admin_aff_cfg",{p:{}}),SBH.rpc("admin_aff_announcements",{}).catch(()=>AF.ann||[])]);AF.list=l;AF.orders=o;AF.cfg=c;AF.ann=an}catch(e){AF.err=e.message;AF.list=AF.list||[];AF.orders=AF.orders||[]}
   AF.loading=false;if(A.tab==="affiliates"){const y=scrollY;renderAdmin();scrollTo(0,y)}}
 async function affLoadRep(id,mine){const [f,t]=afRange();AF.repLoading=true;
   try{const [rep,inf]=await Promise.all([SBH.rpc("aff_report",{p_id:id,p_from:f,p_to:t,p_group:AF.group}),SBH.rpc("aff_pay_info",{p_id:id})]);rep.pay=inf.pay;rep.cfg=inf.cfg;AF.rep=rep;if(!AF.act)AF.err=""}catch(e){AF.err=e.message}
   AF.repLoading=false;if(!AF.prods)affLoadProds();mine?affRender():(A.tab==="affiliates"&&(()=>{const y=scrollY;renderAdmin();scrollTo(0,y)})())}
 async function affLoadProds(){try{const r=await SBH.rpc("shop_public",{});AF.prods=(r.products||[]).map(p=>({id:p.id,name:p.name,status:p.status}));AF.sizes=(r.sizes||[]).filter(z=>z.active!==false).map(z=>({n:z.n})).sort((a,b)=>a.n-b.n)}catch(e){AF.prods=[];AF.sizes=[]}
   if(AF.rep){if(document.getElementById("affView"))affRender();else if(A.tab==="affiliates")renderAdmin()}}
+const AF_QUICK={flash:["🔥 Flash sale is on","A flash sale is running now. Share your link so your followers can order while it lasts."],coupon:["🎟 New coupon","A new coupon is live: CODE. Share it with your followers."],feature:["✨ New feature","New for affiliators: "]};
+function afAnnHTML(L){const F=AF.annf||(AF.annf={to:"all",title:"",body:""}),A=AF.ann||[];
+  return `<section class="panel"><h2>📣 Announcements to affiliators</h2><p class="note" style="margin:2px 0 10px">It appears in the 🔔 bell on their page. Use it for a flash sale, a new coupon or a new feature. Order, payout and account news is sent automatically.</p>
+    <div class="chips">${[["flash","🔥 Flash sale"],["coupon","🎟 New coupon"],["feature","✨ New feature"]].map(([k,l])=>`<button class="fchip" type="button" data-afannfill="${k}">${l}</button>`).join("")}</div>
+    <div class="grid2" style="margin-top:10px"><label class="af">Send to<select class="in" data-anf="to"><option value="all">All affiliators</option>${L.map(x=>`<option value="${esc(x.id)}" ${F.to===x.id?"selected":""}>${esc(x.name||x.username)}</option>`).join("")}</select></label>
+      <label class="af">Title<input class="in" data-anf="title" maxlength="80" value="${esc(F.title)}"></label></div>
+    <label class="af" style="margin-top:8px">Message<textarea class="in" data-anf="body" rows="3" maxlength="500">${esc(F.body)}</textarea></label>
+    <div class="colin" style="margin-top:8px"><button class="btn btn-blue btn-sm" type="button" data-afannsend>Send announcement</button></div>
+    ${A.length?`<div class="afannl">${A.map(x=>`<div class="afann${x.hidden?" off":""}"><span><small>${fmtAgo(x.at)} · ${x.aff?"to "+esc(x.aname||""):"to everyone"}${x.hidden?" · removed":""}</small><b>${esc(x.title)}</b><span>${esc(x.body)}</span></span>${x.hidden?"":`<button class="ghost sm" type="button" data-afannhide="${x.id}">Remove</button>`}</div>`).join("")}</div>`:""}</section>`}
 function viewAffiliates(){
   const h=head("Affiliates","People who share your shop and earn commission on the orders they bring. Only owners can see this.");
   if(!SBH.on)return h+MOCK+`<section class="panel"><div class="empty">Affiliates work once the site is connected to Supabase.</div></section>`;
@@ -5435,6 +5444,7 @@ function viewAffiliates(){
     ${(()=>{const m={};L.forEach(x=>(x.sources||[]).forEach(r=>{const o=m[r.src]||(m[r.src]={src:r.src,views:0,orders:0,sales:0,who:{}});o.views+=+r.views||0;o.orders+=+r.orders||0;o.sales+=+r.sales||0;if((+r.views||0)+(+r.orders||0)>0)o.who[x.code]=(o.who[x.code]||0)+(+r.views||0)+(+r.orders||0)}));
       const rows=Object.values(m).sort((a,b)=>b.views-a.views||b.orders-a.orders),tv=rows.reduce((a,r)=>a+r.views,0)||1;
       return `<section class="panel"><h2>Where visitors came from (all affiliators)</h2>${rows.length?`<div class="aftable"><div class="afrow afth afsrc"><span>Source</span><span>Views</span><span>Orders</span><span>Sales</span><span>Top affiliators</span></div>${rows.map(r=>`<div class="afrow afsrc"><span>${esc(AF_SRC[r.src]||r.src)}<i class="afbar" style="width:${Math.round(r.views/tv*100)}%"></i></span><span>${r.views} <small>${Math.round(r.views/tv*100)}%</small></span><span>${r.orders}</span><span>${money(r.sales)}</span><span>${Object.entries(r.who).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([c])=>esc(c)).join(", ")}</span></div>`).join("")}</div>`:`<p class="note">No visits from affiliate links in this period yet.</p>`}</section>`})()}
+    ${afAnnHTML(L)}
     ${form}
     <section class="panel"><h2>Affiliators (${L.length})</h2>
       <div class="chips" style="margin-top:6px">${[["all","All"],["active","Active"],["paused","Paused"],["disabled","Switched off"],["review","Need approval"],["approved","Waiting payout"],["verify","Accounts to verify"]].map(([k,l])=>`<button class="fchip" type="button" data-afflt="${k}" aria-pressed="${AF.afs===k}">${l}</button>`).join("")}</div>
@@ -5496,22 +5506,41 @@ am.addEventListener("click",async e=>{if(A.tab!=="affiliates")return;const b=e.t
   else if(d.afpayv){AF.act={kind:d.afpayv==="verify"?"payverify":"payreject",aff:AF.sel,reason:""};AF.err="";renderAdmin();showNew("#afAct")}
   else if(d.afcopytxt!==undefined){try{navigator.clipboard.writeText(d.afcopytxt).then(()=>toast("Copied"),()=>toast("Select and copy it"))}catch(x){toast("Select and copy it")}}
   else if(d.afcfgsave!==undefined){try{AF.cfg=await SBH.rpc("admin_aff_cfg",{p:{min:+(document.getElementById("afCfgMin")||{}).value,day:+(document.getElementById("afCfgDay")||{}).value}});toast("Payout rules saved");renderAdmin()}catch(er){toast(er.message)}}
+  else if(d.afannfill){const q=AF_QUICK[d.afannfill];if(q){AF.annf=Object.assign(AF.annf||{to:"all"},{title:q[0],body:q[1]});const y=scrollY;renderAdmin();scrollTo(0,y)}}
+  else if(d.afannsend!==undefined){const F=AF.annf||{};try{await SBH.rpc("admin_aff_announce",{p_to:F.to||"all",p_title:F.title||"",p_body:F.body||""});AF.annf={to:F.to||"all",title:"",body:""};toast("Announcement sent");AF.ann=await SBH.rpc("admin_aff_announcements",{})}catch(er){toast(er.message)}const y=scrollY;renderAdmin();scrollTo(0,y)}
+  else if(d.afannhide){try{await SBH.rpc("admin_aff_announce_hide",{p_id:+d.afannhide});AF.ann=await SBH.rpc("admin_aff_announcements",{});toast("Removed. Affiliators no longer see it")}catch(er){toast(er.message)}const y=scrollY;renderAdmin();scrollTo(0,y)}
   else if(d.afnogo!==undefined){AF.act=null;AF.proof="";AF.err="";renderAdmin()}
   else if(d.afgo!==undefined)afGo()});
+am.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.anf;if(k&&AF.annf)AF.annf[k]=e.target.value});
 am.addEventListener("change",async e=>{if(A.tab!=="affiliates")return;const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(am);if(el.dataset.afd)afDate(el,false);
   if(el.id==="afProof"){const f=el.files&&el.files[0];el.value="";if(!f||!AF.act)return;AF.busy=true;AF.err="";renderAdmin();
     try{AF.proof=await SBK.upload(await lpResize(f,1400,true))}catch(er){AF.err=er.message||"Couldn't upload that picture."}AF.busy=false;renderAdmin()}});
 /* the affiliator's own page (shop address /#partner) */
+/* affiliator notification bell */
+const AFN={d:null,open:false,was:0,t:0};
+const AFN_IC={order:"🛒",money:"💰",void:"⛔",hold:"⏳",account:"👤",info:"📣"};
+function afBellHTML(){const d=AFN.d,n=d?+d.unseen||0:0;
+  return `<button class="afbell${n?" has":""}" type="button" data-afbell aria-label="Notifications${n?`, ${n} new`:""}" aria-expanded="${AFN.open}">🔔${n?`<i>${n>99?"99+":n}</i>`:""}</button>`+(AFN.open?`<div class="afpop" role="dialog" aria-label="Notifications"><div class="afpoph"><b>Notifications</b><button class="ghost sm" type="button" data-afbell>Close</button></div><div class="afpopl">${d&&d.notes.length?d.notes.map(x=>`<div class="afnt${x.at>AFN.was?" new":""}"><span class="afnic" aria-hidden="true">${AFN_IC[x.kind]||"📣"}</span><span class="afntx"><small>${fmtAgo(x.at)}${x.all?" · from the shop, for everyone":x.kind==="info"?" · from the shop":""}</small><b>${esc(x.title)}</b><span>${esc(x.body)}</span></span></div>`).join(""):`<div class="empty">Nothing yet. You will see your orders, payouts and news from the shop here.</div>`}</div></div>`:"")}
+function afBellDraw(){const b=document.getElementById("afBellBox");if(b)b.innerHTML=afBellHTML()}
+async function afNotesLoad(){if(!document.getElementById("affView"))return;
+  try{const d=await SBH.rpc("aff_notes_list",{}),old=AFN.d;AFN.d=d;
+    if(AFN.open){if(d.unseen){SBH.rpc("aff_notes_seen",{}).catch(()=>{});d.unseen=0}}
+    else{AFN.was=d.seen;if(old&&d.unseen>old.unseen&&d.notes[0])toast("🔔 "+d.notes[0].title)}
+    afBellDraw()}catch(e){}}
+function afBellClick(e){if(e.target.closest("[data-afbell]")){AFN.open=!AFN.open;
+    if(AFN.open&&AFN.d){AFN.was=AFN.d.seen;if(AFN.d.unseen){AFN.d.unseen=0;SBH.rpc("aff_notes_seen",{}).catch(()=>{})}}
+    afBellDraw()}
+  else if(AFN.open&&!e.target.closest(".afpop")){AFN.open=false;afBellDraw()}}
 function affRender(){let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
-    v.addEventListener("click",e=>{afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut()});
+    v.addEventListener("click",e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut()});
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 20:28 UTC</small><span class="afwho">@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 20:37 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
-const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";affRender();affLoadRep(me.id,true)};
+const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
 function viewSecurity(){
   const h=head("Security","Limits that protect your shop from abuse, bots and surprise bills. Only owners can see this.");
   if(!SBH.on)return h+MOCK+`<section class="panel"><div class="empty">Security works once the site is connected to Supabase.</div></section>`;

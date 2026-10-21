@@ -1985,8 +1985,8 @@ function heroFill(dome,h){
   dome.classList.toggle("framed",frm);
   if(frm){dome.style.setProperty("--far",HERO_FRAMES[h.frame]);dome.style.setProperty("--fw",Math.max(30,Math.min(100,+h.frameW||60))+"%");dome.style.setProperty("--fcr",h.frameCr==="square"?"0px":"22px")}
   else["--far","--fw","--fcr"].forEach(v=>dome.style.removeProperty(v));
-  if(shp==="none"){dome.style.background=hasM&&!frm?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
-  q(".ho").style.opacity=hasM&&!frm?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
+  if(shp==="none"){dome.style.background=hasM?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
+  q(".ho").style.opacity=hasM?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
   heroFloats(dome,h);
   [h.b1,h.b2].forEach((st,i)=>{const a=ab[i];[...a.classList].filter(c=>/^hb/.test(c)).forEach(c=>a.classList.remove(c));if(!st)return;
     a.classList.add("hbc","hb-"+fxOk(st.shape,HB_SHAPES.map(x=>x[0]),"pill"),"hbz-"+fxOk(st.size,["S","M","L"],"M"),"hbfx-"+fxOk(st.fx,HB_FX.map(x=>x[0]),"none"));
@@ -2202,16 +2202,30 @@ function afClick(e,root,mine){
 function afLinkUpd(root){const r=AF.rep;if(!r)return;const to=root.querySelector("#afTo"),ch=root.querySelector("#afCh"),o=root.querySelector("#afLinkOut");if(!to||!o)return;
   const v=to.value,sz=v.startsWith("size:");o.value=afLink(r.aff.code,v==="__cp"||sz?"":v,ch.value,v==="__cp"?r.aff.coupon:"",sz?v.slice(5):"")}
 function afDate(el,mine){AF[el.dataset.afd]=el.value;if(AF.from){mine?affLoadRep(SBH.aff.id,true):AF.sel?affLoadRep(AF.sel):affLoadList()}}
+const AFN={d:null,open:false,was:0,t:0};
+const AFN_IC={order:"🛒",money:"💰",void:"⛔",hold:"⏳",account:"👤",info:"📣"};
+function afBellHTML(){const d=AFN.d,n=d?+d.unseen||0:0;
+  return `<button class="afbell${n?" has":""}" type="button" data-afbell aria-label="Notifications${n?`, ${n} new`:""}" aria-expanded="${AFN.open}">🔔${n?`<i>${n>99?"99+":n}</i>`:""}</button>`+(AFN.open?`<div class="afpop" role="dialog" aria-label="Notifications"><div class="afpoph"><b>Notifications</b><button class="ghost sm" type="button" data-afbell>Close</button></div><div class="afpopl">${d&&d.notes.length?d.notes.map(x=>`<div class="afnt${x.at>AFN.was?" new":""}"><span class="afnic" aria-hidden="true">${AFN_IC[x.kind]||"📣"}</span><span class="afntx"><small>${fmtAgo(x.at)}${x.all?" · from the shop, for everyone":x.kind==="info"?" · from the shop":""}</small><b>${esc(x.title)}</b><span>${esc(x.body)}</span></span></div>`).join(""):`<div class="empty">Nothing yet. You will see your orders, payouts and news from the shop here.</div>`}</div></div>`:"")}
+function afBellDraw(){const b=document.getElementById("afBellBox");if(b)b.innerHTML=afBellHTML()}
+async function afNotesLoad(){if(!document.getElementById("affView"))return;
+  try{const d=await SBH.rpc("aff_notes_list",{}),old=AFN.d;AFN.d=d;
+    if(AFN.open){if(d.unseen){SBH.rpc("aff_notes_seen",{}).catch(()=>{});d.unseen=0}}
+    else{AFN.was=d.seen;if(old&&d.unseen>old.unseen&&d.notes[0])toast("🔔 "+d.notes[0].title)}
+    afBellDraw()}catch(e){}}
+function afBellClick(e){if(e.target.closest("[data-afbell]")){AFN.open=!AFN.open;
+    if(AFN.open&&AFN.d){AFN.was=AFN.d.seen;if(AFN.d.unseen){AFN.d.unseen=0;SBH.rpc("aff_notes_seen",{}).catch(()=>{})}}
+    afBellDraw()}
+  else if(AFN.open&&!e.target.closest(".afpop")){AFN.open=false;afBellDraw()}}
 function affRender(){let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
-    v.addEventListener("click",e=>{afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut()});
+    v.addEventListener("click",e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut()});
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 20:28 UTC</small><span class="afwho">@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 20:37 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
-const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";affRender();affLoadRep(me.id,true)};
+const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
 const sig = (now=Date.now()) => DB.sales.map(s=>saleStatus(s,now)).join();
 let view=null;
 function route(){
