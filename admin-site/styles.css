@@ -1513,3 +1513,8 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .afkpis .afk em{overflow-wrap:anywhere}
 .size.affhl{animation:cardhl 2.4s ease-out}
 .afhdr .afver{font-size:10px;opacity:.7;margin-left:auto;margin-right:12px}
+/* top banner: pictures and videos in a smaller frame (Wide, Square, Tall 4:5, Story 9:16) under the words */
+.dome.framed{display:flex;flex-direction:column;align-items:center}
+.dome.framed > .hm{position:relative;inset:auto;z-index:1;order:9;width:min(var(--fw,60%),calc(72vh * var(--far,.8)));aspect-ratio:var(--far,.8);margin:24px auto 0;border-radius:var(--fcr,22px);overflow:hidden;background:#000;box-shadow:0 14px 34px rgba(0,0,40,.35);flex:none}
+.dome.framed > .hero-ctas{margin-top:22px}
+.dome.framed.btnfree > .hm{order:9}

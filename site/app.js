@@ -1981,8 +1981,12 @@ function heroFill(dome,h){
   const sls=hm.querySelectorAll(".hs"),hasM=sls.length>0;
   heroCar(dome,h,[...sls]);
   const shp=heroShapes().some(x=>x[0]===h.shape)?h.shape:"dome";heroShapes().forEach(x=>dome.classList.remove("shape-"+x[0]));dome.classList.add("shape-"+shp);dome.classList.toggle("nomedia",!hasM);
-  if(shp==="none"){dome.style.background=hasM?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
-  q(".ho").style.opacity=hasM?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
+  const frm=hasM&&HERO_FRAMES[h.frame]!==undefined;
+  dome.classList.toggle("framed",frm);
+  if(frm){dome.style.setProperty("--far",HERO_FRAMES[h.frame]);dome.style.setProperty("--fw",Math.max(30,Math.min(100,+h.frameW||60))+"%");dome.style.setProperty("--fcr",h.frameCr==="square"?"0px":"22px")}
+  else["--far","--fw","--fcr"].forEach(v=>dome.style.removeProperty(v));
+  if(shp==="none"){dome.style.background=hasM&&!frm?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
+  q(".ho").style.opacity=hasM&&!frm?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
   heroFloats(dome,h);
   [h.b1,h.b2].forEach((st,i)=>{const a=ab[i];[...a.classList].filter(c=>/^hb/.test(c)).forEach(c=>a.classList.remove(c));if(!st)return;
     a.classList.add("hbc","hb-"+fxOk(st.shape,HB_SHAPES.map(x=>x[0]),"pill"),"hbz-"+fxOk(st.size,["S","M","L"],"M"),"hbfx-"+fxOk(st.fx,HB_FX.map(x=>x[0]),"none"));
@@ -1990,7 +1994,7 @@ function heroFill(dome,h){
     a.style.setProperty("--hb-line",hexOk(st.line,"#ffffff"));a.style.setProperty("--hb-glow",hexOk(st.fill===false?st.line:st.bg,"#ffffff"))});
   dome.classList.toggle("fit-contain",h.fit==="contain");
   dome._h=h;dome._ratio=null;
-  if(hasM&&(h.size||"auto")==="auto")heroRatio(list[0],r=>{if(dome._h===h){dome._ratio=r;heroLayout(dome)}});
+  if(hasM&&!frm&&(h.size||"auto")==="auto")heroRatio(list[0],r=>{if(dome._h===h){dome._ratio=r;heroLayout(dome)}});
   heroLayout(dome);
 }
 const HERO_BP=640,HR_RATIO=new Map();
@@ -2027,9 +2031,11 @@ function heroRatio(m,cb){const src=safeMedia(m&&m.src);if(!src)return;if(HR_RATI
   if(vimeoId(src)){done(16/9);return}
   if(m.type==="video"||isVideoSrc(src)){const v=document.createElement("video");v.muted=true;v.preload="metadata";v.onloadedmetadata=()=>done(v.videoWidth/v.videoHeight);v.src=src;return}
   const im=new Image();im.onload=()=>done(im.naturalWidth/im.naturalHeight);im.src=imgOk(src)}
+const HERO_FRAMES={"16:9":16/9,"1:1":1,"4:5":.8,"9:16":.5625};
 function heroLayout(dome){const h=dome&&dome._h;if(!h)return;
   const dev=dome._dev||(innerWidth>HERO_BP?"pc":"ph"),size=h.size||"auto",w=dome.clientWidth;let mh=0;
-  if(size==="custom")mh=dev==="pc"?Math.max(260,Math.min(1000,+h.hPc||480)):Math.max(220,Math.min(900,+h.hPh||360));
+  if(dome.classList.contains("framed")){}
+  else if(size==="custom")mh=dev==="pc"?Math.max(260,Math.min(1000,+h.hPc||480)):Math.max(220,Math.min(900,+h.hPh||360));
   else if(size==="auto"&&dome._ratio&&w)mh=Math.round(Math.min(w/dome._ratio,innerHeight*(dome._dev?.6:.9)));
   dome.style.minHeight=mh?mh+"px":"";dome.classList.toggle("hsz",!!mh);
   const bp=h[dev==="pc"?"btnPc":"btnPh"],c=dome.querySelector(".hero-ctas"),ok=bp&&isFinite(bp.x)&&isFinite(bp.y);
@@ -2202,7 +2208,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 17:09 UTC</small><span class="afwho">@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 20:28 UTC</small><span class="afwho">@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";affRender();affLoadRep(me.id,true)};

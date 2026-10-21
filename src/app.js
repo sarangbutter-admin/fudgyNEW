@@ -2060,6 +2060,12 @@ function viewHero(){
     <section class="panel"><h2>Shape</h2><p class="sub">The shape of the banner. Its color is the Banner color above. "No shape" removes it.</p>
       <div class="chips" style="margin-top:10px">${heroShapes().map(([k,l])=>`<button class="fchip" type="button" data-hrshape="${k}" aria-pressed="${(h.shape||"dome")===k}">${l}</button>`).join("")}</div>
     </section>
+    <section class="panel"><h2>Picture and video frame</h2><p class="sub">How big the pictures and videos are. <b>Full banner</b> fills the whole banner behind the words. The other choices show them in a smaller frame under the words.</p>
+      <div class="chips" style="margin-top:10px">${[["full","Full banner"],["16:9","Wide 16:9"],["1:1","Square 1:1"],["4:5","Tall 4:5"],["9:16","Story 9:16"]].map(([k,l])=>`<button class="fchip" type="button" data-hrframe="${k}" aria-pressed="${(h.frame||"full")===k}">${l}</button>`).join("")}</div>
+      ${HERO_FRAMES[h.frame]!==undefined?`<div class="grid2" style="margin-top:10px"><label class="af">Frame size: ${+h.frameW||60}%<input type="range" min="30" max="100" step="5" value="${+h.frameW||60}" data-hr="frameW" data-hrnum="1" data-hrlbl="Frame size: #%"></label>
+        <div class="af">Corners<div class="chips" style="margin-top:6px">${[["round","Rounded"],["square","Square"]].map(([k,l])=>`<button class="fchip" type="button" data-hrcorner="${k}" aria-pressed="${(h.frameCr||"round")===k}">${l}</button>`).join("")}</div></div></div>
+        <p class="note" style="margin:8px 0 0">The frame never gets taller than the screen. A normal (wide) YouTube video in a Tall or Story frame is cropped on the sides; choose "Show whole picture" under Picture fit to see all of it. YouTube Shorts fit a Story frame exactly.</p>`:""}
+    </section>
     <section class="panel"><h2>Banner size</h2><p class="sub">How tall the banner is.</p>
       <div class="chips" style="margin-top:10px">${[["auto","Fit the picture or video"],["text","Fit the words"],["custom","Custom height"]].map(([k,l])=>`<button class="fchip" type="button" data-hrsize="${k}" aria-pressed="${(h.size||"auto")===k}">${l}</button>`).join("")}</div>
       <p class="note" style="margin:8px 0 0">${(h.size||"auto")==="auto"?"The banner takes the shape of your first picture or video, so it isn't cut off. The words always fit; very tall pictures stop at 90% of the screen height.":(h.size==="text")?"The banner is only as tall as the words. Pictures are cropped to fit.":"Pick the height for phones and computers. The words always fit."}</p>
@@ -2078,7 +2084,7 @@ function viewHero(){
         ${h.carousel!==false?`<div style="display:grid;gap:8px;margin-top:10px">
           <div style="display:flex;gap:10px;align-items:center"><label class="sw"><input type="checkbox" data-hr="waitVideo" data-hrrr="1" ${h.waitVideo!==false?"checked":""} aria-label="Wait for videos to finish"><span></span></label><span class="stlabel">Wait for a video to finish before the next slide${h.waitVideo!==false?"":" (off: videos also move on after the seconds above)"}</span></div>
           <div style="display:flex;gap:10px;align-items:center"><label class="sw"><input type="checkbox" data-hr="swipe" data-hrrr="1" ${h.swipe!==false?"checked":""} aria-label="Customers can swipe"><span></span></label><span class="stlabel">Customers can swipe left or right to change slides (with dots to tap)</span></div></div>`:""}`:""}
-      ${h.media.length?`<label class="af" style="margin-top:10px">Darken the picture: ${h.overlay}%<input type="range" min="0" max="80" step="5" value="${h.overlay}" data-hr="overlay" data-hrnum="1"></label>`:""}
+      ${h.media.length&&HERO_FRAMES[h.frame]===undefined?`<label class="af" style="margin-top:10px">Darken the picture: ${h.overlay}%<input type="range" min="0" max="80" step="5" value="${h.overlay}" data-hr="overlay" data-hrnum="1"></label>`:""}
     </section>
     <section class="panel"><h2>Info line under the banner</h2><div class="stack" style="gap:8px;margin-top:8px">
     <div class="af">Info line under the banner<p class="note" style="margin:0">Each item is a line of text. Tick to show it. <b>{sizes}</b> becomes your box sizes (like "4, 6 or 12"), <b>{cutoff}</b> your order cutoff time, <b>{closed}</b> your closed days.</p></div>
@@ -3702,6 +3708,8 @@ am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   else if(d.hrbset){const [i,k,v]=d.hrbset.split("."),h=hrDraft();h["b"+i]=Object.assign(HB_DEF(+i),h["b"+i]||{});h["b"+i][k]=v;renderAdmin()}
   else if(d.hrbreset){delete hrDraft()["b"+d.hrbreset];renderAdmin()}
   else if(d.hrfit){hrDraft().fit=d.hrfit;renderAdmin()}
+  else if(d.hrframe){const h=hrDraft();h.frame=d.hrframe;if(d.hrframe!=="full"&&!h.frameW)h.frameW=60;renderAdmin()}
+  else if(d.hrcorner){hrDraft().frameCr=d.hrcorner;renderAdmin()}
   else if(d.hrdev){A.hrDev=d.hrdev;renderAdmin()}
   else if(d.hrbtnreset!==undefined){hrDraft()[hrDev()==="pc"?"btnPc":"btnPh"]=null;renderAdmin()}
   else if(d.hrmrm!==undefined){hrDraft().media.splice(+d.hrmrm,1);renderAdmin()}
@@ -4182,8 +4190,12 @@ function heroFill(dome,h){
   const sls=hm.querySelectorAll(".hs"),hasM=sls.length>0;
   heroCar(dome,h,[...sls]);
   const shp=heroShapes().some(x=>x[0]===h.shape)?h.shape:"dome";heroShapes().forEach(x=>dome.classList.remove("shape-"+x[0]));dome.classList.add("shape-"+shp);dome.classList.toggle("nomedia",!hasM);
-  if(shp==="none"){dome.style.background=hasM?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
-  q(".ho").style.opacity=hasM?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
+  const frm=hasM&&HERO_FRAMES[h.frame]!==undefined;
+  dome.classList.toggle("framed",frm);
+  if(frm){dome.style.setProperty("--far",HERO_FRAMES[h.frame]);dome.style.setProperty("--fw",Math.max(30,Math.min(100,+h.frameW||60))+"%");dome.style.setProperty("--fcr",h.frameCr==="square"?"0px":"22px")}
+  else["--far","--fw","--fcr"].forEach(v=>dome.style.removeProperty(v));
+  if(shp==="none"){dome.style.background=hasM&&!frm?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
+  q(".ho").style.opacity=hasM&&!frm?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
   heroFloats(dome,h);
   [h.b1,h.b2].forEach((st,i)=>{const a=ab[i];[...a.classList].filter(c=>/^hb/.test(c)).forEach(c=>a.classList.remove(c));if(!st)return;
     a.classList.add("hbc","hb-"+fxOk(st.shape,HB_SHAPES.map(x=>x[0]),"pill"),"hbz-"+fxOk(st.size,["S","M","L"],"M"),"hbfx-"+fxOk(st.fx,HB_FX.map(x=>x[0]),"none"));
@@ -4191,7 +4203,7 @@ function heroFill(dome,h){
     a.style.setProperty("--hb-line",hexOk(st.line,"#ffffff"));a.style.setProperty("--hb-glow",hexOk(st.fill===false?st.line:st.bg,"#ffffff"))});
   dome.classList.toggle("fit-contain",h.fit==="contain");
   dome._h=h;dome._ratio=null;
-  if(hasM&&(h.size||"auto")==="auto")heroRatio(list[0],r=>{if(dome._h===h){dome._ratio=r;heroLayout(dome)}});
+  if(hasM&&!frm&&(h.size||"auto")==="auto")heroRatio(list[0],r=>{if(dome._h===h){dome._ratio=r;heroLayout(dome)}});
   heroLayout(dome);
 }
 /* banner height and button position. Phones (up to 640px wide) and computers each keep their own button spot.
@@ -4234,9 +4246,11 @@ function heroRatio(m,cb){const src=safeMedia(m&&m.src);if(!src)return;if(HR_RATI
   if(vimeoId(src)){done(16/9);return}
   if(m.type==="video"||isVideoSrc(src)){const v=document.createElement("video");v.muted=true;v.preload="metadata";v.onloadedmetadata=()=>done(v.videoWidth/v.videoHeight);v.src=src;return}
   const im=new Image();im.onload=()=>done(im.naturalWidth/im.naturalHeight);im.src=imgOk(src)}
+const HERO_FRAMES={"16:9":16/9,"1:1":1,"4:5":.8,"9:16":.5625};
 function heroLayout(dome){const h=dome&&dome._h;if(!h)return;
   const dev=dome._dev||(innerWidth>HERO_BP?"pc":"ph"),size=h.size||"auto",w=dome.clientWidth;let mh=0;
-  if(size==="custom")mh=dev==="pc"?Math.max(260,Math.min(1000,+h.hPc||480)):Math.max(220,Math.min(900,+h.hPh||360));
+  if(dome.classList.contains("framed")){}
+  else if(size==="custom")mh=dev==="pc"?Math.max(260,Math.min(1000,+h.hPc||480)):Math.max(220,Math.min(900,+h.hPh||360));
   else if(size==="auto"&&dome._ratio&&w)mh=Math.round(Math.min(w/dome._ratio,innerHeight*(dome._dev?.6:.9)));
   dome.style.minHeight=mh?mh+"px":"";dome.classList.toggle("hsz",!!mh);
   const bp=h[dev==="pc"?"btnPc":"btnPh"],c=dome.querySelector(".hero-ctas"),ok=bp&&isFinite(bp.x)&&isFinite(bp.y);
