@@ -2085,12 +2085,15 @@ function renderLanding(){
   $("#lpBottom").innerHTML=pg.blocks.filter(b=>b.pos!=="top").map(blk).join("");
 }
 const HEX_OK=/^(#[0-9a-f]{6}|transparent)$/i;
-const AF={list:null,orders:null,loading:false,err:"",range:"30d",from:"",to:"",group:"day",sel:null,rep:null,repLoading:false,form:null,ferr:"",prods:null,sf:"all",afs:"all",act:null,proof:"",busy:false};
+const AF={list:null,orders:null,loading:false,err:"",range:"30d",from:"",to:"",group:"day",sel:null,rep:null,repLoading:false,form:null,ferr:"",prods:null,sf:"all",afs:"all",act:null,proof:"",busy:false,cfg:null,pf:null,perr:""};
 const AF_SRC={ig:"Instagram",tt:"TikTok",wa:"WhatsApp",fb:"Facebook",ads:"Ads",x:"X / Twitter",yt:"YouTube",google:"Google",direct:"Direct / unknown",coupon:"Coupon code",web:"Website"};
 const AF_ST={progress:["On progress","#1B4DB3","#E4EDFF"],hold:["On hold","#8A5A00","#FFF4D6"],review:["Needs approval","#B42318","#FDE8E6"],approved:["Waiting payout","#0A6B34","#E3F6EA"],paid:["Paid out","#000096","#E5E8FF"],voided:["VOIDED","#B42318","#FDE2E2"],cancelled:["Cancelled","#5A5F86","#EEF0F7"],waiting:["Waiting for payment","#5A5F86","#EEF0F7"]};
 const AF_STATUS={active:["Active","#0A6B34","#E3F6EA"],paused:["Paused","#8A5A00","#FFF4D6"],disabled:["Switched off","#9B1C1C","#FDE2E2"]};
 const AF_FILTERS=[["all","All"],["review","Needs approval"],["approved","Waiting payout"],["hold","On hold"],["progress","On progress"],["paid","Paid out"],["voided","Voided"],["cancelled","Cancelled"],["waiting","Waiting for payment"]];
-const afChip=(m,k,self)=>{const x=m[k]||m[Object.keys(m)[0]];return `<span class="afchip${k==="review"&&!self?" blink":""}" style="color:${x[1]};background:${x[2]}">${self&&k==="review"?"Under review":x[0]}</span>`};
+const AF_DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const AF_BANKS=["BCA","BRI","BNI","Mandiri","CIMB Niaga","Permata","BSI","Bank Jago","SeaBank","Jenius (BTPN)","GoPay","OVO","DANA","ShopeePay","LinkAja","Other"];
+const AF_PAY_ST={none:["No account","#5A5F86","#EEF0F7"],pending:["Waiting for verification","#B42318","#FDE8E6"],verified:["Verified","#0A6B34","#E3F6EA"],rejected:["Rejected","#9B1C1C","#FDE2E2"]};
+const afChip=(m,k,self)=>{const x=m[k]||m[Object.keys(m)[0]];return `<span class="afchip${!self&&(k==="review"||k==="pending")?" blink":""}" style="color:${x[1]};background:${x[2]}">${self&&k==="review"?"Under review":x[0]}</span>`};
 function afRange(){const n=Date.now(),d0=today0().getTime();
   if(AF.range==="today")return [d0,n+864e5];if(AF.range==="7d")return [d0-6*864e5,n+864e5];if(AF.range==="30d")return [d0-29*864e5,n+864e5];
   if(AF.range==="month"){const d=today0();d.setDate(1);return [d.getTime(),n+864e5]}
@@ -2100,9 +2103,9 @@ const afShop=()=>String((window.DELIDOME_CONFIG||{}).shopUrl||location.origin).r
 function afLink(code,to,ch,cp){const q=new URLSearchParams({ref:code});if(ch)q.set("src",ch);if(to)q.set("to",to);if(cp)q.set("cp",cp);return afShop()+"/?"+q.toString()}
 function afPeriodHTML(){return `<div class="chips" style="margin-top:4px">${[["today","Today"],["7d","Last 7 days"],["30d","Last 30 days"],["month","This month"],["all","All time"],["custom","Custom"]].map(([k,l])=>`<button class="fchip" type="button" data-afr="${k}" aria-pressed="${AF.range===k}">${l}</button>`).join("")}</div>
   ${AF.range==="custom"?`<div class="colin" style="margin-top:8px;gap:8px;flex-wrap:wrap"><label class="af" style="margin:0">From<input class="in" type="date" data-afd="from" value="${esc(AF.from)}"></label><label class="af" style="margin:0">To<input class="in" type="date" data-afd="to" value="${esc(AF.to)}"></label></div>`:""}`}
-function afKpis(t,self){const k=(v,l,cls,sub)=>`<div class="afk${cls?" "+cls:""}"><strong>${v}</strong><small>${l}</small>${sub?`<em>${sub}</em>`:""}</div>`,n=(c,w)=>c?`${c} order${c===1?"":"s"}${w?" "+w:""}`:"";
+function afKpis(t,self,cfg){const k=(v,l,cls,sub)=>`<div class="afk${cls?" "+cls:""}"><strong>${v}</strong><small>${l}</small>${sub?`<em>${sub}</em>`:""}</div>`,n=(c,w)=>c?`${c} order${c===1?"":"s"}${w?" "+w:""}`:"";
   return `<div class="afkpis">${k(t.views,"Link views")}${k(t.uniq,"Unique visitors")}${k(t.orders,"Paid orders")}${k(t.coupon,"Coupon uses")}${k(money(t.sales),"Sales (product value)")}
-  ${k(money(t.pending),"Commission pending",0,n(t.hold_n,"on hold"))}${k(money(t.review),self?"Under review":"Needs approval",!self&&t.review_n>0?"hot red":"",n(t.review_n))}${k(money(t.approved),"Waiting payout",t.approved_n>0?"hot":"",n(t.approved_n))}${k(money(t.paid),"Paid out")}${t.void_n>0?k(money(t.void),"Voided",0,n(t.void_n)):""}</div>
+  ${k(money(t.pending),"Commission pending",0,n(t.hold_n,"on hold"))}${k(money(t.review),self?"Under review":"Needs approval",!self&&t.review_n>0?"hot red":"",n(t.review_n))}${k(money(t.approved),"Waiting payout",t.approved_n>0?"hot":"",n(t.approved_n)+(cfg?`${t.approved_n?" · ":""}min ${money(cfg.min)} · paid every ${AF_DAYS[cfg.day]}`:""))}${k(money(t.paid),"Paid out")}${t.void_n>0?k(money(t.void),"Voided",0,n(t.void_n)):""}</div>
   ${t.waiting>0||t.cancelled_n>0?`<p class="note" style="margin:6px 0 0">${t.waiting?`${t.waiting} order${t.waiting===1?"":"s"} waiting for payment. `:""}${t.cancelled_n?`${t.cancelled_n} cancelled.`:""}</p>`:""}`}
 const afShown=rows=>AF.sf==="all"?rows:rows.filter(r=>r.st===AF.sf);
 function afChips(rows,self){const n=k=>k==="all"?rows.length:rows.filter(r=>r.st===k).length;
@@ -2125,6 +2128,33 @@ function afOrdersHTML(rows,mode){
       else if(r.st==="voided"&&!["Full refund","Order cancelled"].includes(r.reason))act=`<button class="ghost sm" type="button" data-afdo="restore|${esc(r.id)}">Restore</button>`}
     return `<div class="afrow afo st-${r.st}" style="--c:${cols};min-width:${mw}px"><span>${code}${who}</span><span>${fmtDT(r.at)}</span><span>${money(r.sales)}${r.refund>0?`<small>refunded ${money(r.refund)}</small>`:""}</span><span>${com}</span><span>${esc(AF_SRC[r.src]||r.src||"")}</span><span>${afChip(AF_ST,r.st,self)}${why}${proof}</span>${one?`<span class="afacts2">${act}</span>`:""}</div>`};
   return `${bulk}${shown.length?`<div class="aftable">${th}${shown.map(row).join("")}</div>`:`<p class="note" style="margin:10px 0 0">${rows.length?"No orders with this status in this period.":"No orders in this period yet."}</p>`}`}
+const afPayLine=p=>{p=p||{status:"none"};return `Payment: ${p.status==="none"?"":`${esc(p.method)} ${esc(p.no?"••••"+String(p.no).slice(-4):"")} · `}${afChip(AF_PAY_ST,p.status==="none"?"none":p.status,false)}`};
+const afPayOk=x=>{const r=AF.rep||{},p=r.pay||{},cfg=r.cfg||{min:20000};return p.status==="verified"&&x.amount>=cfg.min};
+function afPayBox(x){const r=AF.rep||{},p=r.pay||{},cfg=r.cfg||{min:20000},ok=p.status==="verified";
+  return `<div class="afacct${ok?"":" bad"}">${ok?`<b>${esc(p.method)}</b> · <span class="mono">${esc(p.no)}</span> <button class="ghost sm" type="button" data-afcopytxt="${esc(p.no)}">Copy number</button> · <b>${esc(p.name)}</b>`:`⚠️ The payment account is ${p.status==="none"||!p.status?"not added yet":p.status==="pending"?"waiting for verification":"not verified"}. Verify it first.`}${x.amount<cfg.min?`<br>⚠️ Below the minimum payout of ${money(cfg.min)}.`:""}</div>`}
+function afPayHTML(r,owner){const p=r.pay||{status:"none"},cfg=r.cfg||{min:20000,day:4},bal=+r.tot.approved||0,F=AF.pf;
+  const hint=bal>0&&bal<cfg.min?` You need ${money(cfg.min-bal)} more to reach the minimum.`:"";
+  const note=`<p class="afnote">💸 Minimum payout <b>${money(cfg.min)}</b> · paid every <b>${AF_DAYS[cfg.day]}</b>.${hint}${!owner&&bal>=cfg.min&&p.status!=="verified"?" Add and verify your payment account to be paid.":""}</p>`;
+  let body="";
+  const det=p.status==="none"?`<p class="note" style="margin:6px 0 0">${owner?"No payment account added yet.":"You haven't added a payment account yet."}</p>`:`<div class="afacct"><b>${esc(p.method)}</b> · <span class="mono">${esc(p.no)}</span>${owner?` <button class="ghost sm" type="button" data-afcopytxt="${esc(p.no)}">Copy number</button>`:""}<br>Holder: <b>${esc(p.name)}</b>${p.at?` <small>· changed ${fmtDT(p.at)}</small>`:""}</div>`;
+  if(owner){body=det+(p.status==="rejected"&&p.reason?`<p class="afwhy">Rejected: ${esc(p.reason)}</p>`:"")+
+    (p.status==="pending"?`<div class="colin" style="margin-top:8px"><button class="btn btn-blue btn-sm" type="button" data-afpayv="verify">Verify account</button><button class="afvoid" type="button" data-afpayv="reject">Reject</button></div><p class="note" style="margin:6px 0 0">Check that the holder name matches ${esc(r.aff.name||r.aff.username)} (a small test transfer works too).</p>`:p.status==="verified"?`<div class="colin" style="margin-top:8px"><button class="ghost sm" type="button" data-afpayv="reject">Reject / remove verification</button></div>`:"")}
+  else if(F){const o=F.method==="Other";body=`<div class="grid2" style="margin-top:8px"><label class="af">Bank or e-wallet<select class="in" data-afpf="method"><option value="">Choose…</option>${AF_BANKS.map(b=>`<option value="${esc(b)}" ${F.method===b?"selected":""}>${b==="Other"?"Other (type it)":b}</option>`).join("")}</select></label>
+      ${o?`<label class="af">Name of the bank or e-wallet<input class="in" data-afpf="other" maxlength="40" value="${esc(F.other||"")}"></label>`:""}
+      <label class="af">Account number<input class="in" data-afpf="no" inputmode="numeric" maxlength="30" value="${esc(F.no||"")}"></label>
+      <label class="af">Account holder name<input class="in" data-afpf="name" maxlength="80" value="${esc(F.name||"")}"></label>
+      <label class="af">Your password (to confirm)<input class="in" type="password" data-afpf="password" autocomplete="current-password" value="${esc(F.password||"")}"></label></div>
+      ${AF.perr?`<p class="adl-err" role="alert">${esc(AF.perr)}</p>`:""}<div class="colin" style="margin-top:10px"><button class="btn btn-blue btn-sm" type="button" data-afpaysave>Save account</button><button class="ghost" type="button" data-afpaycancel>Cancel</button></div>
+      <p class="note" style="margin:6px 0 0">The shop checks the account before paying. Changing it later needs checking again.</p>`}
+  else{body=det+(p.status==="pending"?`<p class="note" style="margin:6px 0 0">The shop will check your account before paying you.</p>`:p.status==="rejected"?`<p class="afwhy">The shop couldn't accept it${p.reason?`: ${esc(p.reason)}`:""}. Please fix it.</p>`:p.status==="verified"?`<p class="note" style="margin:6px 0 0">✅ Verified. You'll be paid here.</p>`:"")+`<div class="colin" style="margin-top:8px"><button class="ghost" type="button" data-afpayedit>${p.status==="none"?"Add payment account":"Change account"}</button></div>`}
+  return `<section class="panel" id="afPayPanel"><div class="afhead"><h2 style="margin:0">Payment account</h2>${afChip(AF_PAY_ST,p.status||"none",!owner)}</div>${note}${body}</section>`}
+async function afPaySave(){const f=AF.pf;AF.perr="";const m=f.method==="Other"?(f.other||"").trim():f.method;
+  try{const r=await SBH.rpc("aff_pay_save",{p_method:m||"",p_no:f.no||"",p_name:f.name||"",p_password:f.password||""});AF.rep.pay=r;AF.pf=null;toast("Saved. The shop will check your account before paying.")}catch(e){AF.perr=e.message}
+  affRender()}
+function afPayClick(e){const b=e.target.closest("button");if(!b)return;const d=b.dataset;
+  if(d.afpayedit!==undefined){const p=(AF.rep&&AF.rep.pay)||{};AF.pf={method:AF_BANKS.includes(p.method)?p.method:p.method?"Other":"",other:AF_BANKS.includes(p.method)?"":p.method||"",no:"",name:p.name||"",password:""};AF.perr="";affRender()}
+  else if(d.afpaycancel!==undefined){AF.pf=null;AF.perr="";affRender()}
+  else if(d.afpaysave!==undefined)afPaySave()}
 function afDashHTML(r,owner){
   const a=r.aff,t=r.tot,mx=Math.max(1,...r.series.map(x=>Math.max(x.views,x.orders))),gl={day:"Daily",week:"Weekly",month:"Monthly"};
   const lbl=b=>AF.group==="month"?new Date(b+"-01T00:00:00").toLocaleDateString("en-US",{month:"long",year:"numeric"}):AF.group==="week"?"Week of "+fmtDay(b):fmtDay(b);
@@ -2132,8 +2162,9 @@ function afDashHTML(r,owner){
   return `${a.status==="paused"?`<div class="afwarn">⏸️ ${owner?"This affiliator is paused":"Your account is paused"}: links and the coupon don't earn commission right now.</div>`:""}
   <section class="panel"><div class="afhead"><div><h2 style="margin:0">${esc(a.name||a.username)} ${afChip(AF_STATUS,a.status)}</h2>
     <p class="sub" style="margin:4px 0 0">Code <b>${esc(a.code)}</b> · ${+a.rate}% commission${a.coupon?` · Coupon <b>${esc(a.coupon)}</b>`:""}${owner&&a.phone?` · ${esc(a.phone)}`:""}</p></div></div>
-    ${afPeriodHTML()}${afKpis(t,!owner)}
+    ${afPeriodHTML()}${afKpis(t,!owner,r.cfg)}
     <p class="note" style="margin:8px 0 0">Commission is ${+a.rate}% of the product value of each order (the delivery fee is never included, and refunds are taken off). After delivery an order stays On hold for ${+r.win} hours, or until a complaint is resolved. Then ${owner?"you review it":"the shop reviews it"}. Approved orders wait for payout and are paid with a transfer proof.</p></section>
+  ${afPayHTML(r,owner)}
   ${owner?afActHTML():""}
   <section class="panel"><h2>Commission orders</h2>${afChips(r.orders,!owner)}${afOrdersHTML(r.orders,owner?"one":"self")}</section>
   <section class="panel"><div class="afhead"><h2 style="margin:0">Performance</h2><div class="chips">${["day","week","month"].map(k=>`<button class="fchip" type="button" data-afg="${k}" aria-pressed="${AF.group===k}">${gl[k]}</button>`).join("")}</div></div>
@@ -2147,7 +2178,7 @@ function afDashHTML(r,owner){
     <div class="colin" style="margin-top:8px"><input class="in" id="afLinkOut" readonly value="${esc(afLink(a.code,"","ig",""))}"><button class="btn btn-blue btn-sm" type="button" data-afcopy>Copy</button></div></section>
   <section class="panel"><h2>Payouts</h2>${r.payouts.length?r.payouts.map(p=>`<div class="afrow" style="grid-template-columns:1fr auto"><span>${fmtDT(p.at)} · ${p.n} order${p.n===1?"":"s"}${p.note?` · ${esc(p.note)}`:""}${/^https:\/\//.test(p.proof||"")?` · <a class="afproof" href="${esc(p.proof)}" target="_blank" rel="noopener">🧾 proof</a>`:""}</span><b>${money(p.amount)}</b></div>`).join(""):`<p class="note">No payouts yet.</p>`}</section>`}
 async function affLoadRep(id,mine){const [f,t]=afRange();AF.repLoading=true;
-  try{AF.rep=await SBH.rpc("aff_report",{p_id:id,p_from:f,p_to:t,p_group:AF.group});if(!AF.act)AF.err=""}catch(e){AF.err=e.message}
+  try{const [rep,inf]=await Promise.all([SBH.rpc("aff_report",{p_id:id,p_from:f,p_to:t,p_group:AF.group}),SBH.rpc("aff_pay_info",{p_id:id})]);rep.pay=inf.pay;rep.cfg=inf.cfg;AF.rep=rep;if(!AF.act)AF.err=""}catch(e){AF.err=e.message}
   AF.repLoading=false;if(!AF.prods)affLoadProds();mine?affRender():(A.tab==="affiliates"&&(()=>{const y=scrollY;renderAdmin();scrollTo(0,y)})())}
 async function affLoadProds(){try{const r=await SBH.rpc("shop_public",{});AF.prods=(r.products||[]).map(p=>({id:p.id,name:p.name,status:p.status}))}catch(e){AF.prods=[]}
   if(AF.rep){if(document.getElementById("affView"))affRender();else if(A.tab==="affiliates")renderAdmin()}}
@@ -2164,8 +2195,9 @@ function afLinkUpd(root){const r=AF.rep;if(!r)return;const to=root.querySelector
 function afDate(el,mine){AF[el.dataset.afd]=el.value;if(AF.from){mine?affLoadRep(SBH.aff.id,true):AF.sel?affLoadRep(AF.sel):affLoadList()}}
 function affRender(){let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
-    v.addEventListener("click",e=>{afClick(e,v,true);if(e.target.closest("[data-afout]"))SBH.signOut()});
-    v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true)})}
+    v.addEventListener("click",e=>{afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut()});
+    v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
+    v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
   v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><span class="afwho">@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;

@@ -5265,12 +5265,15 @@ function secAlertsPanel(){
    Affiliator: signs in on the shop at /#partner and gets only their own dashboard (window.affStart).
    Commission per order: On progress -> On hold (24 h window or an unresolved complaint) -> Needs approval (the owner approves or voids)
    -> Waiting payout -> Paid out (with a proof picture). Voided orders show their reason. */
-const AF={list:null,orders:null,loading:false,err:"",range:"30d",from:"",to:"",group:"day",sel:null,rep:null,repLoading:false,form:null,ferr:"",prods:null,sf:"all",afs:"all",act:null,proof:"",busy:false};
+const AF={list:null,orders:null,loading:false,err:"",range:"30d",from:"",to:"",group:"day",sel:null,rep:null,repLoading:false,form:null,ferr:"",prods:null,sf:"all",afs:"all",act:null,proof:"",busy:false,cfg:null,pf:null,perr:""};
 const AF_SRC={ig:"Instagram",tt:"TikTok",wa:"WhatsApp",fb:"Facebook",ads:"Ads",x:"X / Twitter",yt:"YouTube",google:"Google",direct:"Direct / unknown",coupon:"Coupon code",web:"Website"};
 const AF_ST={progress:["On progress","#1B4DB3","#E4EDFF"],hold:["On hold","#8A5A00","#FFF4D6"],review:["Needs approval","#B42318","#FDE8E6"],approved:["Waiting payout","#0A6B34","#E3F6EA"],paid:["Paid out","#000096","#E5E8FF"],voided:["VOIDED","#B42318","#FDE2E2"],cancelled:["Cancelled","#5A5F86","#EEF0F7"],waiting:["Waiting for payment","#5A5F86","#EEF0F7"]};
 const AF_STATUS={active:["Active","#0A6B34","#E3F6EA"],paused:["Paused","#8A5A00","#FFF4D6"],disabled:["Switched off","#9B1C1C","#FDE2E2"]};
 const AF_FILTERS=[["all","All"],["review","Needs approval"],["approved","Waiting payout"],["hold","On hold"],["progress","On progress"],["paid","Paid out"],["voided","Voided"],["cancelled","Cancelled"],["waiting","Waiting for payment"]];
-const afChip=(m,k,self)=>{const x=m[k]||m[Object.keys(m)[0]];return `<span class="afchip${k==="review"&&!self?" blink":""}" style="color:${x[1]};background:${x[2]}">${self&&k==="review"?"Under review":x[0]}</span>`};
+const AF_DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const AF_BANKS=["BCA","BRI","BNI","Mandiri","CIMB Niaga","Permata","BSI","Bank Jago","SeaBank","Jenius (BTPN)","GoPay","OVO","DANA","ShopeePay","LinkAja","Other"];
+const AF_PAY_ST={none:["No account","#5A5F86","#EEF0F7"],pending:["Waiting for verification","#B42318","#FDE8E6"],verified:["Verified","#0A6B34","#E3F6EA"],rejected:["Rejected","#9B1C1C","#FDE2E2"]};
+const afChip=(m,k,self)=>{const x=m[k]||m[Object.keys(m)[0]];return `<span class="afchip${!self&&(k==="review"||k==="pending")?" blink":""}" style="color:${x[1]};background:${x[2]}">${self&&k==="review"?"Under review":x[0]}</span>`};
 function afRange(){const n=Date.now(),d0=today0().getTime();
   if(AF.range==="today")return [d0,n+864e5];if(AF.range==="7d")return [d0-6*864e5,n+864e5];if(AF.range==="30d")return [d0-29*864e5,n+864e5];
   if(AF.range==="month"){const d=today0();d.setDate(1);return [d.getTime(),n+864e5]}
@@ -5280,9 +5283,9 @@ const afShop=()=>String((window.DELIDOME_CONFIG||{}).shopUrl||location.origin).r
 function afLink(code,to,ch,cp){const q=new URLSearchParams({ref:code});if(ch)q.set("src",ch);if(to)q.set("to",to);if(cp)q.set("cp",cp);return afShop()+"/?"+q.toString()}
 function afPeriodHTML(){return `<div class="chips" style="margin-top:4px">${[["today","Today"],["7d","Last 7 days"],["30d","Last 30 days"],["month","This month"],["all","All time"],["custom","Custom"]].map(([k,l])=>`<button class="fchip" type="button" data-afr="${k}" aria-pressed="${AF.range===k}">${l}</button>`).join("")}</div>
   ${AF.range==="custom"?`<div class="colin" style="margin-top:8px;gap:8px;flex-wrap:wrap"><label class="af" style="margin:0">From<input class="in" type="date" data-afd="from" value="${esc(AF.from)}"></label><label class="af" style="margin:0">To<input class="in" type="date" data-afd="to" value="${esc(AF.to)}"></label></div>`:""}`}
-function afKpis(t,self){const k=(v,l,cls,sub)=>`<div class="afk${cls?" "+cls:""}"><strong>${v}</strong><small>${l}</small>${sub?`<em>${sub}</em>`:""}</div>`,n=(c,w)=>c?`${c} order${c===1?"":"s"}${w?" "+w:""}`:"";
+function afKpis(t,self,cfg){const k=(v,l,cls,sub)=>`<div class="afk${cls?" "+cls:""}"><strong>${v}</strong><small>${l}</small>${sub?`<em>${sub}</em>`:""}</div>`,n=(c,w)=>c?`${c} order${c===1?"":"s"}${w?" "+w:""}`:"";
   return `<div class="afkpis">${k(t.views,"Link views")}${k(t.uniq,"Unique visitors")}${k(t.orders,"Paid orders")}${k(t.coupon,"Coupon uses")}${k(money(t.sales),"Sales (product value)")}
-  ${k(money(t.pending),"Commission pending",0,n(t.hold_n,"on hold"))}${k(money(t.review),self?"Under review":"Needs approval",!self&&t.review_n>0?"hot red":"",n(t.review_n))}${k(money(t.approved),"Waiting payout",t.approved_n>0?"hot":"",n(t.approved_n))}${k(money(t.paid),"Paid out")}${t.void_n>0?k(money(t.void),"Voided",0,n(t.void_n)):""}</div>
+  ${k(money(t.pending),"Commission pending",0,n(t.hold_n,"on hold"))}${k(money(t.review),self?"Under review":"Needs approval",!self&&t.review_n>0?"hot red":"",n(t.review_n))}${k(money(t.approved),"Waiting payout",t.approved_n>0?"hot":"",n(t.approved_n)+(cfg?`${t.approved_n?" · ":""}min ${money(cfg.min)} · paid every ${AF_DAYS[cfg.day]}`:""))}${k(money(t.paid),"Paid out")}${t.void_n>0?k(money(t.void),"Voided",0,n(t.void_n)):""}</div>
   ${t.waiting>0||t.cancelled_n>0?`<p class="note" style="margin:6px 0 0">${t.waiting?`${t.waiting} order${t.waiting===1?"":"s"} waiting for payment. `:""}${t.cancelled_n?`${t.cancelled_n} cancelled.`:""}</p>`:""}`}
 const afShown=rows=>AF.sf==="all"?rows:rows.filter(r=>r.st===AF.sf);
 function afChips(rows,self){const n=k=>k==="all"?rows.length:rows.filter(r=>r.st===k).length;
@@ -5307,16 +5310,52 @@ function afOrdersHTML(rows,mode){
     return `<div class="afrow afo st-${r.st}" style="--c:${cols};min-width:${mw}px"><span>${code}${who}</span><span>${fmtDT(r.at)}</span><span>${money(r.sales)}${r.refund>0?`<small>refunded ${money(r.refund)}</small>`:""}</span><span>${com}</span><span>${esc(AF_SRC[r.src]||r.src||"")}</span><span>${afChip(AF_ST,r.st,self)}${why}${proof}</span>${one?`<span class="afacts2">${act}</span>`:""}</div>`};
   return `${bulk}${shown.length?`<div class="aftable">${th}${shown.map(row).join("")}</div>`:`<p class="note" style="margin:10px 0 0">${rows.length?"No orders with this status in this period.":"No orders in this period yet."}</p>`}`}
 /* the box above the table where the owner finishes an action: void (reason), approve many, pay (proof picture) */
-function afActHTML(){const x=AF.act;if(!x)return "";const n=x.ids.length,err=AF.err?`<p class="adl-err" role="alert">${esc(AF.err)}</p>`:"";
+function afActHTML(){const x=AF.act;if(!x)return "";const n=(x.ids||[]).length,err=AF.err?`<p class="adl-err" role="alert">${esc(AF.err)}</p>`:"";
+  if(x.kind==="payverify")return `<section class="panel afact" id="afAct"><h2>Verify this payment account?</h2><p class="sub">Only verify it after checking that the holder name matches the affiliator. You can pay them once it's verified.</p>${err}<div class="colin" style="margin-top:10px"><button class="btn btn-blue" type="button" data-afgo>Yes, verify</button><button class="ghost" type="button" data-afnogo>Cancel</button></div></section>`;
+  if(x.kind==="payreject")return `<section class="panel afact red" id="afAct"><h2>Reject this payment account?</h2><p class="sub">The affiliator sees your reason and must fix the account.</p><label class="af">Reason (required)<input class="in" id="afReason" maxlength="200" value="${esc(x.reason||"")}" placeholder="e.g. The name doesn't match"></label>${err}<div class="colin" style="margin-top:10px"><button class="btn afvoidbtn" type="button" data-afgo>Reject account</button><button class="ghost" type="button" data-afnogo>Cancel</button></div></section>`;
   if(x.kind==="void")return `<section class="panel afact red" id="afAct"><h2>VOID ${n===1?"this commission":n+" commissions"}?</h2><p class="sub">The commission is cancelled and the affiliator sees your reason.</p>
     <label class="af">Reason (required)<input class="in" id="afReason" maxlength="200" value="${esc(x.reason||"")}" placeholder="e.g. Customer never received the box"></label>${err}
     <div class="colin" style="margin-top:10px"><button class="btn afvoidbtn" type="button" data-afgo>VOID commission</button><button class="ghost" type="button" data-afnogo>Cancel</button></div></section>`;
   if(x.kind==="approve")return `<section class="panel afact" id="afAct"><h2>Approve ${n} order${n===1?"":"s"} · ${money(x.amount)}?</h2><p class="sub">They move to Waiting payout. Check the orders first. Partial refunds are not included: approve those one by one.</p>${err}
     <div class="colin" style="margin-top:10px"><button class="btn btn-blue" type="button" data-afgo>Approve</button><button class="ghost" type="button" data-afnogo>Cancel</button></div></section>`;
-  return `<section class="panel afact" id="afAct"><h2>Pay ${money(x.amount)} for ${n} order${n===1?"":"s"}</h2><p class="sub">Make the transfer first, then upload the proof (receipt or screenshot). ${esc(x.who||"The affiliator")} can see it.</p>
-    <div class="af">Payout proof picture (required)<div class="colin" style="flex-wrap:wrap;gap:8px;align-items:center"><label class="ghost mqbtn">📷 ${AF.proof?"Change picture":"Choose picture"}<input type="file" id="afProof" accept="image/*" hidden></label>${AF.proof?`<img class="afprev" src="${esc(AF.proof)}" alt="Payout proof">`:`<span class="note" style="margin:0">${AF.busy?"Uploading…":"Not added yet"}</span>`}</div></div>
+  return `<section class="panel afact" id="afAct"><h2>Pay ${money(x.amount)} for ${n} order${n===1?"":"s"}</h2><p class="sub">Make the transfer first, then upload the proof (receipt or screenshot). ${esc(x.who||"The affiliator")} can see it.</p>${afPayBox(x)}
+    <div class="af" style="margin-top:10px">Payout proof picture (required)<div class="colin" style="flex-wrap:wrap;gap:8px;align-items:center"><label class="ghost mqbtn">📷 ${AF.proof?"Change picture":"Choose picture"}<input type="file" id="afProof" accept="image/*" hidden></label>${AF.proof?`<img class="afprev" src="${esc(AF.proof)}" alt="Payout proof">`:`<span class="note" style="margin:0">${AF.busy?"Uploading…":"Not added yet"}</span>`}</div></div>
     <label class="af" style="margin-top:10px">Note (optional)<input class="in" id="afPayNote" maxlength="200" value="${esc(x.note||"")}" placeholder="e.g. BCA transfer 20 Oct"></label>${err}
-    <div class="colin" style="margin-top:10px"><button class="btn btn-blue" type="button" data-afgo ${AF.proof&&!AF.busy?"":"disabled"}>Mark as paid</button><button class="ghost" type="button" data-afnogo>Cancel</button></div></section>`}
+    <div class="colin" style="margin-top:10px"><button class="btn btn-blue" type="button" data-afgo ${AF.proof&&!AF.busy&&afPayOk(x)?"":"disabled"}>Mark as paid</button><button class="ghost" type="button" data-afnogo>Cancel</button></div></section>`}
+const afPayLine=p=>{p=p||{status:"none"};return `Payment: ${p.status==="none"?"":`${esc(p.method)} ${esc(p.no?"••••"+String(p.no).slice(-4):"")} · `}${afChip(AF_PAY_ST,p.status==="none"?"none":p.status,false)}`};
+const afPayOk=x=>{const r=AF.rep||{},p=r.pay||{},cfg=r.cfg||{min:20000};return p.status==="verified"&&x.amount>=cfg.min};
+function afPayBox(x){const r=AF.rep||{},p=r.pay||{},cfg=r.cfg||{min:20000},ok=p.status==="verified";
+  return `<div class="afacct${ok?"":" bad"}">${ok?`<b>${esc(p.method)}</b> · <span class="mono">${esc(p.no)}</span> <button class="ghost sm" type="button" data-afcopytxt="${esc(p.no)}">Copy number</button> · <b>${esc(p.name)}</b>`:`⚠️ The payment account is ${p.status==="none"||!p.status?"not added yet":p.status==="pending"?"waiting for verification":"not verified"}. Verify it first.`}${x.amount<cfg.min?`<br>⚠️ Below the minimum payout of ${money(cfg.min)}.`:""}</div>`}
+/* payment account: the affiliator adds it (password needed), the owner verifies it by hand; payouts need a verified account and the minimum */
+function afPayHTML(r,owner){const p=r.pay||{status:"none"},cfg=r.cfg||{min:20000,day:4},bal=+r.tot.approved||0,F=AF.pf;
+  const hint=bal>0&&bal<cfg.min?` You need ${money(cfg.min-bal)} more to reach the minimum.`:"";
+  const note=`<p class="afnote">💸 Minimum payout <b>${money(cfg.min)}</b> · paid every <b>${AF_DAYS[cfg.day]}</b>.${hint}${!owner&&bal>=cfg.min&&p.status!=="verified"?" Add and verify your payment account to be paid.":""}</p>`;
+  let body="";
+  const det=p.status==="none"?`<p class="note" style="margin:6px 0 0">${owner?"No payment account added yet.":"You haven't added a payment account yet."}</p>`:`<div class="afacct"><b>${esc(p.method)}</b> · <span class="mono">${esc(p.no)}</span>${owner?` <button class="ghost sm" type="button" data-afcopytxt="${esc(p.no)}">Copy number</button>`:""}<br>Holder: <b>${esc(p.name)}</b>${p.at?` <small>· changed ${fmtDT(p.at)}</small>`:""}</div>`;
+  if(owner){body=det+(p.status==="rejected"&&p.reason?`<p class="afwhy">Rejected: ${esc(p.reason)}</p>`:"")+
+    (p.status==="pending"?`<div class="colin" style="margin-top:8px"><button class="btn btn-blue btn-sm" type="button" data-afpayv="verify">Verify account</button><button class="afvoid" type="button" data-afpayv="reject">Reject</button></div><p class="note" style="margin:6px 0 0">Check that the holder name matches ${esc(r.aff.name||r.aff.username)} (a small test transfer works too).</p>`:p.status==="verified"?`<div class="colin" style="margin-top:8px"><button class="ghost sm" type="button" data-afpayv="reject">Reject / remove verification</button></div>`:"")}
+  else if(F){const o=F.method==="Other";body=`<div class="grid2" style="margin-top:8px"><label class="af">Bank or e-wallet<select class="in" data-afpf="method"><option value="">Choose…</option>${AF_BANKS.map(b=>`<option value="${esc(b)}" ${F.method===b?"selected":""}>${b==="Other"?"Other (type it)":b}</option>`).join("")}</select></label>
+      ${o?`<label class="af">Name of the bank or e-wallet<input class="in" data-afpf="other" maxlength="40" value="${esc(F.other||"")}"></label>`:""}
+      <label class="af">Account number<input class="in" data-afpf="no" inputmode="numeric" maxlength="30" value="${esc(F.no||"")}"></label>
+      <label class="af">Account holder name<input class="in" data-afpf="name" maxlength="80" value="${esc(F.name||"")}"></label>
+      <label class="af">Your password (to confirm)<input class="in" type="password" data-afpf="password" autocomplete="current-password" value="${esc(F.password||"")}"></label></div>
+      ${AF.perr?`<p class="adl-err" role="alert">${esc(AF.perr)}</p>`:""}<div class="colin" style="margin-top:10px"><button class="btn btn-blue btn-sm" type="button" data-afpaysave>Save account</button><button class="ghost" type="button" data-afpaycancel>Cancel</button></div>
+      <p class="note" style="margin:6px 0 0">The shop checks the account before paying. Changing it later needs checking again.</p>`}
+  else{body=det+(p.status==="pending"?`<p class="note" style="margin:6px 0 0">The shop will check your account before paying you.</p>`:p.status==="rejected"?`<p class="afwhy">The shop couldn't accept it${p.reason?`: ${esc(p.reason)}`:""}. Please fix it.</p>`:p.status==="verified"?`<p class="note" style="margin:6px 0 0">✅ Verified. You'll be paid here.</p>`:"")+`<div class="colin" style="margin-top:8px"><button class="ghost" type="button" data-afpayedit>${p.status==="none"?"Add payment account":"Change account"}</button></div>`}
+  return `<section class="panel" id="afPayPanel"><div class="afhead"><h2 style="margin:0">Payment account</h2>${afChip(AF_PAY_ST,p.status||"none",!owner)}</div>${note}${body}</section>`}
+async function afPaySave(){const f=AF.pf;AF.perr="";const m=f.method==="Other"?(f.other||"").trim():f.method;
+  try{const r=await SBH.rpc("aff_pay_save",{p_method:m||"",p_no:f.no||"",p_name:f.name||"",p_password:f.password||""});AF.rep.pay=r;AF.pf=null;toast("Saved. The shop will check your account before paying.")}catch(e){AF.perr=e.message}
+  affRender()}
+function afPayClick(e){const b=e.target.closest("button");if(!b)return;const d=b.dataset;
+  if(d.afpayedit!==undefined){const p=(AF.rep&&AF.rep.pay)||{};AF.pf={method:AF_BANKS.includes(p.method)?p.method:p.method?"Other":"",other:AF_BANKS.includes(p.method)?"":p.method||"",no:"",name:p.name||"",password:""};AF.perr="";affRender()}
+  else if(d.afpaycancel!==undefined){AF.pf=null;AF.perr="";affRender()}
+  else if(d.afpaysave!==undefined)afPaySave()}
+function afRulesHTML(){const c=AF.cfg||{min:20000,day:4};return `<div class="af" style="margin-top:12px">Payout rules<div class="colin" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><label class="af" style="margin:0">Minimum payout<input class="in" id="afCfgMin" type="number" min="0" step="1000" value="${c.min}" style="max-width:160px"></label><label class="af" style="margin:0">Payout day (shown as a note)<select class="in" id="afCfgDay">${AF_DAYS.map((d,i)=>`<option value="${i}" ${i===c.day?"selected":""}>${d}</option>`).join("")}</select></label><button class="btn btn-blue btn-sm" type="button" data-afcfgsave>Save rules</button></div></div>`}
+function afPayoutBanner(L){const c=AF.cfg||{min:20000,day:4},pv=L.filter(x=>x.pay&&x.pay.status==="pending").length;let h="";
+  if(pv)h+=`<div class="afalert"><b>${pv} payment account${pv===1?"":"s"} to verify</b><button class="ghost sm" type="button" data-afflt="verify">Show</button></div>`;
+  if(new Date().getDay()===c.day){const ready=L.filter(x=>x.status!=="disabled"&&(+x.tot.approved||0)>=c.min);
+    h+=ready.length?`<div class="afpayday"><b>💸 It's payout day (${AF_DAYS[c.day]}).</b> Ready to pay: ${ready.map(x=>`<button class="linkbtn" type="button" data-afview="${x.id}">${esc(x.name||x.username)} ${money(x.tot.approved)}</button> <small>${x.pay&&x.pay.status==="verified"?"✓ account verified":"⚠️ account not verified"}</small>`).join(" · ")}</div>`:`<div class="afpayday">💸 It's payout day (${AF_DAYS[c.day]}). Nobody has reached the minimum of ${money(c.min)} yet.</div>`}
+  return h}
 function afDashHTML(r,owner){
   const a=r.aff,t=r.tot,mx=Math.max(1,...r.series.map(x=>Math.max(x.views,x.orders))),gl={day:"Daily",week:"Weekly",month:"Monthly"};
   const lbl=b=>AF.group==="month"?new Date(b+"-01T00:00:00").toLocaleDateString("en-US",{month:"long",year:"numeric"}):AF.group==="week"?"Week of "+fmtDay(b):fmtDay(b);
@@ -5324,8 +5363,9 @@ function afDashHTML(r,owner){
   return `${a.status==="paused"?`<div class="afwarn">⏸️ ${owner?"This affiliator is paused":"Your account is paused"}: links and the coupon don't earn commission right now.</div>`:""}
   <section class="panel"><div class="afhead"><div><h2 style="margin:0">${esc(a.name||a.username)} ${afChip(AF_STATUS,a.status)}</h2>
     <p class="sub" style="margin:4px 0 0">Code <b>${esc(a.code)}</b> · ${+a.rate}% commission${a.coupon?` · Coupon <b>${esc(a.coupon)}</b>`:""}${owner&&a.phone?` · ${esc(a.phone)}`:""}</p></div></div>
-    ${afPeriodHTML()}${afKpis(t,!owner)}
+    ${afPeriodHTML()}${afKpis(t,!owner,r.cfg)}
     <p class="note" style="margin:8px 0 0">Commission is ${+a.rate}% of the product value of each order (the delivery fee is never included, and refunds are taken off). After delivery an order stays On hold for ${+r.win} hours, or until a complaint is resolved. Then ${owner?"you review it":"the shop reviews it"}. Approved orders wait for payout and are paid with a transfer proof.</p></section>
+  ${afPayHTML(r,owner)}
   ${owner?afActHTML():""}
   <section class="panel"><h2>Commission orders</h2>${afChips(r.orders,!owner)}${afOrdersHTML(r.orders,owner?"one":"self")}</section>
   <section class="panel"><div class="afhead"><h2 style="margin:0">Performance</h2><div class="chips">${["day","week","month"].map(k=>`<button class="fchip" type="button" data-afg="${k}" aria-pressed="${AF.group===k}">${gl[k]}</button>`).join("")}</div></div>
@@ -5339,10 +5379,10 @@ function afDashHTML(r,owner){
     <div class="colin" style="margin-top:8px"><input class="in" id="afLinkOut" readonly value="${esc(afLink(a.code,"","ig",""))}"><button class="btn btn-blue btn-sm" type="button" data-afcopy>Copy</button></div></section>
   <section class="panel"><h2>Payouts</h2>${r.payouts.length?r.payouts.map(p=>`<div class="afrow" style="grid-template-columns:1fr auto"><span>${fmtDT(p.at)} · ${p.n} order${p.n===1?"":"s"}${p.note?` · ${esc(p.note)}`:""}${/^https:\/\//.test(p.proof||"")?` · <a class="afproof" href="${esc(p.proof)}" target="_blank" rel="noopener">🧾 proof</a>`:""}</span><b>${money(p.amount)}</b></div>`).join(""):`<p class="note">No payouts yet.</p>`}</section>`}
 async function affLoadList(){if(!SBH.on)return;AF.loading=true;AF.err="";const [f,t]=afRange();
-  try{const [l,o]=await Promise.all([SBH.rpc("admin_aff_list",{p_from:f,p_to:t}),SBH.rpc("admin_aff_orders",{p_from:f,p_to:t})]);AF.list=l;AF.orders=o}catch(e){AF.err=e.message;AF.list=AF.list||[];AF.orders=AF.orders||[]}
+  try{const [l,o,c]=await Promise.all([SBH.rpc("admin_aff_list",{p_from:f,p_to:t}),SBH.rpc("admin_aff_orders",{p_from:f,p_to:t}),SBH.rpc("admin_aff_cfg",{p:{}})]);AF.list=l;AF.orders=o;AF.cfg=c}catch(e){AF.err=e.message;AF.list=AF.list||[];AF.orders=AF.orders||[]}
   AF.loading=false;if(A.tab==="affiliates"){const y=scrollY;renderAdmin();scrollTo(0,y)}}
 async function affLoadRep(id,mine){const [f,t]=afRange();AF.repLoading=true;
-  try{AF.rep=await SBH.rpc("aff_report",{p_id:id,p_from:f,p_to:t,p_group:AF.group});if(!AF.act)AF.err=""}catch(e){AF.err=e.message}
+  try{const [rep,inf]=await Promise.all([SBH.rpc("aff_report",{p_id:id,p_from:f,p_to:t,p_group:AF.group}),SBH.rpc("aff_pay_info",{p_id:id})]);rep.pay=inf.pay;rep.cfg=inf.cfg;AF.rep=rep;if(!AF.act)AF.err=""}catch(e){AF.err=e.message}
   AF.repLoading=false;if(!AF.prods)affLoadProds();mine?affRender():(A.tab==="affiliates"&&(()=>{const y=scrollY;renderAdmin();scrollTo(0,y)})())}
 async function affLoadProds(){try{const r=await SBH.rpc("shop_public",{});AF.prods=(r.products||[]).map(p=>({id:p.id,name:p.name,status:p.status}))}catch(e){AF.prods=[]}
   if(AF.rep){if(document.getElementById("affView"))affRender();else if(A.tab==="affiliates")renderAdmin()}}
@@ -5352,7 +5392,7 @@ function viewAffiliates(){
   if(AF.list===null){if(!AF.loading)affLoadList();return h+`<section class="panel"><div class="empty">Loading…</div></section>`}
   if(AF.sel){const top=`<button class="ghost" type="button" data-afback>← All affiliators</button>`;
     return h+top+(AF.rep&&AF.rep.aff.id===AF.sel?`<div class="stack" style="margin-top:12px">${afDashHTML(AF.rep,true)}</div>`:`<section class="panel" style="margin-top:12px"><div class="empty">Loading…</div></section>`)}
-  const F=AF.form,L=AF.list,sum=k=>L.reduce((a,x)=>a+(+x.tot[k]||0),0),LV=L.filter(x=>AF.afs==="all"||x.status===AF.afs||(AF.afs==="review"&&x.tot.review_n>0)||(AF.afs==="approved"&&x.tot.approved_n>0));
+  const F=AF.form,L=AF.list,sum=k=>L.reduce((a,x)=>a+(+x.tot[k]||0),0),LV=L.filter(x=>AF.afs==="all"||x.status===AF.afs||(AF.afs==="review"&&x.tot.review_n>0)||(AF.afs==="approved"&&x.tot.approved_n>0)||(AF.afs==="verify"&&x.pay&&x.pay.status==="pending"));
   const form=F?`<section class="panel" id="afForm"><h2>${F.id?"Edit affiliator":"New affiliator"}</h2>
     <div class="grid2" style="margin-top:10px"><label class="af">Name<input class="in" data-aff="name" maxlength="80" value="${esc(F.name||"")}"></label>
       ${F.id?`<label class="af">Username<input class="in" value="${esc(F.username)}" disabled></label>`:`<label class="af">Username (to sign in)<input class="in" data-aff="username" maxlength="30" autocapitalize="none" value="${esc(F.username||"")}"></label>`}
@@ -5369,17 +5409,19 @@ function viewAffiliates(){
   const rv=sum("review_n"),ap=sum("approved_n"),hd=sum("hold_n");
   return h+`<div class="stack">
     <section class="panel"><div class="afhead"><h2 style="margin:0">Overview</h2>${F?"":`<button class="btn btn-blue btn-sm" type="button" data-afnew>+ Add affiliator</button>`}</div>${afPeriodHTML()}
-      ${afKpis({views:sum("views"),uniq:sum("uniq"),orders:sum("orders"),coupon:sum("coupon"),sales:sum("sales"),pending:sum("pending"),hold_n:hd,review:sum("review"),review_n:rv,approved:sum("approved"),approved_n:ap,paid:sum("paid"),void:sum("void"),void_n:sum("void_n"),waiting:sum("waiting"),cancelled_n:sum("cancelled_n")},false)}
+      ${afKpis({views:sum("views"),uniq:sum("uniq"),orders:sum("orders"),coupon:sum("coupon"),sales:sum("sales"),pending:sum("pending"),hold_n:hd,review:sum("review"),review_n:rv,approved:sum("approved"),approved_n:ap,paid:sum("paid"),void:sum("void"),void_n:sum("void_n"),waiting:sum("waiting"),cancelled_n:sum("cancelled_n")},false,AF.cfg)}
       ${rv||ap?`<div class="afalert"><b>${rv?`${rv} order${rv===1?"":"s"} need${rv===1?"s":""} your approval`:""}${rv&&ap?" · ":""}${ap?`${ap} waiting payout`:""}</b><button class="ghost sm" type="button" data-afflt="${rv?"review":"approved"}">Show those affiliators</button></div>`:""}
       ${AF.err?`<p class="adl-err" style="margin-top:8px">${esc(AF.err)}</p>`:""}
+      ${afPayoutBanner(L)}
+      ${afRulesHTML()}
       <div class="af" style="margin-top:12px">Affiliator sign-in page (send them this with their username and password)<div class="colin"><input class="in" id="afLoginUrl" readonly value="${esc(afShop()+"/#partner")}"><button class="btn btn-blue btn-sm" type="button" data-afcopyurl>Copy</button></div></div></section>
     ${(()=>{const m={};L.forEach(x=>(x.sources||[]).forEach(r=>{const o=m[r.src]||(m[r.src]={src:r.src,views:0,orders:0,sales:0,who:{}});o.views+=+r.views||0;o.orders+=+r.orders||0;o.sales+=+r.sales||0;if((+r.views||0)+(+r.orders||0)>0)o.who[x.code]=(o.who[x.code]||0)+(+r.views||0)+(+r.orders||0)}));
       const rows=Object.values(m).sort((a,b)=>b.views-a.views||b.orders-a.orders),tv=rows.reduce((a,r)=>a+r.views,0)||1;
       return `<section class="panel"><h2>Where visitors came from (all affiliators)</h2>${rows.length?`<div class="aftable"><div class="afrow afth afsrc"><span>Source</span><span>Views</span><span>Orders</span><span>Sales</span><span>Top affiliators</span></div>${rows.map(r=>`<div class="afrow afsrc"><span>${esc(AF_SRC[r.src]||r.src)}<i class="afbar" style="width:${Math.round(r.views/tv*100)}%"></i></span><span>${r.views} <small>${Math.round(r.views/tv*100)}%</small></span><span>${r.orders}</span><span>${money(r.sales)}</span><span>${Object.entries(r.who).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([c])=>esc(c)).join(", ")}</span></div>`).join("")}</div>`:`<p class="note">No visits from affiliate links in this period yet.</p>`}</section>`})()}
     ${form}
     <section class="panel"><h2>Affiliators (${L.length})</h2>
-      <div class="chips" style="margin-top:6px">${[["all","All"],["active","Active"],["paused","Paused"],["disabled","Switched off"],["review","Need approval"],["approved","Waiting payout"]].map(([k,l])=>`<button class="fchip" type="button" data-afflt="${k}" aria-pressed="${AF.afs===k}">${l}</button>`).join("")}</div>
-      ${LV.length?`<div class="aflist">${LV.map(x=>`<div class="afcard${x.status!=="active"?" off":""}"><div class="afhead"><div><b>${esc(x.name||x.username)}</b> ${afChip(AF_STATUS,x.status)}<small>@${esc(x.username)} · code ${esc(x.code)} · ${+x.rate}%${x.coupon?` · coupon ${esc(x.coupon)}`:""}</small></div>
+      <div class="chips" style="margin-top:6px">${[["all","All"],["active","Active"],["paused","Paused"],["disabled","Switched off"],["review","Need approval"],["approved","Waiting payout"],["verify","Accounts to verify"]].map(([k,l])=>`<button class="fchip" type="button" data-afflt="${k}" aria-pressed="${AF.afs===k}">${l}</button>`).join("")}</div>
+      ${LV.length?`<div class="aflist">${LV.map(x=>`<div class="afcard${x.status!=="active"?" off":""}"><div class="afhead"><div><b>${esc(x.name||x.username)}</b> ${afChip(AF_STATUS,x.status)}<small>@${esc(x.username)} · code ${esc(x.code)} · ${+x.rate}%${x.coupon?` · coupon ${esc(x.coupon)}`:""}</small><small>${afPayLine(x.pay)}</small></div>
         <div class="afacts"><button class="btn btn-blue btn-sm" type="button" data-afview="${x.id}">Dashboard</button><button class="ghost" type="button" data-afedit="${x.id}">Edit</button>
         ${x.status==="active"?`<button class="ghost" type="button" data-afst="${x.id}|paused">Pause</button>`:`<button class="ghost" type="button" data-afst="${x.id}|active">Activate</button>`}${x.status!=="disabled"?`<button class="danger" type="button" data-afst="${x.id}|disabled">Switch off</button>`:""}</div></div>
         <div class="afmini"><span><b>${x.tot.views}</b> views</span><span><b>${x.tot.uniq}</b> unique</span><span><b>${x.tot.orders}</b> orders</span><span><b>${x.tot.coupon}</b> coupon uses</span><span><b>${money(x.tot.sales)}</b> sales</span><span><b>${money(x.tot.pending)}</b> pending</span><span class="${x.tot.review_n>0?"hot red":""}"><b>${money(x.tot.review)}</b> to approve</span><span class="${x.tot.approved_n>0?"hot":""}"><b>${money(x.tot.approved)}</b> waiting payout</span><span><b>${money(x.tot.paid)}</b> paid</span></div>
@@ -5407,7 +5449,8 @@ const afDecide=(ids,action,reason)=>SBH.rpc("admin_aff_decide",{p_ids:ids,p_acti
 const afRefresh=()=>{affLoadList();if(AF.sel)affLoadRep(AF.sel)};
 async function afGo(){const x=AF.act;if(!x||AF.busy)return;AF.err="";AF.busy=true;
   try{
-    if(x.kind==="void"){const r=(x.reason||"").trim();if(r.length<3)throw new Error("Type the reason for voiding (at least 3 letters).");await afDecide(x.ids,"void",r);toast("Commission voided")}
+    if(x.kind==="payverify"||x.kind==="payreject"){const rs=(x.reason||"").trim();if(x.kind==="payreject"&&rs.length<3)throw new Error("Type the reason (at least 3 letters).");await SBH.rpc("admin_aff_pay_verify",{p_id:x.aff,p_action:x.kind==="payverify"?"verify":"reject",p_reason:rs});toast(x.kind==="payverify"?"Payment account verified":"Payment account rejected")}
+    else if(x.kind==="void"){const r=(x.reason||"").trim();if(r.length<3)throw new Error("Type the reason for voiding (at least 3 letters).");await afDecide(x.ids,"void",r);toast("Commission voided")}
     else if(x.kind==="approve"){const r=await afDecide(x.ids,"approve");toast(`Approved ${r.n} order${r.n===1?"":"s"}${r.skipped?` (${r.skipped} skipped)`:""}`)}
     else{if(!AF.proof)throw new Error("Upload the payout proof picture first.");const r=await SBH.rpc("admin_aff_pay",{p_ids:x.ids,p_note:x.note||"",p_proof:AF.proof});toast(`Marked ${money(r.amount)} as paid`)}
     AF.act=null;AF.proof="";AF.busy=false;afRefresh()}
@@ -5433,6 +5476,9 @@ am.addEventListener("click",async e=>{if(A.tab!=="affiliates")return;const b=e.t
     if(d.afbulk==="approve"){const r=rows.filter(x=>x.st==="review"&&!x.partial).slice(0,300);if(!r.length)return;AF.act={kind:"approve",ids:r.map(x=>x.id),amount:r.reduce((s,x)=>s+(+x.com||0),0)}}
     else{const r=rows.filter(x=>x.st==="approved").slice(0,300);if(!r.length)return;AF.act={kind:"pay",ids:r.map(x=>x.id),amount:r.reduce((s,x)=>s+(+x.com||0),0),who:AF.rep.aff.name||AF.rep.aff.username,note:""};AF.proof=""}
     AF.err="";renderAdmin();showNew("#afAct")}
+  else if(d.afpayv){AF.act={kind:d.afpayv==="verify"?"payverify":"payreject",aff:AF.sel,reason:""};AF.err="";renderAdmin();showNew("#afAct")}
+  else if(d.afcopytxt!==undefined){try{navigator.clipboard.writeText(d.afcopytxt).then(()=>toast("Copied"),()=>toast("Select and copy it"))}catch(x){toast("Select and copy it")}}
+  else if(d.afcfgsave!==undefined){try{AF.cfg=await SBH.rpc("admin_aff_cfg",{p:{min:+(document.getElementById("afCfgMin")||{}).value,day:+(document.getElementById("afCfgDay")||{}).value}});toast("Payout rules saved");renderAdmin()}catch(er){toast(er.message)}}
   else if(d.afnogo!==undefined){AF.act=null;AF.proof="";AF.err="";renderAdmin()}
   else if(d.afgo!==undefined)afGo()});
 am.addEventListener("change",async e=>{if(A.tab!=="affiliates")return;const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(am);if(el.dataset.afd)afDate(el,false);
@@ -5441,8 +5487,9 @@ am.addEventListener("change",async e=>{if(A.tab!=="affiliates")return;const el=e
 /* the affiliator's own page (shop address /#partner) */
 function affRender(){let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
-    v.addEventListener("click",e=>{afClick(e,v,true);if(e.target.closest("[data-afout]"))SBH.signOut()});
-    v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true)})}
+    v.addEventListener("click",e=>{afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut()});
+    v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
+    v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
   v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><span class="afwho">@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;

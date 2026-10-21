@@ -1504,3 +1504,10 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .linkbtn.sm{font-size:11px}
 .ghost.sm{padding:4px 10px;font-size:12px}
 .afo{color:var(--ink)}
+/* affiliate payment account and payout rules */
+.afnote{margin:8px 0 0;background:#EEF7F1;border:1px solid #9AD3AE;color:#0a4d27;border-radius:10px;padding:8px 12px;font-size:13px}
+.afacct{margin-top:8px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.6}
+.afacct.bad{border-color:#E0A800;background:#FFF8E1}
+.afacct .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.03em}
+.afpayday{background:#FFF8E1;border:2px solid #FFB800;border-radius:12px;padding:10px 14px;margin-top:10px;color:#4a3300}
+.afkpis .afk em{overflow-wrap:anywhere}
