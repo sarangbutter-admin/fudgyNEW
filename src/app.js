@@ -5095,8 +5095,8 @@ async function loadCustomers(){
 }
 function cuRows(){
   const q=CU.q.trim().toLowerCase(),qd=q.replace(/\D/g,"");
-  const l=(CU.list||[]).filter(c=>(!CU.only||(CU.only==="ban"?c.ban:(c.flags||[]).length))&&(!q||c.name.toLowerCase().includes(q)||(qd&&normPhone(c.phone).includes(normPhone(qd)))||String(c.email||"").toLowerCase().includes(q)));
-  if(!l.length)return `<div class="empty">${(CU.list||[]).length?"No customer matches that.":"No customers yet. They are added automatically when someone orders, or you can add one above."}</div>`;
+  const l=(CU.list||[]).filter(c=>(CU.only==="ban"?c.ban:!c.ban&&(CU.only!=="look"||(c.flags||[]).length))&&(!q||c.name.toLowerCase().includes(q)||(qd&&normPhone(c.phone).includes(normPhone(qd)))||String(c.email||"").toLowerCase().includes(q)));
+  if(!l.length)return `<div class="empty">${(CU.list||[]).length?(CU.only==="ban"?"Nobody is banned right now.":"No customer matches that."):"No customers yet. They are added automatically when someone orders, or you can add one above."}</div>`;
   return l.map(c=>`<div class="pmcard" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><b style="font-size:16px">${esc(c.name)}</b>
     <span class="note" style="margin:0">${c.source==="manual"?"Added by hand":"From an order"}${c.orders?` · ${c.orders} order${c.orders>1?"s":""}`:""}${c.spent>0?` · ${money(c.spent)} paid`:""}</span></div>
     <div><a href="${esc(waLink({customer:{phone:c.phone}},""))}" target="_blank" rel="noopener">${esc(c.phone)}</a>${c.email?` · ${esc(c.email)}`:""}</div>
@@ -5138,8 +5138,8 @@ function viewCustomers(){
       <p class="err" id="cuErr" ${CU.err?"":"hidden"}>${esc(CU.err)}</p>
       <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button class="btn btn-blue" type="button" data-cusave>${F.id?"Save changes":"Add customer"}</button>${F.id?`<button class="btn btn-ghost-blue" type="button" data-cucancel>Cancel</button>`:""}</div></section>
     ${SBH.on?bmPanel():""}
-    <section class="panel"><div class="phead"><div><h2>All customers${CU.list?` (${CU.list.length})`:""}</h2></div></div>
-      <div class="chips" style="margin-top:8px"><button class="fchip" type="button" data-cuonly="" aria-pressed="${!CU.only}">All</button><button class="fchip" type="button" data-cuonly="look" aria-pressed="${CU.only==="look"}">👀 Needs a look${CU.list&&CU.list.some(c=>(c.flags||[]).length)?` (${CU.list.filter(c=>(c.flags||[]).length).length})`:""}</button><button class="fchip" type="button" data-cuonly="ban" aria-pressed="${CU.only==="ban"}">🚫 Banned${CU.list&&CU.list.some(c=>c.ban)?` (${CU.list.filter(c=>c.ban).length})`:""}</button></div>
+    <section class="panel"><div class="phead"><div><h2>All customers${CU.list?` (${CU.list.filter(c=>!c.ban).length})`:""}</h2></div></div>
+      <div class="chips" style="margin-top:8px"><button class="fchip" type="button" data-cuonly="" aria-pressed="${!CU.only}">All</button><button class="fchip" type="button" data-cuonly="look" aria-pressed="${CU.only==="look"}">👀 Needs a look${CU.list&&CU.list.some(c=>!c.ban&&(c.flags||[]).length)?` (${CU.list.filter(c=>!c.ban&&(c.flags||[]).length).length})`:""}</button><button class="fchip" type="button" data-cuonly="ban" aria-pressed="${CU.only==="ban"}">🚫 Banned${CU.list&&CU.list.some(c=>c.ban)?` (${CU.list.filter(c=>c.ban).length})`:""}</button></div>
       <label class="af" style="margin-top:8px">Search<input class="in" id="cuSearch" type="search" placeholder="Name, number or email" value="${esc(CU.q)}" autocomplete="off"></label>
       <div id="cuList" style="margin-top:10px;display:grid;gap:10px">${CU.list===null?`<div class="empty">Loading…</div>`:cuRows()}</div></section></div>`;
 }
