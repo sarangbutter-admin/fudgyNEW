@@ -5058,7 +5058,9 @@ const TAB_PERM={dashboard:"dashboard",orders:"orders",complaints:"complaints",cu
   sales:"sales",coupons:"coupons",notify:"notify",announcer:"design",hero:"design",landing:"design",marquee:"design",settings:"settings",delivery:"settings"};
 const myPerms=()=>SBH.on?(SBH.perms||[]):PERMS.map(p=>p[0]);
 const tabAllowed=t=>ROLE()==="owner"||(TAB_PERM[t]&&myPerms().includes(TAB_PERM[t]));
-const CU={list:null,q:"",form:null,err:"",loading:false,stale:false};
+const CU={list:null,q:"",form:null,err:"",loading:false,stale:false,bf:null,only:false};
+const CU_DAYS=[[1,"1 day"],[7,"7 days"],[30,"30 days"],[90,"90 days"],[0,"No end date"]];
+const cuBanTxt=b=>b.until?"until "+fmtDT(b.until):"no end date";
 const TM={list:null,err:"",loading:false};
 function demoCustomers(){   // demo mode only: customers come from this browser's orders + the ones added by hand
   const m=new Map();
@@ -5075,13 +5077,18 @@ async function loadCustomers(){
 }
 function cuRows(){
   const q=CU.q.trim().toLowerCase(),qd=q.replace(/\D/g,"");
-  const l=(CU.list||[]).filter(c=>!q||c.name.toLowerCase().includes(q)||(qd&&normPhone(c.phone).includes(normPhone(qd)))||String(c.email||"").toLowerCase().includes(q));
+  const l=(CU.list||[]).filter(c=>(!CU.only||c.ban)&&(!q||c.name.toLowerCase().includes(q)||(qd&&normPhone(c.phone).includes(normPhone(qd)))||String(c.email||"").toLowerCase().includes(q)));
   if(!l.length)return `<div class="empty">${(CU.list||[]).length?"No customer matches that.":"No customers yet. They are added automatically when someone orders, or you can add one above."}</div>`;
   return l.map(c=>`<div class="pmcard" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><b style="font-size:16px">${esc(c.name)}</b>
     <span class="note" style="margin:0">${c.source==="manual"?"Added by hand":"From an order"}${c.orders?` · ${c.orders} order${c.orders>1?"s":""}`:""}${c.spent>0?` · ${money(c.spent)} paid`:""}</span></div>
     <div><a href="${esc(waLink({customer:{phone:c.phone}},""))}" target="_blank" rel="noopener">${esc(c.phone)}</a>${c.email?` · ${esc(c.email)}`:""}</div>
     ${c.note?`<div class="note" style="margin:0">${esc(c.note)}</div>`:""}
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" type="button" data-cuedit="${esc(c.id)}">Edit</button>${ROLE()==="owner"?`<button class="danger" type="button" data-cudel="${esc(c.id)}">Delete</button>`:""}</div></div>`).join("");
+    ${c.ban?`<div class="cuban"><b>🚫 Banned ${cuBanTxt(c.ban)}</b><span>${esc(c.ban.reason)}</span></div>`:""}
+    ${CU.bf&&CU.bf.id===c.id?`<div class="cubf"><label class="af">Why? (only the team sees this)<input class="in" data-cubf="reason" maxlength="200" value="${esc(CU.bf.reason)}" placeholder="e.g. Fake orders, never pays"></label>
+      <label class="af">How long<select class="in" data-cubf="days">${CU_DAYS.map(([v,l])=>`<option value="${v}" ${+CU.bf.days===v?"selected":""}>${l}</option>`).join("")}</select></label>
+      <p class="note" style="margin:0">They can't place new orders with this number or email. Their old orders stay as they are.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="danger" type="button" data-cubango>Ban this customer</button><button class="ghost" type="button" data-cubanno>Cancel</button></div></div>`:""}
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" type="button" data-cuedit="${esc(c.id)}">Edit</button>${SBH.on?(c.ban?`<button class="ghost" type="button" data-cuunban="${esc(c.id)}">Unban</button>`:`<button class="ghost" type="button" data-cuban="${esc(c.id)}">🚫 Ban</button>`):""}${ROLE()==="owner"?`<button class="danger" type="button" data-cudel="${esc(c.id)}">Delete</button>`:""}</div></div>`).join("");
 }
 function viewCustomers(){
   const F=CU.form||{name:"",phone:"",email:"",note:""};
@@ -5094,6 +5101,7 @@ function viewCustomers(){
       <p class="err" id="cuErr" ${CU.err?"":"hidden"}>${esc(CU.err)}</p>
       <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button class="btn btn-blue" type="button" data-cusave>${F.id?"Save changes":"Add customer"}</button>${F.id?`<button class="btn btn-ghost-blue" type="button" data-cucancel>Cancel</button>`:""}</div></section>
     <section class="panel"><div class="phead"><div><h2>All customers${CU.list?` (${CU.list.length})`:""}</h2></div></div>
+      <div class="chips" style="margin-top:8px"><button class="fchip" type="button" data-cuonly="0" aria-pressed="${!CU.only}">All</button><button class="fchip" type="button" data-cuonly="1" aria-pressed="${CU.only}">🚫 Banned${CU.list&&CU.list.some(c=>c.ban)?` (${CU.list.filter(c=>c.ban).length})`:""}</button></div>
       <label class="af" style="margin-top:8px">Search<input class="in" id="cuSearch" type="search" placeholder="Name, number or email" value="${esc(CU.q)}" autocomplete="off"></label>
       <div id="cuList" style="margin-top:10px;display:grid;gap:10px">${CU.list===null?`<div class="empty">Loading…</div>`:cuRows()}</div></section></div>`;
 }
@@ -5540,7 +5548,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 20:54 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 21:02 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
@@ -5687,10 +5695,15 @@ am.addEventListener("change",e=>{const el=e.target;if(!el.dataset||!el.dataset.k
   needOwner("change a price").then(()=>{el.value=nv;el.dispatchEvent(new Event("change",{bubbles:true}))}).catch(()=>toast("Price not changed"));
 },true);
 
-am.addEventListener("input",e=>{if(e.target.id==="cuSearch"){CU.q=e.target.value;const l=$("#cuList");if(l)l.innerHTML=cuRows()}});
-am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const d=b.dataset;
+am.addEventListener("input",e=>{const bk=e.target.dataset&&e.target.dataset.cubf;if(bk&&CU.bf)CU.bf[bk]=e.target.value;if(e.target.id==="cuSearch"){CU.q=e.target.value;const l=$("#cuList");if(l)l.innerHTML=cuRows()}});
+am.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;const d=b.dataset;
   if(d.cusave!==undefined)cuSave();
   else if(d.cuedit){const c=(CU.list||[]).find(x=>x.id===d.cuedit);if(c){CU.form=Object.assign({},c);CU.err="";renderAdmin();showNew("#cuForm")}}
+  else if(d.cuonly!==undefined){CU.only=d.cuonly==="1";renderAdmin()}
+  else if(d.cuban){CU.bf={id:d.cuban,reason:"",days:7};renderAdmin()}
+  else if(d.cubanno!==undefined){CU.bf=null;renderAdmin()}
+  else if(d.cubango!==undefined){const f=CU.bf;if(!f)return;try{CU.list=await SBH.rpc("admin_cust_ban",{p_id:f.id,p_reason:f.reason,p_days:+f.days||null});CU.bf=null;toast("Customer banned")}catch(x){toast(x.message);return}const y=scrollY;renderAdmin();scrollTo(0,y)}
+  else if(d.cuunban){try{CU.list=await SBH.rpc("admin_cust_unban",{p_id:d.cuunban});toast("Customer unbanned")}catch(x){toast(x.message);return}const y=scrollY;renderAdmin();scrollTo(0,y)}
   else if(d.cucancel!==undefined){CU.form=null;CU.err="";renderAdmin()}
   else if(d.cudel){armed(b,async()=>{try{if(SBH.on)CU.list=await SBH.rpc("admin_customer_delete",{p_id:d.cudel});else{DB.customers=DB.customers.filter(c=>c.id!==d.cudel);saveDB();CU.list=demoCustomers()}renderAdmin();toast("Customer removed")}catch(x){toast(x.message)}})}
   else if(d.tmadd!==undefined){const em=$("#tmEmail").value.trim();if(!em)return tmErr("Enter the person's email.");tmCall("admin_team_set",{p_email:em,p_role:$("#tmRole").value,p_name:$("#tmName").value.trim()},"Added to the team")}

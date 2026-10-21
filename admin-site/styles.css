@@ -1535,3 +1535,5 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .dome.framed.framefull{aspect-ratio:auto;width:var(--fw,100%)}
 .afpop .bell-tabs{padding:8px 12px 4px}.afnt{grid-template-columns:auto minmax(0,1fr)}.afntx,.afntx span,.afntx b{overflow-wrap:anywhere;word-break:break-word;white-space:normal}.afnt .afntx{padding-right:14px}
 .afpop{white-space:normal;text-align:left}.afpop .empty{text-align:center;overflow-wrap:anywhere}
+.cuban{display:flex;flex-direction:column;gap:2px;padding:8px 12px;border-radius:12px;background:#fde8ec;color:#a3122f;font-size:13px;overflow-wrap:anywhere}
+.cubf{display:grid;gap:8px;padding:10px 12px;border-radius:12px;background:var(--ice,#f2f5ff)}
