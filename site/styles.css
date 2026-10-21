@@ -1212,3 +1212,24 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .card.affhl{animation:cardhl 2.4s ease-out}
 @media (max-width:640px){.afrow{grid-template-columns:minmax(110px,1.4fr) repeat(5,minmax(58px,1fr));font-size:12px}}
 .afrow.afsrc{grid-template-columns:minmax(110px,1.3fr) repeat(3,minmax(60px,.8fr)) minmax(90px,1.2fr)}
+/* affiliate commission orders: statuses, actions, bulk, payout proof */
+.afchip.blink{animation:afBlink 1.3s ease-in-out infinite}
+@keyframes afBlink{50%{opacity:.4}}
+.afo{grid-template-columns:var(--c)}
+.afo small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.afo .afwhy{color:#B42318;font-weight:600}
+.afo.st-voided{background:#FFF1F0}.afo.st-review{background:#FFF8F0}
+.afk em{display:block;font-style:normal;font-size:11px;color:var(--muted);margin-top:2px}
+.afk.red{border-color:#E8384F;background:#FFF1F2}.afk.red strong{color:#B42318}
+.afmini .red b{color:#B42318}
+.afacts2{display:flex;gap:6px;flex-wrap:wrap}
+.afokb{border:0;border-radius:999px;background:#0A6B34;color:#fff;font-weight:700;font-size:12.5px;padding:7px 12px;cursor:pointer}
+.afvoid{border:2px solid #C8102E;border-radius:999px;background:#fff;color:#C8102E;font-weight:800;font-size:12.5px;padding:5px 11px;cursor:pointer}
+.afvoid.blinkv{animation:afBlink 1.1s ease-in-out infinite}
+.afbulk{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 4px}
+.afsf small{opacity:.7;margin-left:3px}
+.afproof{font-weight:700;color:var(--blue);text-decoration:underline}
+.afbadge.blink{animation:afBlink 1.3s ease-in-out infinite}
+.linkbtn.sm{font-size:11px}
+.ghost.sm{padding:4px 10px;font-size:12px}
+.afo{color:var(--ink)}
