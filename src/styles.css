@@ -1542,3 +1542,8 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .bmprev h3{color:var(--pp-acc,#000096);margin:0;font-size:22px}.bmprev p{margin:0;line-height:1.5}
 .bmprev .btn,.bmprev .ghost{width:100%}.bmfall{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.bmfall img{height:30px}
 .bmitem{display:inline-flex;align-items:center;gap:4px}.bmitem img{height:40px;border-radius:8px}
+.hero-ctas .btn{max-width:100%}
+.btn.hbz-A{flex:1 1 150px;min-width:0;white-space:normal;text-align:center;font-size:clamp(13px,3.8vw,17px);padding:clamp(10px,2.4vw,16px) clamp(14px,3vw,28px)}
+.hero-ctas:has(.hbz-A){width:100%;max-width:520px;margin-left:auto;margin-right:auto}
+.dome.btnfree .hero-ctas .btn.hbz-A{white-space:normal}
+.dome.framed{overflow:clip;min-height:auto}

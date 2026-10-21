@@ -2026,6 +2026,7 @@ function viewAnnouncer(){
 A.hr=null;
 const hrDraft=()=>A.hr||(A.hr=heroNorm(DB.page.hero));
 const hrDirty=()=>A.hr&&JSON.stringify(A.hr)!==JSON.stringify(heroNorm(DB.page.hero));
+const hrFrSet=o=>{const h=hrDraft(),k=hrDev()==="pc"?"fPc":"fPh";h[k]=Object.assign({},heroFr(h,hrDev()),o);return h[k]};
 const hrDev=()=>A.hrDev||(innerWidth>HERO_BP?"pc":"ph");
 function hrDraw(){
   const el=document.getElementById("hrPrev");if(!el)return;const pg=DB.page,wrap=el.parentNode;
@@ -2042,7 +2043,7 @@ function hbEditor(h,i){const st=Object.assign(HB_DEF(i),h["b"+i]||{});
     <div style="display:flex;gap:10px;align-items:center"><label class="sw"><input type="checkbox" data-hrb="${i}.fill" ${st.fill!==false?"checked":""} aria-label="Filled background"><span></span></label><span class="stlabel">Filled background</span></div>
     <div class="grid2" style="gap:8px">${st.fill!==false?cin("Background","bg"):""}${cin("Text","ink")}${cin("Border","line")}</div>
     <div class="af" style="margin:0;font-size:12px">Shape</div>${chips("shape",HB_SHAPES)}
-    <div class="af" style="margin:0;font-size:12px">Size</div>${chips("size",[["S","Small"],["M","Medium"],["L","Large"]])}
+    <div class="af" style="margin:0;font-size:12px">Size</div>${chips("size",[["S","Small"],["M","Medium"],["L","Large"],["A","Auto fit"]])}
     <div class="af" style="margin:0;font-size:12px">Lively effect</div>${chips("fx",HB_FX)}</div>`}
 function viewHero(){
   const pg=DB.page,h=hrDraft(),prods=DB.products.filter(p=>p.status!=="hidden"&&hasImage(p)).slice(0,6);
@@ -2077,11 +2078,14 @@ function viewHero(){
     <section class="panel"><h2>Shape</h2><p class="sub">The shape of the banner. Its color is the Banner color above. "No shape" removes it.</p>
       <div class="chips" style="margin-top:10px">${heroShapes().map(([k,l])=>`<button class="fchip" type="button" data-hrshape="${k}" aria-pressed="${(h.shape||"dome")===k}">${l}</button>`).join("")}</div>
     </section>
-    <section class="panel"><h2>Picture and video frame</h2><p class="sub">How big the pictures and videos are. The picture or video always fills the whole banner. <b>Full banner</b> keeps the normal banner shape; the others make the banner Wide, Square, Tall or Story shaped. Every choice can be made narrower with Banner width.</p>
-      <div class="chips" style="margin-top:10px">${[["full","Full banner"],["16:9","Wide 16:9"],["1:1","Square 1:1"],["4:5","Tall 4:5"],["9:16","Story 9:16"]].map(([k,l])=>`<button class="fchip" type="button" data-hrframe="${k}" aria-pressed="${(h.frame||"full")===k}">${l}</button>`).join("")}</div>
-      ${h.media.length?`<div class="grid2" style="margin-top:10px"><label class="af">Banner width: ${+h.frameW||((h.frame||"full")==="full"?100:60)}%<input type="range" min="30" max="100" step="5" value="${+h.frameW||((h.frame||"full")==="full"?100:60)}" data-hr="frameW" data-hrnum="1" data-hrlbl="Banner width: #%"></label>
-        <div class="af">Corners<div class="chips" style="margin-top:6px">${[["round","Rounded"],["square","Square"]].map(([k,l])=>`<button class="fchip" type="button" data-hrcorner="${k}" aria-pressed="${(h.frameCr||"round")===k}">${l}</button>`).join("")}</div></div></div>
-        <p class="note" style="margin:8px 0 0">The frame never gets taller than the screen. A normal (wide) YouTube video in a Tall or Story frame is cropped on the sides; choose "Show whole picture" under Picture fit to see all of it. YouTube Shorts fit a Story frame exactly.</p>`:""}
+    <section class="panel"><h2>Picture and video frame</h2><p class="sub">The picture or video always fills the whole banner. <b>Full banner</b> keeps the normal banner shape; the others make the banner Wide, Square, Tall or Story shaped. Phones and computers keep their own choice: use the 📱 / 💻 buttons in the preview above to switch which one you are changing.</p>
+      ${(()=>{const dv=hrDev(),F=heroFr(h,dv),fr=F.frame||"full",fw=+F.frameW||(fr==="full"?100:60);
+        return `<div class="chips" style="margin:10px 0 0">${[["ph","📱 Phone"],["pc","💻 Computer"]].map(([k,l])=>`<button class="fchip" type="button" data-hrdev="${k}" aria-pressed="${dv===k}">${l}</button>`).join("")}</div>
+      <p class="note" style="margin:6px 0 0">You are changing the <b>${dv==="ph"?"phone":"computer"}</b> frame.</p>
+      <div class="chips" style="margin-top:10px">${[["full","Full banner"],["16:9","Wide 16:9"],["1:1","Square 1:1"],["4:5","Tall 4:5"],["9:16","Story 9:16"]].map(([k,l])=>`<button class="fchip" type="button" data-hrframe="${k}" aria-pressed="${fr===k}">${l}</button>`).join("")}</div>
+      ${h.media.length?`<div class="grid2" style="margin-top:10px"><label class="af">Banner width: ${fw}%<input type="range" min="30" max="100" step="5" value="${fw}" data-hrfw></label>
+        <div class="af">Corners<div class="chips" style="margin-top:6px">${[["round","Rounded"],["square","Square"]].map(([k,l])=>`<button class="fchip" type="button" data-hrcorner="${k}" aria-pressed="${(F.frameCr||"round")===k}">${l}</button>`).join("")}</div></div></div>
+        <p class="note" style="margin:8px 0 0">The frame never gets taller than the screen. A normal (wide) YouTube video in a Tall or Story frame is cropped on the sides; choose "Show whole picture" under Picture fit to see all of it. YouTube Shorts fit a Story frame exactly.</p>`:""}`})()}
     </section>
     <section class="panel"><h2>Banner size</h2><p class="sub">How tall the banner is.</p>
       <div class="chips" style="margin-top:10px">${[["auto","Fit the picture or video"],["text","Fit the words"],["custom","Custom height"]].map(([k,l])=>`<button class="fchip" type="button" data-hrsize="${k}" aria-pressed="${(h.size||"auto")===k}">${l}</button>`).join("")}</div>
@@ -3699,10 +3703,11 @@ function hrSetX(el){const h=hrDraft(),[i,k]=el.dataset.hrx.split("."),n=+i;if(!A
   const x=h.ckx[n]=h.ckx[n]||{};x[k]=k==="op"?+el.value:k==="show"?el.checked:el.value;hrDraw();if(k==="show"){renderAdmin();return}
   if(k==="op"){const l=el.closest("label");if(l&&l.firstChild)l.firstChild.textContent=`Opacity: ${x.op}%`}}
 function hrSetB(el){const [i,k]=el.dataset.hrb.split("."),h=hrDraft(),key="b"+i;h[key]=Object.assign(HB_DEF(+i),h[key]||{});h[key][k]=el.type==="checkbox"?el.checked:el.value;if(el.type==="checkbox")renderAdmin();else hrDraw()}
-am.addEventListener("input",e=>{const el=e.target;if(el.dataset.hrb){if(el.type!=="checkbox")hrSetB(el);return}if(el.dataset.hrx){hrSetX(el);return}if(!el.dataset.hr)return;hrSet(el)});
+am.addEventListener("input",e=>{const el=e.target;if(el.dataset.hrfw!==undefined){hrFrSet({frameW:+el.value});hrDraw();const l=el.closest("label");if(l&&l.firstChild)l.firstChild.textContent="Banner width: "+el.value+"%";return}if(el.dataset.hrb){if(el.type!=="checkbox")hrSetB(el);return}if(el.dataset.hrx){hrSetX(el);return}if(!el.dataset.hr)return;hrSet(el)});
 function hrSet(el){const h=hrDraft(),k=el.dataset.hr;h[k]=el.type==="checkbox"?el.checked:el.dataset.hrnum?+el.value:el.value;
   if(k==="src"&&!el.value)h.src="";hrDraw();if(el.dataset.hrlbl){const l=el.closest("label");if(l&&l.firstChild)l.firstChild.textContent=el.dataset.hrlbl.replace("#",el.value);return}if(el.dataset.hrrr)renderAdmin();else if(k==="overlay"){const l=el.closest("label");if(l&&l.firstChild)l.firstChild.textContent=`Darken the picture: ${h.overlay}%`}}
 am.addEventListener("change",async e=>{const el=e.target;
+  if(el.dataset.hrfw!==undefined)return;
   if(el.dataset.hrx){hrSetX(el);return}
   if(el.dataset.hrb){hrSetB(el);return}
   if(el.dataset.hr){hrSet(el);return}
@@ -3725,8 +3730,8 @@ am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   else if(d.hrbset){const [i,k,v]=d.hrbset.split("."),h=hrDraft();h["b"+i]=Object.assign(HB_DEF(+i),h["b"+i]||{});h["b"+i][k]=v;renderAdmin()}
   else if(d.hrbreset){delete hrDraft()["b"+d.hrbreset];renderAdmin()}
   else if(d.hrfit){hrDraft().fit=d.hrfit;renderAdmin()}
-  else if(d.hrframe){const h=hrDraft();h.frame=d.hrframe;if(d.hrframe!=="full"&&!h.frameW)h.frameW=60;if(d.hrframe==="full"&&h.frameW===60)h.frameW=100;renderAdmin()}
-  else if(d.hrcorner){hrDraft().frameCr=d.hrcorner;renderAdmin()}
+  else if(d.hrframe){const F=hrFrSet({frame:d.hrframe});if(d.hrframe!=="full"&&!F.frameW)F.frameW=60;if(d.hrframe==="full"&&+F.frameW===60)F.frameW=100;renderAdmin()}
+  else if(d.hrcorner){hrFrSet({frameCr:d.hrcorner});renderAdmin()}
   else if(d.hrdev){A.hrDev=d.hrdev;renderAdmin()}
   else if(d.hrbtnreset!==undefined){hrDraft()[hrDev()==="pc"?"btnPc":"btnPh"]=null;renderAdmin()}
   else if(d.hrmrm!==undefined){hrDraft().media.splice(+d.hrmrm,1);renderAdmin()}
@@ -4207,15 +4212,12 @@ function heroFill(dome,h){
   const sls=hm.querySelectorAll(".hs"),hasM=sls.length>0;
   heroCar(dome,h,[...sls]);
   const shp=heroShapes().some(x=>x[0]===h.shape)?h.shape:"dome";heroShapes().forEach(x=>dome.classList.remove("shape-"+x[0]));dome.classList.add("shape-"+shp);dome.classList.toggle("nomedia",!hasM);
-  const full=!h.frame||h.frame==="full",fw=Math.max(30,Math.min(100,+h.frameW||(full?100:60))),frm=hasM&&(full?(fw<100||h.frameCr==="square"):HERO_FRAMES[h.frame]!==undefined);
-  dome.classList.toggle("framed",frm);
-  if(frm){dome.style.setProperty("--far",full?"auto":HERO_FRAMES[h.frame]);dome.style.setProperty("--fw",fw+"%");dome.classList.toggle("framefull",full);dome.style.setProperty("--fcr",h.frameCr==="square"?"0px":"22px")}
-  else{dome.classList.remove("framefull");["--far","--fw","--fcr"].forEach(v=>dome.style.removeProperty(v))}
+  const frm=heroFrameApply(dome,h,hasM);
   if(shp==="none"){dome.style.background=hasM?"#000":"transparent";if(!hasM&&/^#fff(fff)?$/i.test(h.color||"#ffffff"))dome.style.color=""}
   q(".ho").style.opacity=hasM?(Math.max(0,Math.min(90,+h.overlay||0))/100):0;
   heroFloats(dome,h);
   [h.b1,h.b2].forEach((st,i)=>{const a=ab[i];[...a.classList].filter(c=>/^hb/.test(c)).forEach(c=>a.classList.remove(c));if(!st)return;
-    a.classList.add("hbc","hb-"+fxOk(st.shape,HB_SHAPES.map(x=>x[0]),"pill"),"hbz-"+fxOk(st.size,["S","M","L"],"M"),"hbfx-"+fxOk(st.fx,HB_FX.map(x=>x[0]),"none"));
+    a.classList.add("hbc","hb-"+fxOk(st.shape,HB_SHAPES.map(x=>x[0]),"pill"),"hbz-"+fxOk(st.size,["S","M","L","A"],"M"),"hbfx-"+fxOk(st.fx,HB_FX.map(x=>x[0]),"none"));
     a.style.setProperty("--hb-bg",st.fill===false?"transparent":hexOk(st.bg,"#ffffff"));a.style.setProperty("--hb-ink",hexOk(st.ink,"#000096"));
     a.style.setProperty("--hb-line",hexOk(st.line,"#ffffff"));a.style.setProperty("--hb-glow",hexOk(st.fill===false?st.line:st.bg,"#ffffff"))});
   dome.classList.toggle("fit-contain",h.fit==="contain");
@@ -4264,7 +4266,16 @@ function heroRatio(m,cb){const src=safeMedia(m&&m.src);if(!src)return;if(HR_RATI
   if(m.type==="video"||isVideoSrc(src)){const v=document.createElement("video");v.muted=true;v.preload="metadata";v.onloadedmetadata=()=>done(v.videoWidth/v.videoHeight);v.src=src;return}
   const im=new Image();im.onload=()=>done(im.naturalWidth/im.naturalHeight);im.src=imgOk(src)}
 const HERO_FRAMES={"16:9":16/9,"1:1":1,"4:5":.8,"9:16":.5625};
-function heroLayout(dome){const h=dome&&dome._h;if(!h)return;
+// the picture and video frame (shape, width, corners) is kept separately for phones and computers
+const heroFr=(h,dev)=>h[dev==="pc"?"fPc":"fPh"]||{frame:h.frame,frameW:h.frameW,frameCr:h.frameCr};
+function heroFrameApply(dome,h,hasM){
+  const dev=dome._dev||(innerWidth>HERO_BP?"pc":"ph"),F=heroFr(h,dev),full=!F.frame||F.frame==="full",fw=Math.max(30,Math.min(100,+F.frameW||(full?100:60)));
+  const frm=!!hasM&&(full?(fw<100||F.frameCr==="square"):HERO_FRAMES[F.frame]!==undefined);
+  dome.classList.toggle("framed",frm);dome.classList.toggle("framefull",frm&&full);
+  if(frm){dome.style.setProperty("--far",full?"auto":HERO_FRAMES[F.frame]);dome.style.setProperty("--fw",fw+"%");dome.style.setProperty("--fcr",F.frameCr==="square"?"0px":"22px")}
+  else["--far","--fw","--fcr"].forEach(v=>dome.style.removeProperty(v));
+  return frm}
+function heroLayout(dome){const h=dome&&dome._h;if(!h)return;heroFrameApply(dome,h,!dome.classList.contains("nomedia"));
   const dev=dome._dev||(innerWidth>HERO_BP?"pc":"ph"),size=h.size||"auto",w=dome.clientWidth;let mh=0;
   if(dome.classList.contains("framed")){}
   else if(size==="custom")mh=dev==="pc"?Math.max(260,Math.min(1000,+h.hPc||480)):Math.max(220,Math.min(900,+h.hPh||360));
@@ -5592,7 +5603,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 21:12 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 22:09 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
