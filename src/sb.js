@@ -302,7 +302,7 @@
     var raw = { v: 1, settings: Object.assign({}, seed.settings, docs.settings || {}), sizes: rows("sizes"), products: rows("products"), addons: rows("addons"), sales: rows("sales"),
       categories: rows("categories"), coupons: rows("coupons"), broadcasts: rows("broadcasts"), orders: r.orders || [],
       payMethods: Array.isArray(docs.payMethods) ? docs.payMethods : undefined, proofpop: docs.proofpop, page: docs.page, marquee: docs.marquee, announcer: docs.announcer,
-      thanks: docs.thanks, alerts: docs.alerts, label: docs.label, badges: docs.badges };
+      thanks: docs.thanks, alerts: docs.alerts, label: docs.label, badges: docs.badges, prelaunch: docs.prelaunch };
     return raw;
   }
   function cleanStarter() {

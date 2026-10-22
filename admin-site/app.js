@@ -1868,8 +1868,9 @@ function preNorm(p){const d=defaultPre(),o=p&&typeof p==="object"?p:{},r=Object.
   ["items"].forEach(k=>{if(!Array.isArray(r.gifts[k]))r.gifts[k]=[]});if(!Array.isArray(r.fx.imgs))r.fx.imgs=[];if(!Array.isArray(r.game.imgs))r.game.imgs=[];
   if(!Array.isArray(r.hero.media))r.hero.media=[];return r}
 const PRE_KEY="delidome-pre-v1",PRE={st:null,me:null,busy:false,err:"",t:0,poll:0};
-try{PRE.me=JSON.parse(localStorage.getItem(PRE_KEY)||"null")}catch(e){}
 const preForced=()=>/[?&]prelaunch\b/.test(location.search);
+// the owner's preview acts like a private window: nothing is read from or saved to this phone, and nobody is registered
+if(!preForced())try{PRE.me=JSON.parse(localStorage.getItem(PRE_KEY)||"null")}catch(e){}
 const preNow=()=>Date.now()+((window.SBH&&SBH.skew)||0);
 function preOn(){const P=DB.prelaunch;if(!P)return false;if(preForced())return true;
   if(!P.on)return false;return !(P.autoOpen!==false&&+P.openAt>0&&preNow()>=+P.openAt)}
@@ -1893,8 +1894,8 @@ function preFxHTML(P){const F=P.fx;if(!F.on)return "";const imgs=F.imgs.length?F
   for(let i=0;i<n;i++){const fall=F.mode==="fall"||(F.mode==="both"&&i%2),s=sz*(.7+Math.random()*.6);
     h+=`<i class="${fall?"pfx-fall":"pfx-float"}" style="left:${(Math.random()*94).toFixed(1)}%;${fall?"":`top:${(5+Math.random()*85).toFixed(1)}%;`}width:${s|0}px;height:${s|0}px;--t:${((fall?7:5)+Math.random()*5)*sp}s;--dl:-${(Math.random()*8).toFixed(1)}s;opacity:${Math.max(.1,Math.min(1,(+F.op||55)/100))}"><img src="${esc(F.imgs.length?imgOk(imgs[i%imgs.length]):COOKIE_SVG)}" alt=""></i>`}
   return `<div class="pre-fx" aria-hidden="true">${h}</div>`}
-function renderPre(force){const v=preView();if(v.hidden)return;const P=DB.prelaunch,me=PRE.me,st=PRE.st||{},full=!!st.full&&!me;
-  const sig=JSON.stringify([P,me,st.count,st.full,PRE.err,PRE.busy,window.DDLANG?DDLANG():""]);if(!force&&sig===v._sig)return;v._sig=sig;
+function renderPre(force){const v=preView();if(v.hidden)return;const P=DB.prelaunch,me=PRE.me,st=PRE.st||{},full=(!!st.full||!!PRE.pvFull)&&!me;
+  const sig=JSON.stringify([P,me,st.count,st.full,PRE.pvFull,PRE.err,PRE.busy,window.DDLANG?DDLANG():""]);if(!force&&sig===v._sig)return;v._sig=sig;
   const pg=DB.page||{},lg=safeMedia(pg.logo),mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG,C=P.closed;
   v.style.cssText=`--pbg:${hexOk(P.bg,"#FFF4D6")};--pink:${hexOk(P.ink,"#0B0B45")};--pacc:${hexOk(P.accent,"#000096")};--pbtn:${hexOk(P.btnBg,"#C8102E")};--pbtnk:${hexOk(P.btnInk,"#ffffff")};--display:${lpFamily(pg.headFont,pg,"head")};--body:${lpFamily(pg.bodyFont,pg,"body")}`;
   const left=st.max?Math.max(0,st.max-(st.count||0)):null;
@@ -1916,16 +1917,20 @@ function renderPre(force){const v=preView();if(v.hidden)return;const P=DB.prelau
         ${PRE.err?`<p class="pre-err" role="alert">${esc(PRE.err)}</p>`:""}<button class="pre-btn" type="submit" ${PRE.busy?"disabled":""}>${PRE.busy?"Saving…":esc(P.form.btn||"Claim my free Gift Set")}</button></form>`;
     body=`<div class="dome" id="preDome"><div class="hm" aria-hidden="true"></div><div class="ho" aria-hidden="true"></div><p class="eyebrow"></p><h1></h1><p class="lede"></p><div class="hero-ctas"><a class="btn btn-white" href="#preForm" data-prego="form"></a><a class="btn btn-line" href="#preGame" data-prego="game"></a></div></div>
       ${preCdHTML(P)}${reg}${preGiftsHTML(P)}${P.game.on&&!me?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:P.game.on?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:""}`}
-  v.innerHTML=`${preFxHTML(P)}<div class="pre-wrap">${top}${body}</div>`;
+  const pv=preForced()?`<div class="pre-pv" data-notr><b>👁 Preview</b><span>Like a private window: nothing is saved and nobody is registered.</span><div>${[["form","Form"],["done","You're in"],["full","All taken"]].map(([k,l])=>`<button type="button" data-pvst="${k}" aria-pressed="${(k==="done"&&!!me)||(k==="full"&&full)||(k==="form"&&!me&&!full)}">${l}</button>`).join("")}<button type="button" data-pvgame>Game</button></div></div>`:"";
+  v.innerHTML=`${preFxHTML(P)}<div class="pre-wrap">${pv}${top}${body}</div>`;
   const dome=v.querySelector("#preDome");if(dome){const h=JSON.parse(JSON.stringify(P.hero));if(!P.game.on)h.btn2="";if(me)h.btn1="";if(!h.bg)h.bg=pg.brand;heroFill(dome,h)}
   preTick();clearInterval(PRE.t);PRE.t=setInterval(preTick,1000);
   clearInterval(PRE.poll);if(SBH.on&&!me)PRE.poll=setInterval(()=>{if(!document.hidden&&!preView().hidden)preStatus()},30000)}
+function preFake(nm){const P=DB.prelaunch,st=PRE.st||{};return {code:String(P.codePrefix||"GIFT-").toUpperCase()+"TEST",rank:(st.count||0)+1,name:nm,max:P.max,exp:P.expMode==="date"&&+P.expAt?+P.expAt:+P.openAt?+P.openAt+(+P.expDays||7)*864e5:null,preview:true}}
 function preRain(list){let h="";for(let i=0;i<9;i++)h+=`<i style="left:${(Math.random()*92).toFixed(1)}%;--t:${(4+Math.random()*4).toFixed(1)}s;--dl:-${(Math.random()*6).toFixed(1)}s">${list[i%list.length]}</i>`;return `<div class="pre-rain" aria-hidden="true">${h}</div>`}
 function preTick(){const v=document.getElementById("preView");if(!v||v.hidden)return;const P=DB.prelaunch;
   v.querySelectorAll("[data-pcd]").forEach(c=>{const ms=Math.max(0,+c.dataset.pcd-preNow()),s=Math.floor(ms/1000),x={d:Math.floor(s/86400),h:Math.floor(s%86400/3600),m:Math.floor(s%3600/60),s:s%60};
     c.querySelectorAll("[data-pk]").forEach(b=>{const t=String(x[b.dataset.pk]).padStart(2,"0");if(b.textContent!==t){b.textContent=t;if(c.classList.contains("pcs-flip")){b.classList.remove("flp");void b.offsetWidth;b.classList.add("flp")}}})});
   if(P.on&&P.autoOpen!==false&&+P.openAt>0&&preNow()>=+P.openAt&&!preForced()){clearInterval(PRE.t);if(SBH.on&&SBH.loadShop)SBH.loadShop(true);renderStore()}}
 function preClick(e){const b=e.target.closest("button,a");if(!b)return;const d=b.dataset;
+  if(d.pvst){const P=DB.prelaunch;PRE.err="";PRE.pvFull=d.pvst==="full";PRE.me=d.pvst==="done"?preFake("Sari"):null;renderPre(true);return}
+  if(d.pvgame!==undefined){if(window.preGameStart)preGameStart();return}
   if(d.prelang!==undefined&&window.DDsetLang){DDsetLang(DDLANG()==="id"?"en":"id");return}
   if(d.prego==="form"){e.preventDefault();const f=document.getElementById("preForm");if(f){f.scrollIntoView({behavior:"smooth",block:"center"});const n=document.getElementById("prName");n&&setTimeout(()=>n.focus(),400)}return}
   if(d.prego==="game"||d.pregame!==undefined){e.preventDefault();if(window.preGameStart)preGameStart();return}
@@ -1936,7 +1941,9 @@ async function preSubmit(e){if(e.target.id!=="preForm")return;e.preventDefault()
   if(nm.length<2)return fail("Please enter your name.");
   const n=normPhone(ph).length;if(n<7||n>14||!/^[0-9+()\s.-]{6,24}$/.test(ph))return fail("Please enter a valid WhatsApp number.");
   if(em&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em))return fail("Please enter a valid email address.");
-  PRE.err="";PRE.busy=true;renderPre(true);let r;
+  PRE.err="";
+  if(preForced()){PRE.me=preFake(nm);PRE.pvFull=false;renderPre(true);scrollTo({top:0,behavior:"smooth"});toast("Preview only: nobody was registered.");return}
+  PRE.busy=true;renderPre(true);let r;
   try{
     if(SBH.on)r=await SBH.preReg(nm,ph,em);
     else{const L=DB.preRegs||(DB.preRegs=[]),P=DB.prelaunch,ex=L.find(x=>normPhone(x.phone)===normPhone(ph));
@@ -5856,7 +5863,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 14:23 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 16:27 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
