@@ -19,8 +19,9 @@
       var m = core.match(P[i][0]);
       if (m) { hit = typeof P[i][1] === "function" ? P[i][1].apply(null, m) : core.replace(P[i][0], P[i][1]); break; }
     }
+    if (hit === null && window.DD_POST) { var q = window.DD_POST(core); if (q !== core) hit = q; }
+    else if (hit !== null && window.DD_POST) hit = window.DD_POST(hit);
     if (hit === null) return null;
-    if (window.DD_POST) hit = window.DD_POST(hit);
     var lead = (s.match(/^\s*/) || [""])[0], trail = (s.match(/\s*$/) || [""])[0];
     return lead + hit + trail;
   }
