@@ -1666,7 +1666,7 @@ function complaintHTML(o){
   const head=`<div class="dsec"><h4>Problem with your order?</h4>${UNBOX_NOTE}<p class="mo-sub" style="margin:10px 0">Complaint window closes in <span class="cd" data-cexp="${end}">${fmtLeft(end-Date.now())}</span></p>`;
   if(!MO.cform)return head+`<button class="btn btn-ghost-blue btn-sm" type="button" data-cpopen>Report a problem</button></div>`;
   return head+`<form class="form cbox" id="moComplain" novalidate>
-    <div class="field"><label for="cpReason">What went wrong?</label><select id="cpReason">${COMPLAINT_REASONS.map(r=>`<option>${r}</option>`).join("")}</select></div>
+    <div class="field"><label for="cpReason">What went wrong?</label><select id="cpReason">${COMPLAINT_REASONS.map(r=>`<option value="${r}">${r}</option>`).join("")}</select></div>
     <div class="field"><span class="flbl" style="font-weight:600;font-size:14px">Which part of the order?</span>
       <label class="chk"><input type="radio" name="cpScope" value="order" checked> Whole order</label>
       <label class="chk"><input type="radio" name="cpScope" value="items"> Specific flavors</label>
@@ -2436,7 +2436,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 21:55 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 22:07 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

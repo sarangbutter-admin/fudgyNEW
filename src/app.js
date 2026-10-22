@@ -1684,7 +1684,7 @@ function complaintHTML(o){
   const head=`<div class="dsec"><h4>Problem with your order?</h4>${UNBOX_NOTE}<p class="mo-sub" style="margin:10px 0">Complaint window closes in <span class="cd" data-cexp="${end}">${fmtLeft(end-Date.now())}</span></p>`;
   if(!MO.cform)return head+`<button class="btn btn-ghost-blue btn-sm" type="button" data-cpopen>Report a problem</button></div>`;
   return head+`<form class="form cbox" id="moComplain" novalidate>
-    <div class="field"><label for="cpReason">What went wrong?</label><select id="cpReason">${COMPLAINT_REASONS.map(r=>`<option>${r}</option>`).join("")}</select></div>
+    <div class="field"><label for="cpReason">What went wrong?</label><select id="cpReason">${COMPLAINT_REASONS.map(r=>`<option value="${r}">${r}</option>`).join("")}</select></div>
     <div class="field"><span class="flbl" style="font-weight:600;font-size:14px">Which part of the order?</span>
       <label class="chk"><input type="radio" name="cpScope" value="order" checked> Whole order</label>
       <label class="chk"><input type="radio" name="cpScope" value="items"> Specific flavors</label>
