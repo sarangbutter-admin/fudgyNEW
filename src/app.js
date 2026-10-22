@@ -2271,6 +2271,71 @@ function viewHero(){
 A.cp=null;
 const CP_BLANK=()=>({id:"",code:"",desc:"",type:"percent",value:10,minSpend:0,appliesTo:"all",startsAt:"",endsAt:"",maxUses:0,onePerPhone:true,stack:true,show:true,on:true});
 function cpGiven(c){return DB.orders.filter(o=>o.coupon===c.code&&o.status!=="cancelled").reduce((a,o)=>a+(o.couponDisc||0),0)}
+/* --- coupons from / to a CSV file (same columns as the pre-launch gift code export) --- */
+const CSV_COLS=["code","type","value","gift","min_spend","box_size","max_uses","per_customer","phone","start","end","active","note"];
+const CSVI={rows:null,update:false,busy:false,file:""};
+function csvParse(txt){txt=String(txt||"").replace(/^﻿/,"");const first=txt.split(/\r?\n/)[0]||"",sep=(first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?";":",";
+  const out=[];let row=[],f="",q=false;
+  for(let i=0;i<txt.length;i++){const c=txt[i];
+    if(q){if(c==='"'){if(txt[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;else if(c===sep){row.push(f);f=""}else if(c==="\n"||c==="\r"){if(c==="\r"&&txt[i+1]==="\n")i++;row.push(f);f="";if(row.some(x=>x.trim()!==""))out.push(row);row=[]}else f+=c}
+  row.push(f);if(row.some(x=>x.trim()!==""))out.push(row);return out}
+function csvDate(v){v=String(v||"").trim();if(!v)return "";let m=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?$/);
+  if(!m){const k=v.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})(?:[ T](\d{1,2}):(\d{2}))?$/);if(k)m=[0,k[3],k[2],k[1],k[4],k[5]]}
+  if(!m)return null;const p=n=>String(n).padStart(2,"0"),y=+m[1],mo=+m[2],d=+m[3],h=m[4]===undefined?0:+m[4],mi=m[5]===undefined?0:+m[5];
+  if(mo<1||mo>12||d<1||d>31||h>23||mi>59)return null;return `${y}-${p(mo)}-${p(d)}T${p(h)}:${p(mi)}`}
+const csvBool=(v,d)=>{v=String(v||"").trim().toLowerCase();if(!v)return d;if(["yes","y","true","1","ya","on"].includes(v))return true;if(["no","n","false","0","tidak","off"].includes(v))return false;return null};
+function csvCheck(txt){const raw=csvParse(txt);if(!raw.length)return {err:"The file is empty."};
+  const hd=raw[0].map(h=>h.trim().toLowerCase().replace(/\s+/g,"_")),ix=k=>hd.indexOf(k);
+  if(ix("code")<0||ix("type")<0)return {err:"The first row must be the column names (download the template)."};
+  const seen=new Set(),sizes=DB.sizes.map(z=>String(z.n)),rows=[];
+  raw.slice(1).forEach((r,i)=>{const g=k=>ix(k)<0?"":String(r[ix(k)]||"").trim(),code=cpNorm(g("code")),type=g("type").toLowerCase()||"percent",errs=[];
+    const x={line:i+2,code,type,errs,raw:{value:g("value"),gift:g("gift"),min:g("min_spend"),size:g("box_size"),max:g("max_uses"),per:g("per_customer"),phone:g("phone"),start:g("start"),end:g("end"),active:g("active"),note:g("note")}};
+    if(code.length<3)errs.push("code: 3 to 20 letters or numbers");
+    if(seen.has(code))errs.push("this code is twice in the file");seen.add(code);
+    if(!["percent","amount","freedelivery","gift"].includes(type))errs.push("type: percent, amount, freedelivery or gift");
+    const num=v=>v===""?0:+String(v).replace(/[^\d.]/g,""),start=csvDate(x.raw.start),end=csvDate(x.raw.end),act=csvBool(x.raw.active,true),per=csvBool(x.raw.per,true);
+    if(start===null)errs.push("start: use 2026-11-01 10:00");if(end===null)errs.push("end: use 2026-11-30 23:59");if(start&&end&&end<start)errs.push("end is before start");
+    if(act===null)errs.push("active: yes or no");
+    x.start=start||"";x.end=end||"";x.active=act!==false;
+    if(type==="gift"){const pn=normPhone(x.raw.phone);x.phone=x.raw.phone;x.note=x.raw.note;
+      x.exists=!!(PRA.list&&PRA.list.list.some(z=>z.code===code));if(!x.exists&&pn.length<7)errs.push("phone: a gift code needs the customer's WhatsApp number");
+      if(DB.coupons.some(c=>c.code===code))errs.push("a normal coupon already uses this code")}
+    else{const v=num(x.raw.value),mn=num(x.raw.min),mx=Math.round(num(x.raw.max));
+      if(type==="percent"&&!(v>0&&v<=100))errs.push("value: percent from 1 to 100");if(type==="amount"&&!(v>0))errs.push("value: amount above 0");
+      if(x.raw.size&&!sizes.includes(String(+x.raw.size)))errs.push("box_size: no box of "+x.raw.size);
+      if(per===null)errs.push("per_customer: 1 (once per customer) or 0");
+      const old=DB.coupons.find(c=>c.code===code);x.exists=!!old;x.used=old?cpUses(code,DB).length>0:false;
+      x.coupon={code,type,value:type==="freedelivery"?0:v,minSpend:mn,appliesTo:x.raw.size?String(+x.raw.size):"all",maxUses:mx,onePerPhone:per!==false,startsAt:x.start,endsAt:x.end,on:x.active,desc:x.raw.note.slice(0,60)}}
+    rows.push(x)});
+  return {rows}}
+function csvState(x){return x.errs.length?"bad":x.exists?(CSVI.update?"upd":"skip"):"new"}
+async function csvImport(){const rows=(CSVI.rows||[]).filter(x=>{const s=csvState(x);return s==="new"||s==="upd"});if(!rows.length||CSVI.busy)return;CSVI.busy=true;renderAdmin();
+  let msg=[],n=0;
+  rows.filter(x=>x.type!=="gift").forEach(x=>{const old=DB.coupons.find(c=>c.code===x.code);
+    if(old){if(x.used){old.endsAt=x.coupon.endsAt;old.on=x.coupon.on}else Object.assign(old,x.coupon,{desc:x.coupon.desc||old.desc})}
+    else DB.coupons.push(Object.assign(CP_BLANK(),x.coupon,{id:"cp"+uid(),show:false,stack:true}));n++});
+  if(n){saveDB();msg.push(`${n} coupon${n===1?"":"s"} saved`)}
+  const gs=rows.filter(x=>x.type==="gift");
+  if(gs.length){const payload=gs.map(x=>({code:x.code,phone:x.phone,end:x.end?new Date(x.end).getTime():null,active:x.active,note:x.note}));
+    try{let r;if(SBH.on)r=await SBH.rpc("admin_pre_gift_upsert",{p_rows:payload,p_update:CSVI.update});
+      else{r={added:0,updated:0,errors:[]};payload.forEach(p=>{const ex=DB.preRegs.find(z=>z.code===p.code);if(ex){if(CSVI.update){ex.exp=p.active?p.end:Date.now()-1000;r.updated++}}else{DB.preRegs.push({rank:DB.preRegs.length+1,name:p.note,phone:p.phone,code:p.code,at:Date.now(),exp:p.active?p.end:Date.now()-1000});r.added++}});saveDB()}
+      msg.push(`${r.added} gift code${r.added===1?"":"s"} added, ${r.updated} updated`);if(r.errors&&r.errors.length)msg.push("Not imported: "+r.errors.slice(0,3).join("; "));PRA.list=null}
+    catch(er){msg.push("Gift codes: "+er.message)}}
+  CSVI.busy=false;CSVI.rows=null;toast(msg.join(" · ")||"Nothing imported");renderAdmin()}
+function csvDownload(name,rows){const q=v=>{const s=String(v==null?"":v);return /[",\n;]/.test(s)?`"${s.replace(/"/g,'""')}"`:s};
+  const blob=new Blob(["﻿"+rows.map(r=>r.map(q).join(",")).join("\n")],{type:"text/csv"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+function csvTemplate(){csvDownload("coupon-template.csv",[CSV_COLS,["WELCOME10","percent",10,"",50000,"",200,1,"","2026-11-01 10:00","2026-11-30 23:59","yes","10% off your box"],["RP15K","amount",15000,"","",6,"",1,"","","","yes","Rp15.000 off a box of 6"],["FREEONGKIR","freedelivery","","","","",100,1,"","","2026-12-31 23:59","yes","Free delivery"],["GIFT-AB12","gift","","Pre-launch Gift Set","","",1,1,"6281234567890","","2026-11-08 23:59","yes","Sari W."]])}
+function csvExport(){const d=s=>String(s||"").replace("T"," ");csvDownload("coupons.csv",[CSV_COLS,...DB.coupons.map(c=>[c.code,c.type,c.type==="freedelivery"?"":c.value,"",c.minSpend||"",c.appliesTo==="all"?"":c.appliesTo,c.maxUses||"",c.onePerPhone?1:0,"",d(c.startsAt),d(c.endsAt),c.on?"yes":"no",c.desc||""])])}
+function csvPanel(){const R=CSVI.rows,cnt=k=>R?R.filter(x=>csvState(x)===k).length:0;
+  const lab={new:["✅","New","#0A6B34"],upd:["✏️","Will update","#8a5a00"],skip:["⏭","Exists, skipped","#777"],bad:["⚠️","Problem","#C8102E"]};
+  return `<section class="panel"><div class="phead"><div><h2>🎟 Add many coupons with a CSV file</h2><p class="sub">Fill the template in Excel or Google Sheets, save as CSV, then upload. The pre-launch gift code export uses the same columns, so you can upload it here too.</p></div></div>
+    <div class="colin" style="flex-wrap:wrap;gap:8px;margin-top:10px"><button class="ghost" type="button" data-csvtpl>⬇ Download template</button><label class="btn btn-blue btn-sm mqbtn">⬆ Upload CSV<input type="file" accept=".csv,text/csv" hidden data-csvfile></label><button class="ghost" type="button" data-csvexp ${DB.coupons.length?"":"disabled"}>Export coupons</button></div>
+    ${R?`<div class="chips" style="margin-top:12px"><button class="fchip" type="button" data-csvupd="0" aria-pressed="${!CSVI.update}">Only add new codes</button><button class="fchip" type="button" data-csvupd="1" aria-pressed="${CSVI.update}">Add new + update existing</button></div>
+      <p class="note" style="margin:8px 0 0">${esc(CSVI.file)} · ${R.length} rows: ✅ ${cnt("new")} new · ✏️ ${cnt("upd")} update · ⏭ ${cnt("skip")} skipped · ⚠️ ${cnt("bad")} with problems. Codes already used in an order only get their end date and on/off changed.</p>
+      <div class="prtbl csvtbl"><div class="prh"><span>Row</span><span>Code</span><span>Type</span><span>Value / gift</span><span>Ends</span><span>Check</span></div>${R.map(x=>{const s=csvState(x),l=lab[s];return `<div><span>${x.line}</span><span><b>${esc(x.code||"?")}</b></span><span>${esc(x.type)}</span><span>${esc(x.type==="gift"?(x.raw.gift||"Gift Set"):x.type==="percent"?x.raw.value+"%":x.type==="amount"?x.raw.value:"Free delivery")}</span><span>${esc(x.end.replace("T"," ")||"–")}</span><span style="color:${l[2]};font-weight:700">${l[0]} ${s==="bad"?esc(x.errs.join("; ")):l[1]}</span></div>`}).join("")}</div>
+      <div class="colin" style="gap:8px;margin-top:10px"><button class="btn btn-blue" type="button" data-csvgo ${cnt("new")+cnt("upd")&&!CSVI.busy?"":"disabled"}>${CSVI.busy?"Importing…":`Import ${cnt("new")+cnt("upd")} row${cnt("new")+cnt("upd")===1?"":"s"}`}</button><button class="ghost" type="button" data-csvno>Cancel</button></div>`:""}
+    <p class="note" style="margin:10px 0 0">Columns: ${CSV_COLS.join(" · ")}. type is percent, amount, freedelivery or gift. Dates like 2026-11-01 10:00. per_customer 1 = once per WhatsApp number. Phone numbers can start with 0, 62 or +62.</p></section>`}
 function viewCoupons(){
   const F=A.cp,ST={live:["Live","#0A6B34"],scheduled:["Scheduled","#8a5a00"],expired:["Ended","#777"],used:["Used up","#777"],off:["Off","#777"]};
   const list=DB.coupons.map(c=>{const st=cpState(c),u=cpUses(c.code,DB).length;return `<div class="pmcard" style="gap:6px">
@@ -2296,6 +2361,7 @@ function viewCoupons(){
     <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button class="btn btn-blue" type="button" data-cpsave>Save coupon</button><button class="btn btn-ghost-blue" type="button" data-cpcancel>Cancel</button></div></section>`:"";
   return head("Coupons","Create discount codes that customers type in (or tap) in their box. Discounts apply to the box price, and show on the order.")+MOCK+`<div class="stack">
     ${form}
+    ${csvPanel()}
     <section class="panel"><div class="phead"><div><h2>All coupons</h2><p class="sub">Coupons marked "promoted" appear as tappable offers next to the coupon box.</p></div>${F?"":`<button class="btn btn-blue btn-sm" type="button" data-cpnew>+ New coupon</button>`}</div>
     ${DB.coupons.length?`<div class="pmlist" style="margin-top:10px;display:grid;gap:10px">${list}</div>`:`<div class="empty">No coupons yet.</div>`}</section></div>`;
 }
@@ -5836,6 +5902,14 @@ am.addEventListener("click",e=>{if(A.tab!=="prelaunch")return;const b=e.target.c
   else if(d.prehero!==undefined){A.hrT="pre";A.hr=null;A.tab="hero";renderAdmin();scrollTo(0,0)}
   else if(d.precsv!==undefined)preCsv();
   else if(d.prereload!==undefined){PRA.list=null;renderAdmin()}});
+am.addEventListener("click",e=>{if(A.tab!=="coupons")return;const b=e.target.closest("button");if(!b)return;const d=b.dataset;
+  if(d.csvtpl!==undefined)csvTemplate();else if(d.csvexp!==undefined)csvExport();
+  else if(d.csvupd!==undefined){CSVI.update=d.csvupd==="1";renderAdmin()}else if(d.csvno!==undefined){CSVI.rows=null;renderAdmin()}else if(d.csvgo!==undefined)csvImport()});
+am.addEventListener("change",async e=>{if(A.tab!=="coupons"||!e.target.dataset||e.target.dataset.csvfile===undefined)return;const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;
+  if(f.size>2e6){toast("That file is too big (over 2 MB).");return}
+  if(PRA.list===null&&SBH.on)try{PRA.list=await SBH.rpc("admin_prelaunch_list",{})}catch(x){}
+  if(PRA.list===null&&!SBH.on)PRA.list={list:DB.preRegs.map(r=>({code:r.code}))};
+  const r=csvCheck(await f.text());if(r.err){toast(r.err);return}CSVI.rows=r.rows;CSVI.file=f.name;renderAdmin()});
 function viewSecurity(){
   const h=head("Security","Limits that protect your shop from abuse, bots and surprise bills. Only owners can see this.");
   if(!SBH.on)return h+MOCK+`<section class="panel"><div class="empty">Security works once the site is connected to Supabase.</div></section>`;
