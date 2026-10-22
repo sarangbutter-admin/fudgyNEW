@@ -5644,7 +5644,8 @@ function afOrdersHTML(rows,mode){
     const who=all?`<small><button class="linkbtn sm" type="button" data-afview="${esc(r.aff)}">${esc(r.aname)}</button></small>`:"";
     let act="";if(one){
       if(r.st==="review")act=`<button class="afokb" type="button" data-afdo="approve|${esc(r.id)}">Approve</button><button class="afvoid blinkv" type="button" data-afdo="void|${esc(r.id)}">VOIDED</button>`;
-      else if(["progress","hold","approved"].includes(r.st))act=`<button class="afvoid" type="button" data-afdo="void|${esc(r.id)}">VOIDED</button>`;
+      else if(r.st==="hold")act=`<button class="afokb" type="button" data-afdo="approve|${esc(r.id)}" title="Only works when the complaint is resolved">Approve</button><button class="afvoid" type="button" data-afdo="void|${esc(r.id)}">VOIDED</button>`;
+      else if(["progress","approved"].includes(r.st))act=`<button class="afvoid" type="button" data-afdo="void|${esc(r.id)}">VOIDED</button>`;
       else if(r.st==="voided"&&!["Full refund","Order cancelled"].includes(r.reason))act=`<button class="ghost sm" type="button" data-afdo="restore|${esc(r.id)}">Restore</button>`}
     return `<div class="afrow afo st-${r.st}" style="--c:${cols};min-width:${mw}px"><span>${code}${who}</span><span>${fmtDT(r.at)}</span><span>${money(r.sales)}${r.refund>0?`<small>refunded ${money(r.refund)}</small>`:""}</span><span>${com}</span><span>${esc(AF_SRC[r.src]||r.src||"")}</span><span>${afChip(AF_ST,r.st,self)}${why}${proof}</span>${one?`<span class="afacts2">${act}</span>`:""}</div>`};
   return `${bulk}${shown.length?`<div class="aftable">${th}${shown.map(row).join("")}</div>`:`<p class="note" style="margin:10px 0 0">${rows.length?"No orders with this status in this period.":"No orders in this period yet."}</p>`}`}

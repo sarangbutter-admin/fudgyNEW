@@ -5644,7 +5644,8 @@ function afOrdersHTML(rows,mode){
     const who=all?`<small><button class="linkbtn sm" type="button" data-afview="${esc(r.aff)}">${esc(r.aname)}</button></small>`:"";
     let act="";if(one){
       if(r.st==="review")act=`<button class="afokb" type="button" data-afdo="approve|${esc(r.id)}">Approve</button><button class="afvoid blinkv" type="button" data-afdo="void|${esc(r.id)}">VOIDED</button>`;
-      else if(["progress","hold","approved"].includes(r.st))act=`<button class="afvoid" type="button" data-afdo="void|${esc(r.id)}">VOIDED</button>`;
+      else if(r.st==="hold")act=`<button class="afokb" type="button" data-afdo="approve|${esc(r.id)}" title="Only works when the complaint is resolved">Approve</button><button class="afvoid" type="button" data-afdo="void|${esc(r.id)}">VOIDED</button>`;
+      else if(["progress","approved"].includes(r.st))act=`<button class="afvoid" type="button" data-afdo="void|${esc(r.id)}">VOIDED</button>`;
       else if(r.st==="voided"&&!["Full refund","Order cancelled"].includes(r.reason))act=`<button class="ghost sm" type="button" data-afdo="restore|${esc(r.id)}">Restore</button>`}
     return `<div class="afrow afo st-${r.st}" style="--c:${cols};min-width:${mw}px"><span>${code}${who}</span><span>${fmtDT(r.at)}</span><span>${money(r.sales)}${r.refund>0?`<small>refunded ${money(r.refund)}</small>`:""}</span><span>${com}</span><span>${esc(AF_SRC[r.src]||r.src||"")}</span><span>${afChip(AF_ST,r.st,self)}${why}${proof}</span>${one?`<span class="afacts2">${act}</span>`:""}</div>`};
   return `${bulk}${shown.length?`<div class="aftable">${th}${shown.map(row).join("")}</div>`:`<p class="note" style="margin:10px 0 0">${rows.length?"No orders with this status in this period.":"No orders in this period yet."}</p>`}`}
@@ -5868,7 +5869,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 22:07 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 22:28 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
