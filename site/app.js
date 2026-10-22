@@ -1895,13 +1895,14 @@ function renderPre(force){const v=preView();if(v.hidden)return;const P=DB.prelau
         <input class="pre-in" id="prPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" placeholder="WhatsApp number" required>
         ${P.form.email!==false?`<input class="pre-in" id="prEmail" type="email" autocomplete="email" maxlength="120" placeholder="Email (optional)">`:""}
         ${PRE.err?`<p class="pre-err" role="alert">${esc(PRE.err)}</p>`:""}<button class="pre-btn" type="submit" ${PRE.busy?"disabled":""}>${PRE.busy?"Saving…":esc(P.form.btn||"Claim my free Gift Set")}</button></form>`;
-    body=`<div class="dome" id="preDome"><div class="hm" aria-hidden="true"></div><div class="ho" aria-hidden="true"></div><p class="eyebrow"></p><h1></h1><p class="lede"></p><div class="hero-ctas"><a class="btn btn-white" href="#preForm" data-prego="form"></a><a class="btn btn-line" href="#preGame" data-prego="game"></a></div></div>
-      ${preCdHTML(P)}${reg}${preGiftsHTML(P)}${P.game.on&&!me?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:P.game.on?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:""}`}
+    body=`${me?reg+preCdHTML(P):""}<div class="dome" id="preDome"><div class="hm" aria-hidden="true"></div><div class="ho" aria-hidden="true"></div><p class="eyebrow"></p><h1></h1><p class="lede"></p><div class="hero-ctas"><a class="btn btn-white" href="#preForm" data-prego="form"></a><a class="btn btn-line" href="#preGame" data-prego="game"></a></div></div>
+      ${me?"":preCdHTML(P)+reg}${preGiftsHTML(P)}${P.game.on&&!me?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:P.game.on?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:""}`}
   const pv=preForced()?`<div class="pre-pv" data-notr><b>👁 Preview</b><span>Like a private window: nothing is saved and nobody is registered.</span><div>${[["form","Form"],["done","You're in"],["full","All taken"]].map(([k,l])=>`<button type="button" data-pvst="${k}" aria-pressed="${(k==="done"&&!!me)||(k==="full"&&full)||(k==="form"&&!me&&!full)}">${l}</button>`).join("")}<button type="button" data-pvgame>Game</button></div></div>`:"";
   v.innerHTML=`${preFxHTML(P)}<div class="pre-wrap">${pv}${top}${body}</div>`;
   const dome=v.querySelector("#preDome");if(dome){const h=JSON.parse(JSON.stringify(P.hero));if(!P.game.on)h.btn2="";if(me)h.btn1="";if(!h.bg)h.bg=pg.brand;heroFill(dome,h)}
   preTick();clearInterval(PRE.t);PRE.t=setInterval(preTick,1000);
   clearInterval(PRE.poll);if(SBH.on&&!me)PRE.poll=setInterval(()=>{if(!document.hidden&&!preView().hidden)preStatus()},30000)}
+function preShowGift(){requestAnimationFrame(()=>{const g=document.querySelector("#preView .pre-done");if(g)g.scrollIntoView({behavior:"smooth",block:"start"})})}
 function preFake(nm){const P=DB.prelaunch,st=PRE.st||{};return {code:String(P.codePrefix||"GIFT-").toUpperCase()+"TEST",rank:(st.count||0)+1,name:nm,max:P.max,exp:P.expMode==="date"&&+P.expAt?+P.expAt:+P.openAt?+P.openAt+(+P.expDays||7)*864e5:null,preview:true}}
 function preRain(list){let h="";for(let i=0;i<9;i++)h+=`<i style="left:${(Math.random()*92).toFixed(1)}%;--t:${(4+Math.random()*4).toFixed(1)}s;--dl:-${(Math.random()*6).toFixed(1)}s">${list[i%list.length]}</i>`;return `<div class="pre-rain" aria-hidden="true">${h}</div>`}
 function preTick(){const v=document.getElementById("preView");if(!v||v.hidden)return;const P=DB.prelaunch;
@@ -1909,7 +1910,7 @@ function preTick(){const v=document.getElementById("preView");if(!v||v.hidden)re
     c.querySelectorAll("[data-pk]").forEach(b=>{const t=String(x[b.dataset.pk]).padStart(2,"0");if(b.textContent!==t){b.textContent=t;if(c.classList.contains("pcs-flip")){b.classList.remove("flp");void b.offsetWidth;b.classList.add("flp")}}})});
   if(P.on&&P.autoOpen!==false&&+P.openAt>0&&preNow()>=+P.openAt&&!preForced()){clearInterval(PRE.t);if(SBH.on&&SBH.loadShop)SBH.loadShop(true);renderStore()}}
 function preClick(e){const b=e.target.closest("button,a");if(!b)return;const d=b.dataset;
-  if(d.pvst){const P=DB.prelaunch;PRE.err="";PRE.pvFull=d.pvst==="full";PRE.me=d.pvst==="done"?preFake("Sari"):null;renderPre(true);return}
+  if(d.pvst){const P=DB.prelaunch;PRE.err="";PRE.pvFull=d.pvst==="full";PRE.me=d.pvst==="done"?preFake("Sari"):null;renderPre(true);if(PRE.me)preShowGift();return}
   if(d.pvgame!==undefined){if(window.preGameStart)preGameStart();return}
   if(d.prelang!==undefined&&window.DDsetLang){DDsetLang(DDLANG()==="id"?"en":"id");return}
   if(d.prego==="form"){e.preventDefault();const f=document.getElementById("preForm");if(f){f.scrollIntoView({behavior:"smooth",block:"center"});const n=document.getElementById("prName");n&&setTimeout(()=>n.focus(),400)}return}
@@ -1922,7 +1923,7 @@ async function preSubmit(e){if(e.target.id!=="preForm")return;e.preventDefault()
   const n=normPhone(ph).length;if(n<7||n>14||!/^[0-9+()\s.-]{6,24}$/.test(ph))return fail("Please enter a valid WhatsApp number.");
   if(em&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em))return fail("Please enter a valid email address.");
   PRE.err="";
-  if(preForced()){PRE.me=preFake(nm);PRE.pvFull=false;renderPre(true);scrollTo({top:0,behavior:"smooth"});toast("Preview only: nobody was registered.");return}
+  if(preForced()){PRE.me=preFake(nm);PRE.pvFull=false;renderPre(true);preShowGift();toast("Preview only: nobody was registered.");return}
   PRE.busy=true;renderPre(true);let r;
   try{
     if(SBH.on)r=await SBH.preReg(nm,ph,em);
@@ -1937,7 +1938,7 @@ async function preSubmit(e){if(e.target.id!=="preForm")return;e.preventDefault()
   if(r&&r.full){PRE.st=Object.assign({},PRE.st,{full:true,count:r.max,max:r.max});renderPre(true);return}
   PRE.me={code:r.code,rank:r.rank,name:r.name,exp:r.exp||null,max:r.max,at:Date.now()};try{localStorage.setItem(PRE_KEY,JSON.stringify(PRE.me))}catch(x){}
   if(PRE.st&&!r.again)PRE.st.count=(PRE.st.count||0)+1;
-  renderPre(true);scrollTo({top:0,behavior:"smooth"});if(r.again)toast("You're already registered. Here's your code again.")}
+  renderPre(true);preShowGift();if(r.again)toast("You're already registered. Here's your code again.")}
 addEventListener("ddlang",()=>{if(!preView().hidden)renderPre(true)});
 /* pre-launch mini game "Catch the cookies": runs only on the visitor's phone (no server calls while playing) */
 const PGM={run:false,score:0,best:0,t:0,raf:0,cks:[],combo:0,last:0,acc:0,lt:0};
@@ -2431,7 +2432,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 16:27 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 16:32 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
