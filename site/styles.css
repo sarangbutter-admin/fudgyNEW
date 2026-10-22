@@ -1277,3 +1277,14 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .langtip[hidden]{display:none}.langtip b{font-size:13px}
 @media (max-width:420px){.langbtn{height:34px;padding:0 8px;gap:4px;font-size:11px}.langbtn svg{width:18px;height:12px}}
 .top.hdc .langbtn{background:var(--ic-bg,var(--white));color:var(--ic-ink,var(--blue));border-color:var(--ic-line,var(--line))}
+
+/* top bar: never cut off the buttons on small phones; the logo/name gives way instead */
+.top .wrap>.logo{flex:1 1 auto;min-width:0}
+.top .logo #brandTxt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top-actions{flex:none;min-width:0}
+.top.lgnotxt #brandTxt{display:none}
+.top.hbs-pill{margin:8px 8px 0;border-radius:999px;border:2px solid var(--hd-line,var(--ice-2));overflow:hidden;top:calc(env(safe-area-inset-top,0px) + 8px)}
+.top.hbs-pill .wrap{padding-inline:14px 10px}
+@media (max-width:520px){.top .wrap{padding-inline:10px;gap:8px}.top.hbs-float .wrap,.top.hbs-pill .wrap{padding-inline:10px 8px}}
+@media (max-width:480px){.langbtn{height:34px;padding:0 7px;gap:4px;font-size:10.5px}.langbtn svg{width:18px;height:12px}.top .pill{padding:6px 6px 6px 10px;font-size:12.5px;gap:6px}}
+@media (max-width:380px){.langbtn b{display:none}.langbtn{width:34px;padding:0;justify-content:center}}
