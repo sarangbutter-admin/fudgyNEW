@@ -1846,7 +1846,8 @@ function defaultPre(){return {on:false,max:100,openAt:0,autoOpen:true,
 function preNorm(p){const d=defaultPre(),o=p&&typeof p==="object"?p:{},r=Object.assign({},d,o);
   ["hero","form","gifts","done","closed","fx","game"].forEach(k=>{r[k]=Object.assign({},d[k],o[k]&&typeof o[k]==="object"?o[k]:{})});
   ["items"].forEach(k=>{if(!Array.isArray(r.gifts[k]))r.gifts[k]=[]});if(!Array.isArray(r.fx.imgs))r.fx.imgs=[];if(!Array.isArray(r.game.imgs))r.game.imgs=[];
-  if(!Array.isArray(r.hero.media))r.hero.media=[];return r}
+  if(!Array.isArray(r.hero.media))r.hero.media=[];
+  r.gifts.items=r.gifts.items.filter(g=>g&&typeof g==="object");r.gifts.items.forEach((g,i)=>{if(!g.id)g.id="i"+i});return r}
 const PRE_KEY="delidome-pre-v1",PRE={st:null,me:null,busy:false,err:"",t:0,poll:0};
 const preForced=()=>/[?&]prelaunch\b/.test(location.search);
 // the owner's preview acts like a private window: nothing is read from or saved to this phone, and nobody is registered
@@ -1990,16 +1991,16 @@ async function pgCheck(code,phone,quiet){code=String(code||"").trim().toUpperCas
   else{const x=(DB.preRegs||[]).find(z=>z.code===code),G=DB.prelaunch.gifts;
     r=!x?{ok:false,gift:false}:x.used?{ok:false,gift:true,err:"This gift code was already used."}:x.exp&&x.exp<Date.now()?{ok:false,gift:true,err:"This gift code has expired."}
       :phone&&normPhone(phone).length>=7&&normPhone(phone)!==normPhone(x.phone)?{ok:false,gift:true,err:"This gift code belongs to another WhatsApp number."}
-      :{ok:true,gift:true,code,exp:x.exp,info:{title:G.title||"Free Gift Set",mode:G.mode,items:G.items.map(g=>({name:g.name,img:g.img}))}}}
+      :{ok:true,gift:true,code,exp:x.exp,info:{title:G.title||"Free Gift Set",mode:G.mode,items:G.mode==="surprise"?[]:G.items.map(g=>({name:g.name,img:g.img}))}}}
   if(r.ok){PG.code=r.code;PG.info=r.info;PG.exp=r.exp||null;try{localStorage.setItem(PG_KEY,r.code)}catch(e){}}
   else if(r.gift&&quiet)pgForget();
   if(quiet)renderStore();return r}
 function pgForget(){PG.code=null;PG.info=null;PG.exp=null;try{localStorage.removeItem(PG_KEY)}catch(e){}}
 function pgPanelHTML(){if(!PG.info)return "";const I=PG.info,its=(I.items||[]).filter(g=>g&&(g.name||g.img));
   return `<div class="gb pgb fx-shine" style="--gb:#FFE9A8;--gi:#000096"><div class="gh"><span class="gtag">PRE-LAUNCH GIFT</span><b class="gt">${esc(I.title||"Free Gift Set")}</b>${PG.exp?`<span class="gend">Claim before ${esc(fmtDT(PG.exp))}</span>`:""}</div>
-    <p class="gs">🎁 Reserved for you with code <b>${esc(PG.code)}</b>${I.mode==="surprise"&&its.length>1?". You get 1 of these, picked at random:":". Comes free with this order:"}</p>
-    <div class="gl big">${its.length?its.map(g=>giftCard(g)).join(""):`<span class="gcard"><i aria-hidden="true">🎁</i><b>${esc(I.title||"Free Gift Set")}</b><em>FREE</em></span>`}</div></div>`}
-const preGiftHTML=(o,cust)=>o.preGift?`<div class="dsec"><h4>🎁 ${cust?"Your pre-launch gift":"Pre-launch gift to pack"} · ${esc(o.preGift.code||"")}</h4><div class="gl">${(o.preGift.items||[]).map(g=>giftChip(g)).join("")||giftChip({name:o.preGift.title||"Free Gift Set"})}</div>${o.preGift.mode==="surprise"&&o.preGift.pool>1?`<p class="note" style="margin:8px 0 0">Picked at random from ${o.preGift.pool} gifts.</p>`:""}</div>`:"";
+    <p class="gs">🎁 Reserved for you with code <b>${esc(PG.code)}</b>${I.mode==="surprise"?". Your surprise gift is picked when you send your payment proof. 🤫":". Comes free with this order:"}</p>
+    <div class="gl big">${I.mode==="surprise"?`<span class="gcard"><i aria-hidden="true">🎁</i><b>Surprise gift</b><em>FREE</em></span>`:its.length?its.map(g=>giftCard(g)).join(""):`<span class="gcard"><i aria-hidden="true">🎁</i><b>${esc(I.title||"Free Gift Set")}</b><em>FREE</em></span>`}</div></div>`}
+const preGiftHTML=(o,cust)=>o.preGift?`<div class="dsec"><h4>🎁 ${cust?"Your pre-launch gift":"Pre-launch gift to pack"} · ${esc(o.preGift.code||"")}</h4><div class="gl">${(o.preGift.items||[]).map(g=>giftChip(g)).join("")||giftChip({name:o.preGift.mode==="surprise"&&o.preGift.drawn===false?"Surprise gift":o.preGift.soldOut?"Out of stock":o.preGift.title||"Free Gift Set"})}</div>${o.preGift.mode==="surprise"&&o.preGift.drawn===false?`<p class="note" style="margin:8px 0 0">${cust?"Your surprise gift is picked when you send your payment proof.":"Not drawn yet. It is picked when the payment proof is sent."}</p>`:o.preGift.soldOut?`<p class="note" style="margin:8px 0 0">${cust?"Sorry, the free gifts ran out.":"No gift left in stock for this order."}</p>`:o.preGift.mode==="surprise"&&o.preGift.pool>1?`<p class="note" style="margin:8px 0 0">Picked at random from ${o.preGift.pool} gifts.</p>`:""}</div>`:"";
 function toast(msg){if(typeof toastHook==="function")msg=toastHook(msg);const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,Math.max(1600,msg.length*45))}
 function armed(btn,fn){if(btn.dataset.armed){fn();return}btn.dataset.armed="1";const t=btn.textContent;btn.textContent="Tap again to confirm";btn.classList.add("armed");
   setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent=t;btn.classList.remove("armed")}},3000)}
@@ -2433,7 +2434,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 16:51 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 17:15 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

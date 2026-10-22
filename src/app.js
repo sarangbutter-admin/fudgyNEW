@@ -1866,7 +1866,8 @@ function defaultPre(){return {on:false,max:100,openAt:0,autoOpen:true,
 function preNorm(p){const d=defaultPre(),o=p&&typeof p==="object"?p:{},r=Object.assign({},d,o);
   ["hero","form","gifts","done","closed","fx","game"].forEach(k=>{r[k]=Object.assign({},d[k],o[k]&&typeof o[k]==="object"?o[k]:{})});
   ["items"].forEach(k=>{if(!Array.isArray(r.gifts[k]))r.gifts[k]=[]});if(!Array.isArray(r.fx.imgs))r.fx.imgs=[];if(!Array.isArray(r.game.imgs))r.game.imgs=[];
-  if(!Array.isArray(r.hero.media))r.hero.media=[];return r}
+  if(!Array.isArray(r.hero.media))r.hero.media=[];
+  r.gifts.items=r.gifts.items.filter(g=>g&&typeof g==="object");r.gifts.items.forEach((g,i)=>{if(!g.id)g.id="i"+i});return r}
 const PRE_KEY="delidome-pre-v1",PRE={st:null,me:null,busy:false,err:"",t:0,poll:0};
 const preForced=()=>/[?&]prelaunch\b/.test(location.search);
 // the owner's preview acts like a private window: nothing is read from or saved to this phone, and nobody is registered
@@ -2011,16 +2012,16 @@ async function pgCheck(code,phone,quiet){code=String(code||"").trim().toUpperCas
   else{const x=(DB.preRegs||[]).find(z=>z.code===code),G=DB.prelaunch.gifts;
     r=!x?{ok:false,gift:false}:x.used?{ok:false,gift:true,err:"This gift code was already used."}:x.exp&&x.exp<Date.now()?{ok:false,gift:true,err:"This gift code has expired."}
       :phone&&normPhone(phone).length>=7&&normPhone(phone)!==normPhone(x.phone)?{ok:false,gift:true,err:"This gift code belongs to another WhatsApp number."}
-      :{ok:true,gift:true,code,exp:x.exp,info:{title:G.title||"Free Gift Set",mode:G.mode,items:G.items.map(g=>({name:g.name,img:g.img}))}}}
+      :{ok:true,gift:true,code,exp:x.exp,info:{title:G.title||"Free Gift Set",mode:G.mode,items:G.mode==="surprise"?[]:G.items.map(g=>({name:g.name,img:g.img}))}}}
   if(r.ok){PG.code=r.code;PG.info=r.info;PG.exp=r.exp||null;try{localStorage.setItem(PG_KEY,r.code)}catch(e){}}
   else if(r.gift&&quiet)pgForget();
   if(quiet)renderStore();return r}
 function pgForget(){PG.code=null;PG.info=null;PG.exp=null;try{localStorage.removeItem(PG_KEY)}catch(e){}}
 function pgPanelHTML(){if(!PG.info)return "";const I=PG.info,its=(I.items||[]).filter(g=>g&&(g.name||g.img));
   return `<div class="gb pgb fx-shine" style="--gb:#FFE9A8;--gi:#000096"><div class="gh"><span class="gtag">PRE-LAUNCH GIFT</span><b class="gt">${esc(I.title||"Free Gift Set")}</b>${PG.exp?`<span class="gend">Claim before ${esc(fmtDT(PG.exp))}</span>`:""}</div>
-    <p class="gs">🎁 Reserved for you with code <b>${esc(PG.code)}</b>${I.mode==="surprise"&&its.length>1?". You get 1 of these, picked at random:":". Comes free with this order:"}</p>
-    <div class="gl big">${its.length?its.map(g=>giftCard(g)).join(""):`<span class="gcard"><i aria-hidden="true">🎁</i><b>${esc(I.title||"Free Gift Set")}</b><em>FREE</em></span>`}</div></div>`}
-const preGiftHTML=(o,cust)=>o.preGift?`<div class="dsec"><h4>🎁 ${cust?"Your pre-launch gift":"Pre-launch gift to pack"} · ${esc(o.preGift.code||"")}</h4><div class="gl">${(o.preGift.items||[]).map(g=>giftChip(g)).join("")||giftChip({name:o.preGift.title||"Free Gift Set"})}</div>${o.preGift.mode==="surprise"&&o.preGift.pool>1?`<p class="note" style="margin:8px 0 0">Picked at random from ${o.preGift.pool} gifts.</p>`:""}</div>`:"";
+    <p class="gs">🎁 Reserved for you with code <b>${esc(PG.code)}</b>${I.mode==="surprise"?". Your surprise gift is picked when you send your payment proof. 🤫":". Comes free with this order:"}</p>
+    <div class="gl big">${I.mode==="surprise"?`<span class="gcard"><i aria-hidden="true">🎁</i><b>Surprise gift</b><em>FREE</em></span>`:its.length?its.map(g=>giftCard(g)).join(""):`<span class="gcard"><i aria-hidden="true">🎁</i><b>${esc(I.title||"Free Gift Set")}</b><em>FREE</em></span>`}</div></div>`}
+const preGiftHTML=(o,cust)=>o.preGift?`<div class="dsec"><h4>🎁 ${cust?"Your pre-launch gift":"Pre-launch gift to pack"} · ${esc(o.preGift.code||"")}</h4><div class="gl">${(o.preGift.items||[]).map(g=>giftChip(g)).join("")||giftChip({name:o.preGift.mode==="surprise"&&o.preGift.drawn===false?"Surprise gift":o.preGift.soldOut?"Out of stock":o.preGift.title||"Free Gift Set"})}</div>${o.preGift.mode==="surprise"&&o.preGift.drawn===false?`<p class="note" style="margin:8px 0 0">${cust?"Your surprise gift is picked when you send your payment proof.":"Not drawn yet. It is picked when the payment proof is sent."}</p>`:o.preGift.soldOut?`<p class="note" style="margin:8px 0 0">${cust?"Sorry, the free gifts ran out.":"No gift left in stock for this order."}</p>`:o.preGift.mode==="surprise"&&o.preGift.pool>1?`<p class="note" style="margin:8px 0 0">Picked at random from ${o.preGift.pool} gifts.</p>`:""}</div>`:"";
 
 
 /* ================= ADMIN ================= */
@@ -5910,7 +5911,8 @@ function viewPrelaunch(){
     <div class="grid2" style="margin-top:8px">${inp("Line under the title (Surprise mode)","gifts.surText",{max:120})}</div>
     <div class="grid3" style="margin-top:8px">${col("Box color","gifts.bg","#ffffff")}${col("Title color","gifts.title2","#000096")}${col("Text color","gifts.ink","#0B0B45")}${col("Gift tile color","gifts.tile","#FFF4D6")}</div>
     <div class="af" style="margin-top:8px">Effect${chips("gifts.fx",[["float","Float"],["wiggle","Wiggle"],["spin","Spin"],["pulse","Pulse"],["shine","Shine"],["none","None"]])}</div>
-    <div class="stack" style="gap:8px;margin-top:10px">${P.gifts.items.map((g,i)=>`<div class="pmcard prgift"><span class="prgimg">${g.img?`<img src="${esc(imgOk(g.img))}" alt="">`:"🎁"}</span><input class="in" data-pre="gifts.items.${i}.name" maxlength="40" value="${esc(g.name||"")}" placeholder="Gift name"><label class="ghost mqbtn">${g.img?"Change":"Picture"}<input type="file" accept="image/*" hidden data-preup="gifts.items.${i}.img"></label><button class="danger" type="button" data-pregrm="${i}">Remove</button></div>`).join("")}</div>
+    <div class="stack" style="gap:8px;margin-top:10px">${P.gifts.items.map((g,i)=>`<div class="pmcard prgift"><span class="prgimg">${g.img?`<img src="${esc(imgOk(g.img))}" alt="">`:"🎁"}</span><input class="in" data-pre="gifts.items.${i}.name" maxlength="40" value="${esc(g.name||"")}" placeholder="Gift name"><label class="prstock">Stock<input class="in" type="number" min="0" max="999999" data-pre="gifts.items.${i}.stock" value="${esc(g.stock===undefined||g.stock===null?"":g.stock)}" placeholder="∞">${(()=>{const q=((L&&L.pool)||[]).find(x=>x.id===g.id);return q&&q.stock!=null?`<small>${q.used} used · ${q.left} left</small>`:`<small>unlimited</small>`})()}</label><label class="ghost mqbtn">${g.img?"Change":"Picture"}<input type="file" accept="image/*" hidden data-preup="gifts.items.${i}.img"></label><button class="danger" type="button" data-pregrm="${i}">Remove</button></div>`).join("")}</div>
+    <p class="note" style="margin:8px 0 0">Stock: leave blank for unlimited. A gift is held for an order when the customer sends the payment proof (or you confirm it) and comes back if that order is cancelled. A gift code always gets the same gift, so cancelling and re-ordering can't re-roll it.</p>
     ${P.gifts.items.length<12?`<button class="ghost" type="button" data-pregadd style="margin-top:8px">+ Add gift</button>`:""}</section>
   <section class="panel"><h2>🎉 After registering and when full</h2>
     <div class="grid2" style="margin-top:10px">${inp("\"You're in\" title","done.title",{max:60})}${inp("\"You're in\" text ({name}, {rank}, {max})","done.text",{rows:2,max:300})}</div>
@@ -5961,7 +5963,7 @@ am.addEventListener("click",e=>{if(A.tab!=="prelaunch")return;const b=e.target.c
   if(d.preset){const [k,v]=d.preset.split("|");preSet(k,v);renderAdmin()}
   else if(d.prerm){const [k,i]=d.prerm.split("|");preGet(k).splice(+i,1);saveSoon();renderAdmin()}
   else if(d.preclr){preSet(d.preclr,"");renderAdmin()}
-  else if(d.pregadd!==undefined){DB.prelaunch.gifts.items.push({name:"",img:""});saveSoon();renderAdmin()}
+  else if(d.pregadd!==undefined){DB.prelaunch.gifts.items.push({id:"g"+Math.random().toString(36).slice(2,8),name:"",img:"",stock:""});saveSoon();renderAdmin()}
   else if(d.pregrm){DB.prelaunch.gifts.items.splice(+d.pregrm,1);saveSoon();renderAdmin()}
   else if(d.prehero!==undefined){A.hrT="pre";A.hr=null;A.tab="hero";renderAdmin();scrollTo(0,0)}
   else if(d.precsv!==undefined)preCsv();
