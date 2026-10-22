@@ -2065,8 +2065,8 @@ function renderAdmin(){
 /* drafts: each screen publishes (or discards) only the changes made on that screen.
    Shop settings, Boxes & extras, Delivery & courier and Security share one settings document, and Landing page and
    Top banner share the page document, so every changed field remembers the screen it was changed on. */
-const DRAFT_TABS={settings:["settings","boxes","delivery","security","badges"],marquee:["marquee"],page:["landing","hero"],thanks:["settings"],proofpop:["settings"],payMethods:["settings"],badges:["badges"]};
-const DRAFT_TAB_NAME={settings:"Shop settings",boxes:"Boxes & extras",delivery:"Delivery & courier",security:"Security",badges:"Badges",marquee:"Marquee banner",landing:"Landing page",hero:"Top banner"};
+const DRAFT_TABS={settings:["settings","boxes","delivery","security","badges"],marquee:["marquee"],page:["landing","hero"],prelaunch:["prelaunch"],thanks:["settings"],proofpop:["settings"],payMethods:["settings"],badges:["badges"]};
+const DRAFT_TAB_NAME={prelaunch:"Pre-launch",settings:"Shop settings",boxes:"Boxes & extras",delivery:"Delivery & courier",security:"Security",badges:"Badges",marquee:"Marquee banner",landing:"Landing page",hero:"Top banner"};
 const DRAFT_ALL=[...new Set(Object.values(DRAFT_TABS).flat())];
 const DTAG={};   // doc -> {field: screen}
 function draftScan(tab){
@@ -2104,7 +2104,7 @@ function toastHook(msg){return msg==="Saved"&&SBH.admin&&SBH.changed&&DRAFT_ALL.
 // publish only some fields of a draft document (falls back to publishing the whole document on older backends)
 const draftPublish=(k,f)=>SBH.publishFields?SBH.publishFields(k,f):SBH.publish([k]);
 document.addEventListener("click",async e=>{
-  const g=e.target.closest("[data-dbgo]");if(g){A.tab=g.dataset.dbgo;closeDrawer();renderAdmin();scrollTo(0,0);return}
+  const g=e.target.closest("[data-dbgo]");if(g){if(A.hrT){A.hrT=null;A.hr=null}A.tab=g.dataset.dbgo;closeDrawer();renderAdmin();scrollTo(0,0);return}
   const b=e.target.closest("[data-dbpub],[data-dbdisc]");if(!b||!SBH.changed)return;
   draftScan(A.tab);const mine=draftMine(A.tab);if(!mine.length)return;
   if(b.dataset.dbdisc!==undefined){
@@ -3990,7 +3990,7 @@ am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
     let lk=u;if(/dropbox\.com/i.test(lk))lk=lk.replace(/([?&])dl=0/,"$1raw=1");
     if(!isVideoSrc(lk)&&/(drive\.google|instagram\.com|tiktok\.com|facebook\.com|fb\.watch|dropbox\.com)/i.test(lk)){toast("That link is a web page, not a video file. Use a YouTube or Vimeo link, or a direct .mp4 link.");return}
     const ty=isVideoSrc(lk)?"video":"image";h.media.push({type:ty,src:lk});renderAdmin();toast("Added to the preview. Press Save to publish.")}
-  else if(d.hrsave!==undefined&&A.hrT==="pre"){DB.prelaunch.hero=heroNorm(A.hr);saveDB();toast("Pre-launch banner saved");A.hr=null;renderAdmin()}
+  else if(d.hrsave!==undefined&&A.hrT==="pre"){DB.prelaunch.hero=heroNorm(A.hr);saveDB();A.hr=null;A.hrT=null;A.tab="prelaunch";renderAdmin();scrollTo(0,0);toast(SBH.on?"Pre-launch banner kept as a draft. Press Save & publish to show it.":"Pre-launch banner saved")}
   else if(d.preback!==undefined){A.hrT=null;A.hr=null;A.tab="prelaunch";renderAdmin();scrollTo(0,0)}
   else if(d.hrsave!==undefined){const prev=DB.page.hero;DB.page.hero=heroNorm(A.hr);if(saveDB()){if(SBH.publish)draftPublish("page",["hero"]);toast("Top banner published to the shop");A.hr=null;renderAdmin()}else{DB.page.hero=prev;toast("Not enough storage space. Try smaller pictures.")}}
   else if(d.hrdisc!==undefined){A.hr=null;renderAdmin();toast("Changes discarded")}
@@ -5876,7 +5876,8 @@ function viewPrelaunch(){
   const st=s=>s==="claimed"?`<span style="color:#0A6B34;font-weight:700">Claimed ✓</span>`:s==="expired"?`<span style="color:#C8102E;font-weight:700">Expired</span>`:`<span style="color:#B07A3F;font-weight:700">Not used yet</span>`;
   return head("Pre-launch","A page that replaces your shop before opening: countdown, free Gift Set for the first customers, and a form. Only owners can see this.")+MOCK+`<div class="stack">
   <section class="panel prsw${on?" on":""}">${sw("on",on?"<b>Pre-launch is ON</b>: customers only see the pre-launch page. The shop is hidden and takes no orders.":"<b>Pre-launch is OFF</b>: customers see your normal shop.")}
-    <div class="colin" style="margin-top:10px;flex-wrap:wrap;gap:8px"><a class="btn btn-ghost-blue btn-sm" href="${esc(prev)}" target="_blank" rel="noopener">👁 Preview the page</a><span class="note" style="margin:0">The preview works even when it is off.</span></div></section>
+    ${SBH.on?`<p class="note" style="margin:8px 0 0">Every change on this page (including the switch and the banner) goes live only after you press <b>Save &amp; publish</b> at the bottom.</p>`:""}
+    <div class="colin" style="margin-top:10px;flex-wrap:wrap;gap:8px"><a class="btn btn-ghost-blue btn-sm" href="${esc(prev)}" target="_blank" rel="noopener">👁 Preview the page</a><span class="note" style="margin:0">The preview shows the published version, even while the page is off.</span></div></section>
   <section class="panel"><h2>⚙️ Main</h2>
     <div class="grid2" style="margin-top:10px">${inp("Free Gift Sets (first X customers)","max",{type:"number",num:1})}
       <label class="af">Opening date and time<input class="in" type="datetime-local" data-predt="openAt" value="${preDT(P.openAt)}"></label></div>
@@ -5886,7 +5887,7 @@ function viewPrelaunch(){
         ${P.expMode==="date"?`<input class="in" type="datetime-local" data-predt="expAt" value="${preDT(P.expAt)}" style="margin-top:6px">`:`<input class="in" type="number" min="1" max="365" data-pre="expDays" data-prenum="1" value="${+P.expDays||7}" style="margin-top:6px" aria-label="Days after opening">`}</div></div>
     <p class="note">Example code: <b>${esc(String(P.codePrefix||"GIFT-").toUpperCase())}64QX</b>. Codes are made by the server, one per WhatsApp number.</p></section>
   <section class="panel"><h2>🎞 Banner and carousel</h2><p class="sub">The top of the page works exactly like your Top banner: pictures, videos, YouTube or TikTok links, carousel, frame for phone and computer, words and buttons.</p>
-    <button class="btn btn-blue btn-sm" type="button" data-prehero style="margin-top:10px">✏️ Edit the pre-launch banner</button></section>
+    <button class="btn btn-blue btn-sm" type="button" data-prehero style="margin-top:10px">✏️ Edit the pre-launch banner</button><p class="note" style="margin:8px 0 0">It has its own pictures, videos and words. Your shop's Top banner is never changed from here.</p></section>
   <section class="panel"><h2>✍️ Look and words</h2>
     <div class="grid2" style="margin-top:10px">${inp("Text above the form","text",{rows:2,max:300})}${inp("Form button","form.btn",{max:40})}</div>
     <div style="display:grid;gap:8px;margin-top:10px">${sw("form.email","Ask for email (optional for customers)")}${sw("spots","Show \"X of Y Gift Sets left\"")}</div>
@@ -5933,7 +5934,7 @@ function preCsv(){const L=(PRA.list&&PRA.list.list)||[],q=v=>{const s=String(v==
 am.addEventListener("input",e=>{if(A.tab!=="prelaunch")return;const el=e.target,k=el.dataset.pre;if(!k||el.type==="checkbox")return;
   preSet(k,el.dataset.prenum?(+el.value||0):el.value);if(el.dataset.prerr){const l=el.closest("label");if(l&&l.firstChild)l.firstChild.textContent=l.firstChild.textContent.replace(/\d+(%?)$/,el.value+"$1")}});
 am.addEventListener("change",async e=>{if(A.tab!=="prelaunch")return;const el=e.target;
-  if(el.dataset.pre&&el.type==="checkbox"){preSet(el.dataset.pre,el.checked);if(el.dataset.pre==="on")toast(el.checked?"Pre-launch is ON. Customers now see the pre-launch page.":"Pre-launch is OFF. Your shop is back.");renderAdmin();return}
+  if(el.dataset.pre&&el.type==="checkbox"){preSet(el.dataset.pre,el.checked);if(el.dataset.pre==="on")toast(SBH.on?(el.checked?"Switched on. Press Save & publish to show the pre-launch page to customers.":"Switched off. Press Save & publish to bring your shop back."):(el.checked?"Pre-launch is ON.":"Pre-launch is OFF."));renderAdmin();return}
   if(el.dataset.predt){const v=el.value?new Date(el.value).getTime():0;preSet(el.dataset.predt,v||0);return}
   if(el.dataset.preup){const fs=[...(el.files||[])],k=el.dataset.preup;el.value="";if(!fs.length)return;
     try{for(const f of fs){const url=SBH.on?await SBK.upload(await lpResize(f,k.startsWith("fx.")?220:600,true)):await lpResize(f,k.startsWith("fx.")?220:600,true);
