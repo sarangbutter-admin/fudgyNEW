@@ -262,3 +262,5 @@ window.DD_ID_PATTERNS = [
   [/^(.+?), your (.+?) order$/, "$1, pesanan $2 kamu"], [/^Delivered · (.+)$/, (m, r) => "Terkirim · " + _T(r)], [/^Picked up · (.+)$/, (m, r) => "Sudah diambil · " + _T(r)],
   [/^(\d+) × (.+)$/, "$1 × $2"], [/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)day, (.+)$/, (m, d, r) => ({ Mon: "Senin", Tue: "Selasa", Wed: "Rabu", Thu: "Kamis", Fri: "Jumat", Sat: "Sabtu", Sun: "Minggu" })[d] + ", " + r]
 ];
+
+Object.assign(window.DD_ID, { "We need it to find your address and show courier prices.": "Kami butuh nomor ini untuk mencari alamatmu dan menampilkan harga kurir." });

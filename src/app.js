@@ -1100,6 +1100,7 @@ function bsNudge(){
 function bsPopOpen(){
   const body=$("#bsPopBody");body.appendChild($("#addrFields"));body.appendChild($("#bsBox"));
   $("#addrFields").hidden=false;$("#coAddr").required=false;prefillCust();placeFieldsShow();bsBoxOpen();
+  $("#bsPhone").value=$("#coPhone").value;
   $("#bsPop").hidden=false;document.body.style.overflow="hidden";
 }
 // checkout form: one line with the chosen courier and a Change button (the full courier box lives in the pop-up)
@@ -1117,6 +1118,7 @@ document.addEventListener("click",e=>{if(e.target.closest("[data-bscourier]"))bs
 $("#bsPopX").addEventListener("click",bsPopClose);$("#bsPopDone").addEventListener("click",bsPopClose);
 $("#bsPop").addEventListener("click",e=>{if(e.target.id==="bsPop")bsPopClose()});
 $("#bsPop").addEventListener("input",e=>{if(e.target.id==="coAddr"||e.target.id==="coDNote")saveCust()});
+$("#bsPhone").addEventListener("input",e=>{const v=e.target.value.replace(/\D/g,"");if(v!==e.target.value)e.target.value=v;$("#coPhone").value=v;saveCust();if(normPhone(v).length>=7&&BSD.err&&/WhatsApp/.test(BSD.err)){BSD.err="";bsDraw()}});
 
 const CUST_KEY="delidome-cust-v1";
 function loadCust(){try{return JSON.parse(localStorage.getItem(CUST_KEY)||"{}")||{}}catch(e){return {}}}
