@@ -157,6 +157,7 @@ function migrate(db){
   db.alerts=deepFill(defaultAlerts(),db.alerts);
   if(!Array.isArray(db.payMethods))db.payMethods=[{id:"pm1",name:"Bank transfer",details:(db.settings&&db.settings.payBank)||"Example Bank\nAccount 123 456 7890\nName: Delidome Cookies",img:"",on:true}];
   db.proofpop=Object.assign(defaultProofPop(),db.proofpop||{});
+  db.prelaunch=preNorm(db.prelaunch);if(!Array.isArray(db.preRegs))db.preRegs=[];
   if(db.page&&db.page.strip&&db.page.strip.mode){const st=db.page.strip,d=defaultPage().strip.items;
     db.page.strip={items:st.mode==="off"?d.map(x=>({...x,on:false})):st.mode==="custom"?String(st.text||"").split("\n").map(x=>x.trim()).filter(Boolean).map(t=>({t,on:true})):d}}
   db.page=deepFill(defaultPage(),db.page);
@@ -558,6 +559,7 @@ function ctaState(){
   return {label:`Checkout (${money(total())})`,dis:false,go:"checkout"};
 }
 function renderStore(){
+  if(preGate())return;
   let q=Q();
   if(S.coupon&&q.couponErr){cpMsg(`Coupon ${S.coupon}: ${q.couponErr}`,false);S.coupon="";q=Q()}
   // custom box
@@ -910,7 +912,7 @@ function renderFab(){
   const d=fabDims();f.style.setProperty("--fab-s",d.s+"px");f.style.setProperty("--fab-o",d.o/100);
   f.title=tx||"Show my box";
   if(!f.dataset.placed){f.dataset.placed="1";if(window.fabApply)fabApply()}
-  if(t.fabGest!==false&&!f.classList.contains("away")&&!fabPrefs().hinted){fabSave({hinted:1});setTimeout(()=>toast("Tip: drag the circle to move it. Pinch it, or press and hold, to make it smaller or fainter."),1800)}
+  if(t.fabGest!==false&&!f.classList.contains("away")&&!fabPrefs().hinted&&!document.body.classList.contains("pre-on")){fabSave({hinted:1});setTimeout(()=>toast("Tip: drag the circle to move it. Pinch it, or press and hold, to make it smaller or fainter."),1800)}
 }
 (function(){
   const f=$("#fab");if(!f)return;let st=null,pinch=null,longT=null;const ptrs=new Map();
@@ -1839,11 +1841,115 @@ function sweepOrders(){
 }
 setInterval(()=>{tickCountdowns();if(Math.round(Date.now()/1000)%10===0)sweepOrders()},1000);
 
+/* ================= pre-launch page =================
+   While the owner has it on (Pre-launch tab), customers see only this page: a banner like the Top banner, a countdown to the
+   opening, the free Gift Set, and a form for the first X people. Each one gets a personal gift code (made on the server). */
+function defaultPre(){return {on:false,max:100,openAt:0,autoOpen:true,
+  hero:Object.assign(JSON.parse(JSON.stringify(defaultPage().hero)),{eyebrow:"Pre-launch",title:"Something sweet is coming 🍪",lede:"",btn1:"🎁 Claim my gift",btn2:"🍪 Play while you wait",floats:false,shape:"rounded"}),
+  text:"Be one of the first {max} to register and get a FREE Gift Set on opening day.",cdLabel:"Opening in",cdSize:"M",cdStyle:"pulse",cdBg:"#000096",cdInk:"#FFE066",
+  bg:"#FFF4D6",ink:"#0B0B45",accent:"#000096",btnBg:"#C8102E",btnInk:"#ffffff",spots:true,
+  form:{btn:"🎁 Claim my free Gift Set",email:true},
+  gifts:{on:true,mode:"set",title:"Your Free Gift Set",items:[],fx:"float"},
+  codePrefix:"GIFT-",expMode:"days",expDays:7,expAt:0,
+  done:{title:"You're in, {name}!",text:"You're #{rank} of {max}. Your Free Gift Set is waiting for you on opening day."},
+  closed:{icon:"🎉",img:"",fx:"confetti",title:"All {max} Gift Sets are taken!",text:"Thank you for the amazing enthusiasm 💙 Stay tuned, more exciting events are coming soon.",btn:"Follow us on Instagram",link:"",bg:"#000096",ink:"#ffffff"},
+  fx:{on:true,mode:"float",imgs:[],n:8,speed:"normal",size:"M",op:55},
+  game:{on:true,imgs:[],gold:"",burnt:"",sec:20,speed:"normal",tap:"crumble",bg:"#FFF4D6",end:"You caught {score} cookies!",share:"I caught {score} cookies 🍪 Join the {shop} pre-launch: {link}"}}}
+function preNorm(p){const d=defaultPre(),o=p&&typeof p==="object"?p:{},r=Object.assign({},d,o);
+  ["hero","form","gifts","done","closed","fx","game"].forEach(k=>{r[k]=Object.assign({},d[k],o[k]&&typeof o[k]==="object"?o[k]:{})});
+  ["items"].forEach(k=>{if(!Array.isArray(r.gifts[k]))r.gifts[k]=[]});if(!Array.isArray(r.fx.imgs))r.fx.imgs=[];if(!Array.isArray(r.game.imgs))r.game.imgs=[];
+  if(!Array.isArray(r.hero.media))r.hero.media=[];return r}
+const PRE_KEY="delidome-pre-v1",PRE={st:null,me:null,busy:false,err:"",t:0,poll:0};
+try{PRE.me=JSON.parse(localStorage.getItem(PRE_KEY)||"null")}catch(e){}
+const preForced=()=>/[?&]prelaunch\b/.test(location.search);
+const preNow=()=>Date.now()+((window.SBH&&SBH.skew)||0);
+function preOn(){const P=DB.prelaunch;if(!P)return false;if(preForced())return true;
+  if(!P.on)return false;return !(P.autoOpen!==false&&+P.openAt>0&&preNow()>=+P.openAt)}
+const preFill=(t,x)=>String(t||"").replace(/\{max\}/g,(DB.prelaunch||{}).max||"").replace(/\{name\}/g,x&&x.name?String(x.name).split(" ")[0]:"").replace(/\{rank\}/g,x&&x.rank||"").replace(/\{shop\}/g,(DB.page&&DB.page.name)||"Delidome");
+function preView(){let v=document.getElementById("preView");if(!v){v=document.createElement("div");v.id="preView";v.hidden=true;document.body.insertBefore(v,document.body.firstChild);
+  v.addEventListener("click",preClick);v.addEventListener("submit",preSubmit)}return v}
+// called at the start of renderStore: true = the pre-launch page is showing instead of the shop
+function preGate(){const on=preOn(),v=preView();document.body.classList.toggle("pre-on",on);document.documentElement.style.backgroundColor=on?hexOk(DB.prelaunch.bg,"#FFF4D6"):"";
+  if(!on){if(!v.hidden){v.hidden=true;v.innerHTML="";v._sig=""}return false}
+  v.hidden=false;if(!PRE.st)preStatus();renderPre();return true}
+async function preStatus(){if(PRE.busy)return;
+  if(!SBH.on){const n=(DB.preRegs||[]).length,mx=+DB.prelaunch.max||0;PRE.st={count:n,max:mx,full:n>=mx};renderPre(true);return}
+  try{PRE.st=await SBH.preStatus()}catch(e){}renderPre(true)}
+function preCdHTML(P,dark){if(!(+P.openAt>0))return "";
+  return `<div class="pcd pcd-${["S","M","L","XL"].includes(P.cdSize)?P.cdSize:"M"} pcs-${["still","pulse","flip","glow"].includes(P.cdStyle)?P.cdStyle:"pulse"}" data-pcd="${+P.openAt}" style="--pcb:${hexOk(P.cdBg,"#000096")};--pci:${hexOk(P.cdInk,"#FFE066")}">
+    ${P.cdLabel?`<p class="pcd-l">${esc(P.cdLabel)}</p>`:""}<div class="pcd-n">${["d","h","m","s"].map((k,i)=>`<div><b data-pk="${k}">00</b><span>${["DAYS","HRS","MIN","SEC"][i]}</span></div>`).join("")}</div></div>`}
+function preGiftsHTML(P){const G=P.gifts;if(!G.on||!G.items.length)return "";
+  return `<section class="pre-gifts"><h3>🎁 ${esc(G.title||"Your Free Gift Set")}</h3><p>${G.mode==="surprise"?`You'll get <b>1 of these</b>, picked at random:`:`Everything below is yours:`}</p>
+    <div class="pg-grid gfx-${["float","wiggle","spin","pulse","shine","none"].includes(G.fx)?G.fx:"float"}">${G.items.map((g,i)=>`<div class="pg-it" style="--d:${(i*.35).toFixed(2)}s">${g.img?`<img src="${esc(imgOk(g.img))}" alt="">`:`<i aria-hidden="true">🎁</i>`}<span>${esc(g.name||"")}</span></div>`).join("")}</div></section>`}
+function preFxHTML(P){const F=P.fx;if(!F.on)return "";const imgs=F.imgs.length?F.imgs:[COOKIE_SVG],n=Math.max(2,Math.min(20,+F.n||8)),sz={S:26,M:38,L:54}[F.size]||38,sp={slow:1.6,normal:1,fast:.6}[F.speed]||1;let h="";
+  for(let i=0;i<n;i++){const fall=F.mode==="fall"||(F.mode==="both"&&i%2),s=sz*(.7+Math.random()*.6);
+    h+=`<i class="${fall?"pfx-fall":"pfx-float"}" style="left:${(Math.random()*94).toFixed(1)}%;${fall?"":`top:${(5+Math.random()*85).toFixed(1)}%;`}width:${s|0}px;height:${s|0}px;--t:${((fall?7:5)+Math.random()*5)*sp}s;--dl:-${(Math.random()*8).toFixed(1)}s;opacity:${Math.max(.1,Math.min(1,(+F.op||55)/100))}"><img src="${esc(F.imgs.length?imgOk(imgs[i%imgs.length]):COOKIE_SVG)}" alt=""></i>`}
+  return `<div class="pre-fx" aria-hidden="true">${h}</div>`}
+function renderPre(force){const v=preView();if(v.hidden)return;const P=DB.prelaunch,me=PRE.me,st=PRE.st||{},full=!!st.full&&!me;
+  const sig=JSON.stringify([P,me,st.count,st.full,PRE.err,PRE.busy,window.DDLANG?DDLANG():""]);if(!force&&sig===v._sig)return;v._sig=sig;
+  const pg=DB.page||{},lg=safeMedia(pg.logo),mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG,C=P.closed;
+  v.style.cssText=`--pbg:${hexOk(P.bg,"#FFF4D6")};--pink:${hexOk(P.ink,"#0B0B45")};--pacc:${hexOk(P.accent,"#000096")};--pbtn:${hexOk(P.btnBg,"#C8102E")};--pbtnk:${hexOk(P.btnInk,"#ffffff")};--display:${lpFamily(pg.headFont,pg,"head")};--body:${lpFamily(pg.bodyFont,pg,"body")}`;
+  const left=st.max?Math.max(0,st.max-(st.count||0)):null;
+  const top=`<header class="pre-top"><span class="pre-mk">${mark}</span><b>${esc(pg.name||"delidome")}</b>${window.DDlangBtnHTML?`<button class="langbtn" type="button" data-prelang>${DDlangBtnHTML()}</button>`:""}</header>`;
+  let body;
+  if(full){const ic=C.img?`<img class="pre-big" src="${esc(imgOk(C.img))}" alt="">`:`<div class="pre-big">${esc(C.icon||"🎉")}</div>`;
+    body=`<section class="pre-closed" style="--cbg:${hexOk(C.bg,"#000096")};--cink:${hexOk(C.ink,"#ffffff")}">${C.fx!=="none"?preRain(C.fx==="gifts"?["🎁","🍪","🎁"]:["✨","🎉","✨","🎊"]):""}${ic}<h2>${esc(preFill(C.title))}</h2><p>${esc(preFill(C.text))}</p>${preCdHTML(P)}
+      ${C.btn&&C.link?`<a class="pre-btn pre-btn-w" href="${esc(socialUrl(C.link)||"#")}" target="_blank" rel="noopener">${esc(C.btn)}</a>`:""}${P.game.on?`<button class="pre-btn pre-btn-y" type="button" data-pregame>🍪 Play while you wait</button>`:""}</section>`}
+  else{
+    const reg=me?`<section class="pre-done" id="preForm">${preRain(["🎁","🍪","🎁"])}<div class="pre-big">🎁</div><h2>${esc(preFill(P.done.title,me))}</h2><p>${esc(preFill(P.done.text,me))}</p>
+        <div class="pre-code" data-notr>${esc(me.code)}</div><p class="pre-sm">This phone remembers it for you. Ordering from another phone? Type this code in the coupon box.</p>
+        <div class="pre-row"><button class="pre-btn pre-btn-l" type="button" data-precopy>📋 Copy code</button><a class="pre-btn pre-btn-wa" href="https://wa.me/?text=${encodeURIComponent(`My ${pg.name||"Delidome"} gift code: ${me.code}${me.exp?` (claim before ${fmtDT(me.exp)})`:""}`)}" target="_blank" rel="noopener">💬 Save to my WhatsApp</a></div>
+        ${me.exp?`<p class="pre-exp">⏳ Claim before ${esc(fmtDT(me.exp))}</p>`:""}<p class="pre-sm">📸 Tip: take a screenshot of this page</p></section>`
+      :`<form class="pre-form" id="preForm" novalidate><p class="pre-lead">${esc(preFill(P.text))}</p>
+        ${P.spots!==false&&left!==null?`<div class="pre-spots">🔥 <b>${left} of ${st.max}</b> Gift Sets left<div class="pre-bar"><i style="width:${st.max?Math.round(left/st.max*100):0}%"></i></div></div>`:""}
+        <input class="pre-in" id="prName" autocomplete="name" maxlength="80" placeholder="Full name" required>
+        <input class="pre-in" id="prPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" placeholder="WhatsApp number" required>
+        ${P.form.email!==false?`<input class="pre-in" id="prEmail" type="email" autocomplete="email" maxlength="120" placeholder="Email (optional)">`:""}
+        ${PRE.err?`<p class="pre-err" role="alert">${esc(PRE.err)}</p>`:""}<button class="pre-btn" type="submit" ${PRE.busy?"disabled":""}>${PRE.busy?"Saving…":esc(P.form.btn||"Claim my free Gift Set")}</button></form>`;
+    body=`<div class="dome" id="preDome"><div class="hm" aria-hidden="true"></div><div class="ho" aria-hidden="true"></div><p class="eyebrow"></p><h1></h1><p class="lede"></p><div class="hero-ctas"><a class="btn btn-white" href="#preForm" data-prego="form"></a><a class="btn btn-line" href="#preGame" data-prego="game"></a></div></div>
+      ${preCdHTML(P)}${reg}${preGiftsHTML(P)}${P.game.on&&!me?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:P.game.on?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:""}`}
+  v.innerHTML=`${preFxHTML(P)}<div class="pre-wrap">${top}${body}</div>`;
+  const dome=v.querySelector("#preDome");if(dome){const h=JSON.parse(JSON.stringify(P.hero));if(!P.game.on)h.btn2="";if(me)h.btn1="";if(!h.bg)h.bg=pg.brand;heroFill(dome,h)}
+  preTick();clearInterval(PRE.t);PRE.t=setInterval(preTick,1000);
+  clearInterval(PRE.poll);if(SBH.on&&!me)PRE.poll=setInterval(()=>{if(!document.hidden&&!preView().hidden)preStatus()},30000)}
+function preRain(list){let h="";for(let i=0;i<9;i++)h+=`<i style="left:${(Math.random()*92).toFixed(1)}%;--t:${(4+Math.random()*4).toFixed(1)}s;--dl:-${(Math.random()*6).toFixed(1)}s">${list[i%list.length]}</i>`;return `<div class="pre-rain" aria-hidden="true">${h}</div>`}
+function preTick(){const v=document.getElementById("preView");if(!v||v.hidden)return;const P=DB.prelaunch;
+  v.querySelectorAll("[data-pcd]").forEach(c=>{const ms=Math.max(0,+c.dataset.pcd-preNow()),s=Math.floor(ms/1000),x={d:Math.floor(s/86400),h:Math.floor(s%86400/3600),m:Math.floor(s%3600/60),s:s%60};
+    c.querySelectorAll("[data-pk]").forEach(b=>{const t=String(x[b.dataset.pk]).padStart(2,"0");if(b.textContent!==t){b.textContent=t;if(c.classList.contains("pcs-flip")){b.classList.remove("flp");void b.offsetWidth;b.classList.add("flp")}}})});
+  if(P.on&&P.autoOpen!==false&&+P.openAt>0&&preNow()>=+P.openAt&&!preForced()){clearInterval(PRE.t);if(SBH.on&&SBH.loadShop)SBH.loadShop(true);renderStore()}}
+function preClick(e){const b=e.target.closest("button,a");if(!b)return;const d=b.dataset;
+  if(d.prelang!==undefined&&window.DDsetLang){DDsetLang(DDLANG()==="id"?"en":"id");return}
+  if(d.prego==="form"){e.preventDefault();const f=document.getElementById("preForm");if(f){f.scrollIntoView({behavior:"smooth",block:"center"});const n=document.getElementById("prName");n&&setTimeout(()=>n.focus(),400)}return}
+  if(d.prego==="game"||d.pregame!==undefined){e.preventDefault();if(window.preGameStart)preGameStart();return}
+  if(d.precopy!==undefined&&PRE.me){const c=PRE.me.code;(navigator.clipboard?navigator.clipboard.writeText(c):Promise.reject()).then(()=>toast("Code copied"),()=>toast(c))}}
+async function preSubmit(e){if(e.target.id!=="preForm")return;e.preventDefault();if(PRE.busy)return;
+  const v=id=>((document.getElementById(id)||{}).value||"").trim(),nm=v("prName"),ph=v("prPhone"),em=v("prEmail");
+  const fail=m=>{PRE.err=m;renderPre(true)};
+  if(nm.length<2)return fail("Please enter your name.");
+  const n=normPhone(ph).length;if(n<7||n>14||!/^[0-9+()\s.-]{6,24}$/.test(ph))return fail("Please enter a valid WhatsApp number.");
+  if(em&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em))return fail("Please enter a valid email address.");
+  PRE.err="";PRE.busy=true;renderPre(true);let r;
+  try{
+    if(SBH.on)r=await SBH.preReg(nm,ph,em);
+    else{const L=DB.preRegs||(DB.preRegs=[]),P=DB.prelaunch,ex=L.find(x=>normPhone(x.phone)===normPhone(ph));
+      if(ex)r={ok:true,again:true,code:ex.code,rank:ex.rank,name:ex.name,exp:ex.exp,max:P.max};
+      else if(L.length>=+P.max)r={ok:false,full:true,max:P.max};
+      else{const ab="ABCDEFGHJKMNPQRSTUVWXYZ23456789";let c=(P.codePrefix||"GIFT-").toUpperCase();for(let i=0;i<4;i++)c+=ab[Math.floor(Math.random()*ab.length)];
+        const exp=P.expMode==="date"&&+P.expAt?+P.expAt:+P.openAt?+P.openAt+(+P.expDays||7)*864e5:null;
+        const x={rank:L.length+1,name:nm,phone:ph,email:em,code:c,at:Date.now(),exp};L.push(x);saveDB();r=Object.assign({ok:true,max:P.max},x)}}
+  }catch(x){PRE.busy=false;return fail(x.message||"Please try again.")}
+  PRE.busy=false;
+  if(r&&r.full){PRE.st=Object.assign({},PRE.st,{full:true,count:r.max,max:r.max});renderPre(true);return}
+  PRE.me={code:r.code,rank:r.rank,name:r.name,exp:r.exp||null,max:r.max,at:Date.now()};try{localStorage.setItem(PRE_KEY,JSON.stringify(PRE.me))}catch(x){}
+  if(PRE.st&&!r.again)PRE.st.count=(PRE.st.count||0)+1;
+  renderPre(true);scrollTo({top:0,behavior:"smooth"});if(r.again)toast("You're already registered. Here's your code again.")}
+addEventListener("ddlang",()=>{if(!preView().hidden)renderPre(true)});
+
 /* ================= ADMIN ================= */
 const A={sel:new Set(),lbl:null,lblPrev:"sample",rvPid:null,tab:"dashboard",nf:{type:"news",title:"",text:"",pid:"",code:"",until:""},dd:"today",vr:"today",dsig:"",filter:"all",od:"all",q:"",pq:"",pcat:"all",modal:null,np:null,bakeDay:null,openOrder:null,
   draft:{kind:"discount",name:"Flash sale",type:"percent",value:20,appliesTo:"all",startMode:"now",startAt:"",durH:1,durM:0,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#000096",fx:"shine",view:"teaser"}};
 // the page the team is on survives a refresh (and coming back later in the same browser)
-{const KEY="delidome-admin-tab",TABS="dashboard orders complaints customers products badges sales coupons boxes notify announcer hero landing marquee delivery labels settings security affiliates log team".split(" ");
+{const KEY="delidome-admin-tab",TABS="dashboard orders complaints customers products badges sales coupons boxes notify announcer hero landing marquee delivery labels settings security affiliates prelaunch log team".split(" ");
   let cur="dashboard";try{const v=localStorage.getItem(KEY);if(TABS.includes(v))cur=v}catch(e){}
   Object.defineProperty(A,"tab",{enumerable:true,get:()=>cur,set:v=>{cur=v;if(TABS.includes(v))try{localStorage.setItem(KEY,v)}catch(e){}}})}
 function toast(msg){if(typeof toastHook==="function")msg=toastHook(msg);const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,Math.max(1600,msg.length*45))}
@@ -1869,7 +1975,7 @@ function renderAdmin(){
   $("#cSales").textContent=nLive?nLive+" live":"";$("#cSales").hidden=!nLive;
   const lowN=DB.products.filter(isLow).length;
   $("#cProducts").textContent=lowN?lowN+" low":DB.products.filter(p=>p.status==="available").length;$("#cProducts").classList.toggle("live",!!lowN);
-  $("#amain").innerHTML=({notify:viewNotify,dashboard:viewDashboard,orders:viewOrders,sales:viewSales,products:viewProducts,complaints:viewComplaints,boxes:viewBoxes,marquee:viewMarquee,announcer:viewAnnouncer,coupons:viewCoupons,hero:viewHero,labels:viewLabels,landing:viewLanding,settings:viewSettings,delivery:viewDelivery,customers:viewCustomers,team:viewTeam,badges:viewBadges,log:viewLog,security:viewSecurity,affiliates:viewAffiliates})[A.tab]();
+  $("#amain").innerHTML=({notify:viewNotify,prelaunch:viewPrelaunch,dashboard:viewDashboard,orders:viewOrders,sales:viewSales,products:viewProducts,complaints:viewComplaints,boxes:viewBoxes,marquee:viewMarquee,announcer:viewAnnouncer,coupons:viewCoupons,hero:viewHero,labels:viewLabels,landing:viewLanding,settings:viewSettings,delivery:viewDelivery,customers:viewCustomers,team:viewTeam,badges:viewBadges,log:viewLog,security:viewSecurity,affiliates:viewAffiliates})[A.tab]();
   if(A.tab==="log"&&LG.list===null)loadLog();
   if(A.tab==="customers"&&(CU.list===null||CU.stale))loadCustomers();
   if(A.tab==="team"&&TM.list===null)loadTeam();
@@ -2029,8 +2135,10 @@ function viewAnnouncer(){
 
 /* --- Top banner / hero (owner) --- */
 A.hr=null;
-const hrDraft=()=>A.hr||(A.hr=heroNorm(DB.page.hero));
-const hrDirty=()=>A.hr&&JSON.stringify(A.hr)!==JSON.stringify(heroNorm(DB.page.hero));
+A.hrT=null;   // "pre": the Top banner editor is editing the pre-launch banner
+const hrSrc=()=>A.hrT==="pre"&&DB.prelaunch?DB.prelaunch.hero:DB.page.hero;
+const hrDraft=()=>A.hr||(A.hr=heroNorm(hrSrc()));
+const hrDirty=()=>A.hr&&JSON.stringify(A.hr)!==JSON.stringify(heroNorm(hrSrc()));
 const hrFrSet=o=>{const h=hrDraft(),k=hrDev()==="pc"?"fPc":"fPh";h[k]=Object.assign({},heroFr(h,hrDev()),o);return h[k]};
 const hrDev=()=>A.hrDev||(innerWidth>HERO_BP?"pc":"ph");
 function hrDraw(){
@@ -2064,7 +2172,7 @@ function viewHero(){
       ${i>=6?`<button class="danger" type="button" data-hrckdel="${i}">Remove cookie</button>`:""}</div>`};
   const mt=h.mediaType,src=h.src||"",isData=/^data:/i.test(src);
   const col=(l,k,v)=>`<label class="af">${l}<input type="color" data-hr="${k}" value="${v}" style="width:100%;height:42px"></label>`;
-  return head("Top banner","The big dome at the top of your shop. Edit everything here and check the preview. Nothing changes in the shop until you press Save.")+MOCK+`
+  return (A.hrT==="pre"?`<div class="prbanner"><b>✏️ Editing the PRE-LAUNCH banner</b><span>Saving here changes only the pre-launch page, not your shop's Top banner.</span><button class="btn btn-white btn-sm" type="button" data-preback>← Back to Pre-launch</button></div>`:"")+head(A.hrT==="pre"?"Pre-launch banner":"Top banner","The big dome at the top of your shop. Edit everything here and check the preview. Nothing changes in the shop until you press Save.")+MOCK+`
   <div class="stack">
     <section class="panel hrsticky">
       <div class="phead"><div><h2>Preview <span id="hrDirty" hidden style="font-size:12px;background:var(--red);color:#fff;border-radius:99px;padding:2px 9px;margin-left:6px;vertical-align:middle">Not saved yet</span></h2><p class="sub">Updates as you edit.</p></div></div>
@@ -3747,6 +3855,8 @@ am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
     let lk=u;if(/dropbox\.com/i.test(lk))lk=lk.replace(/([?&])dl=0/,"$1raw=1");
     if(!isVideoSrc(lk)&&/(drive\.google|instagram\.com|tiktok\.com|facebook\.com|fb\.watch|dropbox\.com)/i.test(lk)){toast("That link is a web page, not a video file. Use a YouTube or Vimeo link, or a direct .mp4 link.");return}
     const ty=isVideoSrc(lk)?"video":"image";h.media.push({type:ty,src:lk});renderAdmin();toast("Added to the preview. Press Save to publish.")}
+  else if(d.hrsave!==undefined&&A.hrT==="pre"){DB.prelaunch.hero=heroNorm(A.hr);saveDB();toast("Pre-launch banner saved");A.hr=null;renderAdmin()}
+  else if(d.preback!==undefined){A.hrT=null;A.hr=null;A.tab="prelaunch";renderAdmin();scrollTo(0,0)}
   else if(d.hrsave!==undefined){const prev=DB.page.hero;DB.page.hero=heroNorm(A.hr);if(saveDB()){if(SBH.publish)draftPublish("page",["hero"]);toast("Top banner published to the shop");A.hr=null;renderAdmin()}else{DB.page.hero=prev;toast("Not enough storage space. Try smaller pictures.")}}
   else if(d.hrdisc!==undefined){A.hr=null;renderAdmin();toast("Changes discarded")}
   else if(d.hrreset!==undefined){armed(b,()=>{A.hr=heroNorm(defaultPage().hero);renderAdmin();toast("Reset in the preview. Press Save to publish.")})}
@@ -4788,7 +4898,7 @@ am.addEventListener("dragover",e=>{const t=e.target.closest("[data-drop]");if(!t
 am.addEventListener("dragleave",e=>{const t=e.target.closest("[data-drop]");if(t&&!t.contains(e.relatedTarget))t.classList.remove("drag")});
 am.addEventListener("drop",e=>{const t=e.target.closest("[data-drop]");if(!t)return;e.preventDefault();t.classList.remove("drag");const f=e.dataTransfer.files[0];if(f)uploadPhoto(t.dataset.drop,f,t.querySelector(".upl"))});
 am.addEventListener("submit",e=>{if(e.target.id==="saleForm"){e.preventDefault();createSale()}});
-$("#anav").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(b){A.tab=b.dataset.tab;closeDrawer();renderAdmin();if(matchMedia("(max-width:860px)").matches){const m=$("#amain");window.scrollTo(0,Math.max(0,m.getBoundingClientRect().top+window.scrollY-8))}else window.scrollTo(0,0)}});
+$("#anav").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(b){if(A.hrT){A.hrT=null;A.hr=null}A.tab=b.dataset.tab;closeDrawer();renderAdmin();if(matchMedia("(max-width:860px)").matches){const m=$("#amain");window.scrollTo(0,Math.max(0,m.getBoundingClientRect().top+window.scrollY-8))}else window.scrollTo(0,0)}});
 $("#drawer").addEventListener("click",e=>{
   if(e.target.id==="drawer"||e.target.closest("[data-close]")){closeDrawer();return}
   const b=e.target.closest("[data-set-status]");if(b){const oo=DB.orders.find(x=>x.id===A.openOrder);if(oo&&b.dataset.setStatus==="review"&&oo.status==="review"){openCheckPay(oo.id);return}setOrderStatus(A.openOrder,b.dataset.setStatus);return}
@@ -5615,6 +5725,88 @@ function affRender(){let v=document.getElementById("affView");
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
+/* --- Pre-launch (owner) --- */
+const PRA={list:null,loading:false,err:""};
+const preDT=ms=>{if(!(+ms>0))return "";const d=new Date(+ms),p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};
+async function preLoadList(){if(!SBH.on){PRA.list={count:DB.preRegs.length,max:DB.prelaunch.max,list:DB.preRegs.slice().reverse().map(r=>Object.assign({status:r.exp&&r.exp<Date.now()?"expired":"open"},r))};return}
+  if(PRA.loading)return;PRA.loading=true;try{PRA.list=await SBH.rpc("admin_prelaunch_list",{});PRA.err=""}catch(e){PRA.err=e.message;PRA.list={count:0,max:DB.prelaunch.max,list:[]}}PRA.loading=false;if(A.tab==="prelaunch"){const y=scrollY;renderAdmin();scrollTo(0,y)}}
+function viewPrelaunch(){
+  const P=DB.prelaunch,on=!!P.on,L=PRA.list;if(L===null&&!PRA.loading)preLoadList();
+  const inp=(l,k,o={})=>`<label class="af">${l}${o.rows?`<textarea class="in" rows="${o.rows}" data-pre="${k}" maxlength="${o.max||300}">${esc(preGet(k))}</textarea>`:`<input class="in" data-pre="${k}" ${o.type?`type="${o.type}"`:""} ${o.num?`data-prenum="1"`:""} maxlength="${o.max||120}" value="${esc(preGet(k))}" ${o.ph?`placeholder="${esc(o.ph)}"`:""}>`}</label>`;
+  const col=(l,k,d)=>`<label class="af">${l}<input type="color" data-pre="${k}" value="${hexOk(preGet(k),d)}" style="width:100%;height:40px"></label>`;
+  const sw=(k,l)=>`<div style="display:flex;gap:10px;align-items:center"><label class="sw"><input type="checkbox" data-pre="${k}" ${preGet(k)!==false&&preGet(k)?"checked":""} aria-label="${esc(l)}"><span></span></label><span class="stlabel">${l}</span></div>`;
+  const chips=(k,opts)=>`<div class="chips" style="margin-top:6px">${opts.map(([v,l])=>`<button class="fchip" type="button" data-preset="${k}|${v}" aria-pressed="${String(preGet(k))===String(v)}">${l}</button>`).join("")}</div>`;
+  const thumbs=(k,max)=>{const a=preGet(k)||[];return `<div class="prth">${a.map((u,i)=>`<span><img src="${esc(imgOk(u))}" alt=""><button class="ghost sm" type="button" data-prerm="${k}|${i}" aria-label="Remove">✕</button></span>`).join("")}${a.length<max?`<label class="ghost mqbtn">+ Add<input type="file" accept="image/*" multiple hidden data-preup="${k}"></label>`:""}</div>`};
+  const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,""),prev=(shop||location.origin)+"/?prelaunch=1";
+  const st=s=>s==="claimed"?`<span style="color:#0A6B34;font-weight:700">Claimed ✓</span>`:s==="expired"?`<span style="color:#C8102E;font-weight:700">Expired</span>`:`<span style="color:#B07A3F;font-weight:700">Not used yet</span>`;
+  return head("Pre-launch","A page that replaces your shop before opening: countdown, free Gift Set for the first customers, and a form. Only owners can see this.")+MOCK+`<div class="stack">
+  <section class="panel prsw${on?" on":""}">${sw("on",on?"<b>Pre-launch is ON</b>: customers only see the pre-launch page. The shop is hidden and takes no orders.":"<b>Pre-launch is OFF</b>: customers see your normal shop.")}
+    <div class="colin" style="margin-top:10px;flex-wrap:wrap;gap:8px"><a class="btn btn-ghost-blue btn-sm" href="${esc(prev)}" target="_blank" rel="noopener">👁 Preview the page</a><span class="note" style="margin:0">The preview works even when it is off.</span></div></section>
+  <section class="panel"><h2>⚙️ Main</h2>
+    <div class="grid2" style="margin-top:10px">${inp("Free Gift Sets (first X customers)","max",{type:"number",num:1})}
+      <label class="af">Opening date and time<input class="in" type="datetime-local" data-predt="openAt" value="${preDT(P.openAt)}"></label></div>
+    <div style="margin-top:10px">${sw("autoOpen","Open the shop automatically when the countdown ends")}</div>
+    <div class="grid2" style="margin-top:10px">${inp("Gift code start (prefix)","codePrefix",{max:8,ph:"GIFT-"})}
+      <div class="af">Gift code expiry${chips("expMode",[["days","Days after opening"],["date","Fixed date"]])}
+        ${P.expMode==="date"?`<input class="in" type="datetime-local" data-predt="expAt" value="${preDT(P.expAt)}" style="margin-top:6px">`:`<input class="in" type="number" min="1" max="365" data-pre="expDays" data-prenum="1" value="${+P.expDays||7}" style="margin-top:6px" aria-label="Days after opening">`}</div></div>
+    <p class="note">Example code: <b>${esc(String(P.codePrefix||"GIFT-").toUpperCase())}64QX</b>. Codes are made by the server, one per WhatsApp number.</p></section>
+  <section class="panel"><h2>🎞 Banner and carousel</h2><p class="sub">The top of the page works exactly like your Top banner: pictures, videos, YouTube or TikTok links, carousel, frame for phone and computer, words and buttons.</p>
+    <button class="btn btn-blue btn-sm" type="button" data-prehero style="margin-top:10px">✏️ Edit the pre-launch banner</button></section>
+  <section class="panel"><h2>✍️ Look and words</h2>
+    <div class="grid2" style="margin-top:10px">${inp("Text above the form","text",{rows:2,max:300})}${inp("Form button","form.btn",{max:40})}</div>
+    <div style="display:grid;gap:8px;margin-top:10px">${sw("form.email","Ask for email (optional for customers)")}${sw("spots","Show \"X of Y Gift Sets left\"")}</div>
+    <div class="grid3" style="margin-top:10px">${col("Page background","bg","#FFF4D6")}${col("Main color","accent","#000096")}${col("Text color","ink","#0B0B45")}${col("Button color","btnBg","#C8102E")}${col("Button text","btnInk","#ffffff")}</div>
+    <h3 class="sech" style="margin-top:14px">Countdown</h3>
+    <div class="grid2">${inp("Label","cdLabel",{max:40})}<div class="af">Size${chips("cdSize",[["S","Small"],["M","Medium"],["L","Large"],["XL","Huge"]])}</div></div>
+    <div class="grid3" style="margin-top:8px"><div class="af">Style${chips("cdStyle",[["still","Still"],["pulse","Pulse"],["flip","Flip"],["glow","Glow"]])}</div>${col("Box color","cdBg","#000096")}${col("Number color","cdInk","#FFE066")}</div></section>
+  <section class="panel"><h2>🎁 Gift showcase</h2>${sw("gifts.on","Show the gifts on the page")}
+    <div class="grid2" style="margin-top:10px">${inp("Title","gifts.title",{max:60})}<div class="af">Mode${chips("gifts.mode",[["set","Gift Set (they get all)"],["surprise","Surprise (1 of these)"]])}</div></div>
+    <div class="af" style="margin-top:8px">Effect${chips("gifts.fx",[["float","Float"],["wiggle","Wiggle"],["spin","Spin"],["pulse","Pulse"],["shine","Shine"],["none","None"]])}</div>
+    <div class="stack" style="gap:8px;margin-top:10px">${P.gifts.items.map((g,i)=>`<div class="pmcard prgift"><span class="prgimg">${g.img?`<img src="${esc(imgOk(g.img))}" alt="">`:"🎁"}</span><input class="in" data-pre="gifts.items.${i}.name" maxlength="40" value="${esc(g.name||"")}" placeholder="Gift name"><label class="ghost mqbtn">${g.img?"Change":"Picture"}<input type="file" accept="image/*" hidden data-preup="gifts.items.${i}.img"></label><button class="danger" type="button" data-pregrm="${i}">Remove</button></div>`).join("")}</div>
+    ${P.gifts.items.length<12?`<button class="ghost" type="button" data-pregadd style="margin-top:8px">+ Add gift</button>`:""}</section>
+  <section class="panel"><h2>🎉 After registering and when full</h2>
+    <div class="grid2" style="margin-top:10px">${inp("\"You're in\" title","done.title",{max:60})}${inp("\"You're in\" text ({name}, {rank}, {max})","done.text",{rows:2,max:300})}</div>
+    <h3 class="sech" style="margin-top:14px">When all Gift Sets are taken</h3>
+    <div class="grid2">${inp("Title ({max})","closed.title",{max:80})}${inp("Message","closed.text",{rows:2,max:300})}</div>
+    <div class="grid2" style="margin-top:8px"><div class="af">Icon${chips("closed.icon",[["🎉","🎉"],["🎁","🎁"],["🍪","🍪"],["💙","💙"],["✨","✨"]])}<div class="colin" style="margin-top:6px;gap:8px">${P.closed.img?`<img src="${esc(imgOk(P.closed.img))}" alt="" style="height:40px"><button class="ghost sm" type="button" data-preclr="closed.img">Remove picture</button>`:`<label class="ghost mqbtn">Upload a picture instead<input type="file" accept="image/*" hidden data-preup="closed.img"></label>`}</div></div>
+      <div class="af">Falling effect${chips("closed.fx",[["confetti","✨ Confetti"],["gifts","🎁 Gifts"],["none","None"]])}</div></div>
+    <div class="grid2" style="margin-top:8px">${inp("Button text","closed.btn",{max:40})}${inp("Button link (Instagram, WhatsApp...)","closed.link",{max:300,ph:"https://instagram.com/…"})}</div>
+    <div class="grid2" style="margin-top:8px">${col("Background","closed.bg","#000096")}${col("Text","closed.ink","#ffffff")}</div></section>
+  <section class="panel"><h2>🍪 Cookies on the page</h2>${sw("fx.on","Show cookies in the background")}
+    <div class="af" style="margin-top:8px">Movement${chips("fx.mode",[["float","Floating"],["fall","Falling"],["both","Both"]])}</div>
+    <div class="af" style="margin-top:8px">Your cookie pictures (up to 8, a cookie drawing is used if you add none)${thumbs("fx.imgs",8)}</div>
+    <div class="grid3" style="margin-top:8px"><label class="af">How many: ${+P.fx.n||8}<input type="range" min="2" max="20" value="${+P.fx.n||8}" data-pre="fx.n" data-prenum="1" data-prerr="1"></label><div class="af">Speed${chips("fx.speed",[["slow","Slow"],["normal","Normal"],["fast","Fast"]])}</div><div class="af">Size${chips("fx.size",[["S","S"],["M","M"],["L","L"]])}</div></div>
+    <label class="af" style="margin-top:8px">How visible: ${+P.fx.op||55}%<input type="range" min="10" max="100" step="5" value="${+P.fx.op||55}" data-pre="fx.op" data-prenum="1" data-prerr="1"></label></section>
+  <section class="panel"><div class="phead"><div><h2>📋 Registrations${L?` · ${L.count} / ${L.max}`:""}</h2></div><div class="colin" style="gap:8px"><button class="ghost" type="button" data-precsv ${L&&L.list.length?"":"disabled"}>⬇ Export CSV</button><button class="ghost" type="button" data-prereload>Refresh</button></div></div>
+    ${PRA.err?`<p class="err">${esc(PRA.err)}</p>`:""}
+    ${L===null?`<div class="empty">Loading…</div>`:L.list.length?`<div class="prtbl"><div class="prh"><span>#</span><span>Name</span><span>WhatsApp</span><span>Code</span><span>Status</span><span></span></div>${L.list.map(r=>`<div><span>${r.rank}</span><span>${esc(r.name)}</span><span>${esc(r.phone)}</span><span><b>${esc(r.code)}</b></span><span>${st(r.status)}${r.order?` · ${esc(r.order)}`:""}</span><span><a class="ghost sm" href="${esc(waLink({customer:{phone:r.phone}},preMsg(r)))}" target="_blank" rel="noopener">💬</a></span></div>`).join("")}</div>`:`<div class="empty">Nobody has registered yet.</div>`}
+    <label class="af" style="margin-top:10px">WhatsApp message for the 💬 buttons ({name}, {code}, {date})<textarea class="in" rows="2" data-pre="waMsg" maxlength="400">${esc(P.waMsg||"Hi {name}! 🍪 We're open! Your free Gift Set code is {code}. Order with this WhatsApp number or type the code in the coupon box. Claim before {date}.")}</textarea></label></section>
+  </div>`}
+const preMsg=r=>String(DB.prelaunch.waMsg||"Hi {name}! 🍪 We're open! Your free Gift Set code is {code}. Order with this WhatsApp number or type the code in the coupon box. Claim before {date}.").replace(/\{name\}/g,String(r.name||"").split(" ")[0]).replace(/\{code\}/g,r.code).replace(/\{date\}/g,r.exp?fmtDT(r.exp):"opening day");
+function preGet(k){return k.split(".").reduce((o,x)=>o==null?undefined:o[x],DB.prelaunch)}
+function preSet(k,v){const ks=k.split("."),last=ks.pop();let o=DB.prelaunch;for(const x of ks){if(o[x]==null)o[x]={};o=o[x]}o[last]=v;saveSoon()}
+function preCsv(){const L=(PRA.list&&PRA.list.list)||[],q=v=>{const s=String(v==null?"":v);return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s},d=ms=>ms?preDT(ms).replace("T"," "):"";
+  const rows=[["code","type","value","gift","min_spend","box_size","max_uses","per_customer","phone","start","end","active","note","name","rank","registered_at","claimed","order"]];
+  L.slice().sort((a,b)=>a.rank-b.rank).forEach(r=>rows.push([r.code,"gift","","Pre-launch Gift Set","","",1,1,normPhone(r.phone)?"62"+normPhone(r.phone):"",d(DB.prelaunch.openAt),d(r.exp),r.status==="expired"?"no":"yes",`${r.name} #${r.rank}`,r.name,r.rank,d(r.at),r.status==="claimed"?"yes":"no",r.order||""]));
+  const blob=new Blob(["﻿"+rows.map(r=>r.map(q).join(",")).join("\n")],{type:"text/csv"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="prelaunch-gift-codes.csv";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+am.addEventListener("input",e=>{if(A.tab!=="prelaunch")return;const el=e.target,k=el.dataset.pre;if(!k||el.type==="checkbox")return;
+  preSet(k,el.dataset.prenum?(+el.value||0):el.value);if(el.dataset.prerr){const l=el.closest("label");if(l&&l.firstChild)l.firstChild.textContent=l.firstChild.textContent.replace(/\d+(%?)$/,el.value+"$1")}});
+am.addEventListener("change",async e=>{if(A.tab!=="prelaunch")return;const el=e.target;
+  if(el.dataset.pre&&el.type==="checkbox"){preSet(el.dataset.pre,el.checked);if(el.dataset.pre==="on")toast(el.checked?"Pre-launch is ON. Customers now see the pre-launch page.":"Pre-launch is OFF. Your shop is back.");renderAdmin();return}
+  if(el.dataset.predt){const v=el.value?new Date(el.value).getTime():0;preSet(el.dataset.predt,v||0);return}
+  if(el.dataset.preup){const fs=[...(el.files||[])],k=el.dataset.preup;el.value="";if(!fs.length)return;
+    try{for(const f of fs){const url=SBH.on?await SBK.upload(await lpResize(f,k.startsWith("fx.")?220:600,true)):await lpResize(f,k.startsWith("fx.")?220:600,true);
+        const cur=preGet(k);if(Array.isArray(cur)){if(cur.length>=8)break;cur.push(url);saveSoon()}else{preSet(k,url);break}}}
+    catch(er){toast(er.message||"Couldn't add that picture.")}renderAdmin()}});
+am.addEventListener("click",e=>{if(A.tab!=="prelaunch")return;const b=e.target.closest("button");if(!b)return;const d=b.dataset;
+  if(d.preset){const [k,v]=d.preset.split("|");preSet(k,v);renderAdmin()}
+  else if(d.prerm){const [k,i]=d.prerm.split("|");preGet(k).splice(+i,1);saveSoon();renderAdmin()}
+  else if(d.preclr){preSet(d.preclr,"");renderAdmin()}
+  else if(d.pregadd!==undefined){DB.prelaunch.gifts.items.push({name:"",img:""});saveSoon();renderAdmin()}
+  else if(d.pregrm){DB.prelaunch.gifts.items.splice(+d.pregrm,1);saveSoon();renderAdmin()}
+  else if(d.prehero!==undefined){A.hrT="pre";A.hr=null;A.tab="hero";renderAdmin();scrollTo(0,0)}
+  else if(d.precsv!==undefined)preCsv();
+  else if(d.prereload!==undefined){PRA.list=null;renderAdmin()}});
 function viewSecurity(){
   const h=head("Security","Limits that protect your shop from abuse, bots and surprise bills. Only owners can see this.");
   if(!SBH.on)return h+MOCK+`<section class="panel"><div class="empty">Security works once the site is connected to Supabase.</div></section>`;

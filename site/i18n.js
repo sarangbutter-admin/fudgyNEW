@@ -99,6 +99,7 @@
     en: '<svg viewBox="0 0 60 40" aria-hidden="true"><rect width="60" height="40" fill="#012169"/><path d="M0 0L60 40M60 0L0 40" stroke="#fff" stroke-width="8"/><path d="M0 0L60 40M60 0L0 40" stroke="#C8102E" stroke-width="3"/><path d="M30 0V40M0 20H60" stroke="#fff" stroke-width="13"/><path d="M30 0V40M0 20H60" stroke="#C8102E" stroke-width="8"/></svg>',
     id: '<svg viewBox="0 0 60 40" aria-hidden="true"><rect width="60" height="20" fill="#E70011"/><rect y="20" width="60" height="20" fill="#fff"/><rect width="60" height="40" fill="none" stroke="#d8d8e8" stroke-width="2"/></svg>'
   };
+  window.DDlangBtnHTML = function () { return FLAG[lang] + "<b>" + (lang === "id" ? "ID" : "ENG") + "</b>"; };
   function drawBtn() {
     var b = document.getElementById("langBtn"); if (!b) return;
     b.innerHTML = FLAG[lang] + "<b>" + (lang === "id" ? "ID" : "ENG") + "</b>";

@@ -154,6 +154,7 @@ function migrate(db){
   db.alerts=deepFill(defaultAlerts(),db.alerts);
   if(!Array.isArray(db.payMethods))db.payMethods=[{id:"pm1",name:"Bank transfer",details:(db.settings&&db.settings.payBank)||"Example Bank\nAccount 123 456 7890\nName: Delidome Cookies",img:"",on:true}];
   db.proofpop=Object.assign(defaultProofPop(),db.proofpop||{});
+  db.prelaunch=preNorm(db.prelaunch);if(!Array.isArray(db.preRegs))db.preRegs=[];
   if(db.page&&db.page.strip&&db.page.strip.mode){const st=db.page.strip,d=defaultPage().strip.items;
     db.page.strip={items:st.mode==="off"?d.map(x=>({...x,on:false})):st.mode==="custom"?String(st.text||"").split("\n").map(x=>x.trim()).filter(Boolean).map(t=>({t,on:true})):d}}
   db.page=deepFill(defaultPage(),db.page);
@@ -548,6 +549,7 @@ function ctaState(){
   return {label:`Checkout (${money(total())})`,dis:false,go:"checkout"};
 }
 function renderStore(){
+  if(preGate())return;
   let q=Q();
   if(S.coupon&&q.couponErr){cpMsg(`Coupon ${S.coupon}: ${q.couponErr}`,false);S.coupon="";q=Q()}
   // custom box
@@ -897,7 +899,7 @@ function renderFab(){
   const d=fabDims();f.style.setProperty("--fab-s",d.s+"px");f.style.setProperty("--fab-o",d.o/100);
   f.title=tx||"Show my box";
   if(!f.dataset.placed){f.dataset.placed="1";if(window.fabApply)fabApply()}
-  if(t.fabGest!==false&&!f.classList.contains("away")&&!fabPrefs().hinted){fabSave({hinted:1});setTimeout(()=>toast("Tip: drag the circle to move it. Pinch it, or press and hold, to make it smaller or fainter."),1800)}
+  if(t.fabGest!==false&&!f.classList.contains("away")&&!fabPrefs().hinted&&!document.body.classList.contains("pre-on")){fabSave({hinted:1});setTimeout(()=>toast("Tip: drag the circle to move it. Pinch it, or press and hold, to make it smaller or fainter."),1800)}
 }
 (function(){
   const f=$("#fab");if(!f)return;let st=null,pinch=null,longT=null;const ptrs=new Map();
@@ -1819,6 +1821,109 @@ function sweepOrders(){
   if(view==="store"){sanitizeCart();renderStoreStatic();renderStore();renderEditBar();if(!$("#moSheet").hidden)renderMO()}
 }
 setInterval(()=>{tickCountdowns();if(Math.round(Date.now()/1000)%10===0)sweepOrders()},1000);
+/* ================= pre-launch page =================
+   While the owner has it on (Pre-launch tab), customers see only this page: a banner like the Top banner, a countdown to the
+   opening, the free Gift Set, and a form for the first X people. Each one gets a personal gift code (made on the server). */
+function defaultPre(){return {on:false,max:100,openAt:0,autoOpen:true,
+  hero:Object.assign(JSON.parse(JSON.stringify(defaultPage().hero)),{eyebrow:"Pre-launch",title:"Something sweet is coming 🍪",lede:"",btn1:"🎁 Claim my gift",btn2:"🍪 Play while you wait",floats:false,shape:"rounded"}),
+  text:"Be one of the first {max} to register and get a FREE Gift Set on opening day.",cdLabel:"Opening in",cdSize:"M",cdStyle:"pulse",cdBg:"#000096",cdInk:"#FFE066",
+  bg:"#FFF4D6",ink:"#0B0B45",accent:"#000096",btnBg:"#C8102E",btnInk:"#ffffff",spots:true,
+  form:{btn:"🎁 Claim my free Gift Set",email:true},
+  gifts:{on:true,mode:"set",title:"Your Free Gift Set",items:[],fx:"float"},
+  codePrefix:"GIFT-",expMode:"days",expDays:7,expAt:0,
+  done:{title:"You're in, {name}!",text:"You're #{rank} of {max}. Your Free Gift Set is waiting for you on opening day."},
+  closed:{icon:"🎉",img:"",fx:"confetti",title:"All {max} Gift Sets are taken!",text:"Thank you for the amazing enthusiasm 💙 Stay tuned, more exciting events are coming soon.",btn:"Follow us on Instagram",link:"",bg:"#000096",ink:"#ffffff"},
+  fx:{on:true,mode:"float",imgs:[],n:8,speed:"normal",size:"M",op:55},
+  game:{on:true,imgs:[],gold:"",burnt:"",sec:20,speed:"normal",tap:"crumble",bg:"#FFF4D6",end:"You caught {score} cookies!",share:"I caught {score} cookies 🍪 Join the {shop} pre-launch: {link}"}}}
+function preNorm(p){const d=defaultPre(),o=p&&typeof p==="object"?p:{},r=Object.assign({},d,o);
+  ["hero","form","gifts","done","closed","fx","game"].forEach(k=>{r[k]=Object.assign({},d[k],o[k]&&typeof o[k]==="object"?o[k]:{})});
+  ["items"].forEach(k=>{if(!Array.isArray(r.gifts[k]))r.gifts[k]=[]});if(!Array.isArray(r.fx.imgs))r.fx.imgs=[];if(!Array.isArray(r.game.imgs))r.game.imgs=[];
+  if(!Array.isArray(r.hero.media))r.hero.media=[];return r}
+const PRE_KEY="delidome-pre-v1",PRE={st:null,me:null,busy:false,err:"",t:0,poll:0};
+try{PRE.me=JSON.parse(localStorage.getItem(PRE_KEY)||"null")}catch(e){}
+const preForced=()=>/[?&]prelaunch\b/.test(location.search);
+const preNow=()=>Date.now()+((window.SBH&&SBH.skew)||0);
+function preOn(){const P=DB.prelaunch;if(!P)return false;if(preForced())return true;
+  if(!P.on)return false;return !(P.autoOpen!==false&&+P.openAt>0&&preNow()>=+P.openAt)}
+const preFill=(t,x)=>String(t||"").replace(/\{max\}/g,(DB.prelaunch||{}).max||"").replace(/\{name\}/g,x&&x.name?String(x.name).split(" ")[0]:"").replace(/\{rank\}/g,x&&x.rank||"").replace(/\{shop\}/g,(DB.page&&DB.page.name)||"Delidome");
+function preView(){let v=document.getElementById("preView");if(!v){v=document.createElement("div");v.id="preView";v.hidden=true;document.body.insertBefore(v,document.body.firstChild);
+  v.addEventListener("click",preClick);v.addEventListener("submit",preSubmit)}return v}
+// called at the start of renderStore: true = the pre-launch page is showing instead of the shop
+function preGate(){const on=preOn(),v=preView();document.body.classList.toggle("pre-on",on);document.documentElement.style.backgroundColor=on?hexOk(DB.prelaunch.bg,"#FFF4D6"):"";
+  if(!on){if(!v.hidden){v.hidden=true;v.innerHTML="";v._sig=""}return false}
+  v.hidden=false;if(!PRE.st)preStatus();renderPre();return true}
+async function preStatus(){if(PRE.busy)return;
+  if(!SBH.on){const n=(DB.preRegs||[]).length,mx=+DB.prelaunch.max||0;PRE.st={count:n,max:mx,full:n>=mx};renderPre(true);return}
+  try{PRE.st=await SBH.preStatus()}catch(e){}renderPre(true)}
+function preCdHTML(P,dark){if(!(+P.openAt>0))return "";
+  return `<div class="pcd pcd-${["S","M","L","XL"].includes(P.cdSize)?P.cdSize:"M"} pcs-${["still","pulse","flip","glow"].includes(P.cdStyle)?P.cdStyle:"pulse"}" data-pcd="${+P.openAt}" style="--pcb:${hexOk(P.cdBg,"#000096")};--pci:${hexOk(P.cdInk,"#FFE066")}">
+    ${P.cdLabel?`<p class="pcd-l">${esc(P.cdLabel)}</p>`:""}<div class="pcd-n">${["d","h","m","s"].map((k,i)=>`<div><b data-pk="${k}">00</b><span>${["DAYS","HRS","MIN","SEC"][i]}</span></div>`).join("")}</div></div>`}
+function preGiftsHTML(P){const G=P.gifts;if(!G.on||!G.items.length)return "";
+  return `<section class="pre-gifts"><h3>🎁 ${esc(G.title||"Your Free Gift Set")}</h3><p>${G.mode==="surprise"?`You'll get <b>1 of these</b>, picked at random:`:`Everything below is yours:`}</p>
+    <div class="pg-grid gfx-${["float","wiggle","spin","pulse","shine","none"].includes(G.fx)?G.fx:"float"}">${G.items.map((g,i)=>`<div class="pg-it" style="--d:${(i*.35).toFixed(2)}s">${g.img?`<img src="${esc(imgOk(g.img))}" alt="">`:`<i aria-hidden="true">🎁</i>`}<span>${esc(g.name||"")}</span></div>`).join("")}</div></section>`}
+function preFxHTML(P){const F=P.fx;if(!F.on)return "";const imgs=F.imgs.length?F.imgs:[COOKIE_SVG],n=Math.max(2,Math.min(20,+F.n||8)),sz={S:26,M:38,L:54}[F.size]||38,sp={slow:1.6,normal:1,fast:.6}[F.speed]||1;let h="";
+  for(let i=0;i<n;i++){const fall=F.mode==="fall"||(F.mode==="both"&&i%2),s=sz*(.7+Math.random()*.6);
+    h+=`<i class="${fall?"pfx-fall":"pfx-float"}" style="left:${(Math.random()*94).toFixed(1)}%;${fall?"":`top:${(5+Math.random()*85).toFixed(1)}%;`}width:${s|0}px;height:${s|0}px;--t:${((fall?7:5)+Math.random()*5)*sp}s;--dl:-${(Math.random()*8).toFixed(1)}s;opacity:${Math.max(.1,Math.min(1,(+F.op||55)/100))}"><img src="${esc(F.imgs.length?imgOk(imgs[i%imgs.length]):COOKIE_SVG)}" alt=""></i>`}
+  return `<div class="pre-fx" aria-hidden="true">${h}</div>`}
+function renderPre(force){const v=preView();if(v.hidden)return;const P=DB.prelaunch,me=PRE.me,st=PRE.st||{},full=!!st.full&&!me;
+  const sig=JSON.stringify([P,me,st.count,st.full,PRE.err,PRE.busy,window.DDLANG?DDLANG():""]);if(!force&&sig===v._sig)return;v._sig=sig;
+  const pg=DB.page||{},lg=safeMedia(pg.logo),mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG,C=P.closed;
+  v.style.cssText=`--pbg:${hexOk(P.bg,"#FFF4D6")};--pink:${hexOk(P.ink,"#0B0B45")};--pacc:${hexOk(P.accent,"#000096")};--pbtn:${hexOk(P.btnBg,"#C8102E")};--pbtnk:${hexOk(P.btnInk,"#ffffff")};--display:${lpFamily(pg.headFont,pg,"head")};--body:${lpFamily(pg.bodyFont,pg,"body")}`;
+  const left=st.max?Math.max(0,st.max-(st.count||0)):null;
+  const top=`<header class="pre-top"><span class="pre-mk">${mark}</span><b>${esc(pg.name||"delidome")}</b>${window.DDlangBtnHTML?`<button class="langbtn" type="button" data-prelang>${DDlangBtnHTML()}</button>`:""}</header>`;
+  let body;
+  if(full){const ic=C.img?`<img class="pre-big" src="${esc(imgOk(C.img))}" alt="">`:`<div class="pre-big">${esc(C.icon||"🎉")}</div>`;
+    body=`<section class="pre-closed" style="--cbg:${hexOk(C.bg,"#000096")};--cink:${hexOk(C.ink,"#ffffff")}">${C.fx!=="none"?preRain(C.fx==="gifts"?["🎁","🍪","🎁"]:["✨","🎉","✨","🎊"]):""}${ic}<h2>${esc(preFill(C.title))}</h2><p>${esc(preFill(C.text))}</p>${preCdHTML(P)}
+      ${C.btn&&C.link?`<a class="pre-btn pre-btn-w" href="${esc(socialUrl(C.link)||"#")}" target="_blank" rel="noopener">${esc(C.btn)}</a>`:""}${P.game.on?`<button class="pre-btn pre-btn-y" type="button" data-pregame>🍪 Play while you wait</button>`:""}</section>`}
+  else{
+    const reg=me?`<section class="pre-done" id="preForm">${preRain(["🎁","🍪","🎁"])}<div class="pre-big">🎁</div><h2>${esc(preFill(P.done.title,me))}</h2><p>${esc(preFill(P.done.text,me))}</p>
+        <div class="pre-code" data-notr>${esc(me.code)}</div><p class="pre-sm">This phone remembers it for you. Ordering from another phone? Type this code in the coupon box.</p>
+        <div class="pre-row"><button class="pre-btn pre-btn-l" type="button" data-precopy>📋 Copy code</button><a class="pre-btn pre-btn-wa" href="https://wa.me/?text=${encodeURIComponent(`My ${pg.name||"Delidome"} gift code: ${me.code}${me.exp?` (claim before ${fmtDT(me.exp)})`:""}`)}" target="_blank" rel="noopener">💬 Save to my WhatsApp</a></div>
+        ${me.exp?`<p class="pre-exp">⏳ Claim before ${esc(fmtDT(me.exp))}</p>`:""}<p class="pre-sm">📸 Tip: take a screenshot of this page</p></section>`
+      :`<form class="pre-form" id="preForm" novalidate><p class="pre-lead">${esc(preFill(P.text))}</p>
+        ${P.spots!==false&&left!==null?`<div class="pre-spots">🔥 <b>${left} of ${st.max}</b> Gift Sets left<div class="pre-bar"><i style="width:${st.max?Math.round(left/st.max*100):0}%"></i></div></div>`:""}
+        <input class="pre-in" id="prName" autocomplete="name" maxlength="80" placeholder="Full name" required>
+        <input class="pre-in" id="prPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" placeholder="WhatsApp number" required>
+        ${P.form.email!==false?`<input class="pre-in" id="prEmail" type="email" autocomplete="email" maxlength="120" placeholder="Email (optional)">`:""}
+        ${PRE.err?`<p class="pre-err" role="alert">${esc(PRE.err)}</p>`:""}<button class="pre-btn" type="submit" ${PRE.busy?"disabled":""}>${PRE.busy?"Saving…":esc(P.form.btn||"Claim my free Gift Set")}</button></form>`;
+    body=`<div class="dome" id="preDome"><div class="hm" aria-hidden="true"></div><div class="ho" aria-hidden="true"></div><p class="eyebrow"></p><h1></h1><p class="lede"></p><div class="hero-ctas"><a class="btn btn-white" href="#preForm" data-prego="form"></a><a class="btn btn-line" href="#preGame" data-prego="game"></a></div></div>
+      ${preCdHTML(P)}${reg}${preGiftsHTML(P)}${P.game.on&&!me?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:P.game.on?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:""}`}
+  v.innerHTML=`${preFxHTML(P)}<div class="pre-wrap">${top}${body}</div>`;
+  const dome=v.querySelector("#preDome");if(dome){const h=JSON.parse(JSON.stringify(P.hero));if(!P.game.on)h.btn2="";if(me)h.btn1="";if(!h.bg)h.bg=pg.brand;heroFill(dome,h)}
+  preTick();clearInterval(PRE.t);PRE.t=setInterval(preTick,1000);
+  clearInterval(PRE.poll);if(SBH.on&&!me)PRE.poll=setInterval(()=>{if(!document.hidden&&!preView().hidden)preStatus()},30000)}
+function preRain(list){let h="";for(let i=0;i<9;i++)h+=`<i style="left:${(Math.random()*92).toFixed(1)}%;--t:${(4+Math.random()*4).toFixed(1)}s;--dl:-${(Math.random()*6).toFixed(1)}s">${list[i%list.length]}</i>`;return `<div class="pre-rain" aria-hidden="true">${h}</div>`}
+function preTick(){const v=document.getElementById("preView");if(!v||v.hidden)return;const P=DB.prelaunch;
+  v.querySelectorAll("[data-pcd]").forEach(c=>{const ms=Math.max(0,+c.dataset.pcd-preNow()),s=Math.floor(ms/1000),x={d:Math.floor(s/86400),h:Math.floor(s%86400/3600),m:Math.floor(s%3600/60),s:s%60};
+    c.querySelectorAll("[data-pk]").forEach(b=>{const t=String(x[b.dataset.pk]).padStart(2,"0");if(b.textContent!==t){b.textContent=t;if(c.classList.contains("pcs-flip")){b.classList.remove("flp");void b.offsetWidth;b.classList.add("flp")}}})});
+  if(P.on&&P.autoOpen!==false&&+P.openAt>0&&preNow()>=+P.openAt&&!preForced()){clearInterval(PRE.t);if(SBH.on&&SBH.loadShop)SBH.loadShop(true);renderStore()}}
+function preClick(e){const b=e.target.closest("button,a");if(!b)return;const d=b.dataset;
+  if(d.prelang!==undefined&&window.DDsetLang){DDsetLang(DDLANG()==="id"?"en":"id");return}
+  if(d.prego==="form"){e.preventDefault();const f=document.getElementById("preForm");if(f){f.scrollIntoView({behavior:"smooth",block:"center"});const n=document.getElementById("prName");n&&setTimeout(()=>n.focus(),400)}return}
+  if(d.prego==="game"||d.pregame!==undefined){e.preventDefault();if(window.preGameStart)preGameStart();return}
+  if(d.precopy!==undefined&&PRE.me){const c=PRE.me.code;(navigator.clipboard?navigator.clipboard.writeText(c):Promise.reject()).then(()=>toast("Code copied"),()=>toast(c))}}
+async function preSubmit(e){if(e.target.id!=="preForm")return;e.preventDefault();if(PRE.busy)return;
+  const v=id=>((document.getElementById(id)||{}).value||"").trim(),nm=v("prName"),ph=v("prPhone"),em=v("prEmail");
+  const fail=m=>{PRE.err=m;renderPre(true)};
+  if(nm.length<2)return fail("Please enter your name.");
+  const n=normPhone(ph).length;if(n<7||n>14||!/^[0-9+()\s.-]{6,24}$/.test(ph))return fail("Please enter a valid WhatsApp number.");
+  if(em&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em))return fail("Please enter a valid email address.");
+  PRE.err="";PRE.busy=true;renderPre(true);let r;
+  try{
+    if(SBH.on)r=await SBH.preReg(nm,ph,em);
+    else{const L=DB.preRegs||(DB.preRegs=[]),P=DB.prelaunch,ex=L.find(x=>normPhone(x.phone)===normPhone(ph));
+      if(ex)r={ok:true,again:true,code:ex.code,rank:ex.rank,name:ex.name,exp:ex.exp,max:P.max};
+      else if(L.length>=+P.max)r={ok:false,full:true,max:P.max};
+      else{const ab="ABCDEFGHJKMNPQRSTUVWXYZ23456789";let c=(P.codePrefix||"GIFT-").toUpperCase();for(let i=0;i<4;i++)c+=ab[Math.floor(Math.random()*ab.length)];
+        const exp=P.expMode==="date"&&+P.expAt?+P.expAt:+P.openAt?+P.openAt+(+P.expDays||7)*864e5:null;
+        const x={rank:L.length+1,name:nm,phone:ph,email:em,code:c,at:Date.now(),exp};L.push(x);saveDB();r=Object.assign({ok:true,max:P.max},x)}}
+  }catch(x){PRE.busy=false;return fail(x.message||"Please try again.")}
+  PRE.busy=false;
+  if(r&&r.full){PRE.st=Object.assign({},PRE.st,{full:true,count:r.max,max:r.max});renderPre(true);return}
+  PRE.me={code:r.code,rank:r.rank,name:r.name,exp:r.exp||null,max:r.max,at:Date.now()};try{localStorage.setItem(PRE_KEY,JSON.stringify(PRE.me))}catch(x){}
+  if(PRE.st&&!r.again)PRE.st.count=(PRE.st.count||0)+1;
+  renderPre(true);scrollTo({top:0,behavior:"smooth"});if(r.again)toast("You're already registered. Here's your code again.")}
+addEventListener("ddlang",()=>{if(!preView().hidden)renderPre(true)});
 function toast(msg){if(typeof toastHook==="function")msg=toastHook(msg);const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,Math.max(1600,msg.length*45))}
 function armed(btn,fn){if(btn.dataset.armed){fn();return}btn.dataset.armed="1";const t=btn.textContent;btn.textContent="Tap again to confirm";btn.classList.add("armed");
   setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent=t;btn.classList.remove("armed")}},3000)}
@@ -2252,7 +2357,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 09:31 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 14:01 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

@@ -33,7 +33,7 @@
       categories: res.categories || [], broadcasts: res.broadcasts || [],
       coupons: (res.coupons || []).map(function (c) { return Object.assign({}, c, { startsAt: "", endsAt: "", maxUses: 0 }); }),
       payMethods: Array.isArray(d.payMethods) ? d.payMethods : [],
-      proofpop: d.proofpop, page: d.page, marquee: d.marquee, announcer: d.announcer, thanks: d.thanks, badges: d.badges, sold: res.sold || {}, slotUse: res.slotUse || {}, orders: []
+      proofpop: d.proofpop, prelaunch: d.prelaunch, page: d.page, marquee: d.marquee, announcer: d.announcer, thanks: d.thanks, badges: d.badges, sold: res.sold || {}, slotUse: res.slotUse || {}, orders: []
     };
     // coupons the visitor typed in earlier stay usable until the page is reloaded
     (DB.coupons || []).forEach(function (c) { if (c._srv && !raw.coupons.some(function (x) { return x.code === c.code; })) raw.coupons.push(c); });
@@ -169,6 +169,8 @@
   document.addEventListener("visibilitychange", function () { if (!document.hidden && !H.admin && H.loaded) { H.refreshOrders(); H.loadShop(true); } });
 
   // Edge Functions (courier prices etc.); admin = true sends the team sign-in
+  H.preStatus = function () { return K.rpc("prelaunch_public", {}); };
+  H.preReg = function (n, p, e) { return K.rpc("prelaunch_register", { p_name: n, p_phone: p, p_email: e || "" }); };
   H.banMsg = function () { return K.rpc("ban_msg", {}); };
   H.fn = function (name, body, admin) { return K.fn(name, body, !!admin); };
 
@@ -205,7 +207,7 @@
   };
 
   /* ================= owner: sign-in ================= */
-  var DOCS = ["settings", "page", "marquee", "announcer", "thanks", "proofpop", "payMethods", "alerts", "label", "badges"];
+  var DOCS = ["settings", "page", "marquee", "announcer", "thanks", "proofpop", "payMethods", "alerts", "label", "badges", "prelaunch"];
   var COLLS = { sizes: function (o) { return String(o.n); }, categories: function (o) { return o.id; }, addons: function (o) { return o.id; }, sales: function (o) { return o.id; }, coupons: function (o) { return o.id; }, broadcasts: function (o) { return o.id; } };
   var OFIELDS = ["status", "expiresAt", "cancelReason", "paidAt", "completedAt", "labelAt", "courier", "awb", "rejected", "items", "total", "surcharge", "notify"];
 
