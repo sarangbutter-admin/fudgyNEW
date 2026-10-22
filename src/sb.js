@@ -116,8 +116,12 @@
     // affiliate link: credit the new order to the link the customer came from (within 30 days; a matching coupon wins on the server)
     if (!existing && r.token) { try { var af = JSON.parse(localStorage.getItem("delidome-aff-v1") || "null");
       if (af && af.code && Date.now() - af.at < 30 * 864e5) K.rpc("aff_claim", { p_id: r.order.id, p_token: r.token, p_code: af.code, p_src: af.src || "", p_at: af.at }).catch(function () {}); } catch (e) {} }
+    // pre-launch gift code: attach the gift to the new order (the server checks the code belongs to this WhatsApp number)
+    if (!existing && r.token && p.preCode) { try { var pg = await K.rpc("pre_gift_claim", { p_id: r.order.id, p_token: r.token, p_code: p.preCode });
+      var po = DB.orders.find(function (x) { return x.id === r.order.id; }); if (po && pg) { if (pg.ok) po.preGift = pg.gift; else po._preErr = pg.err; } } catch (e) {} }
     return DB.orders.find(function (x) { return x.id === r.order.id; });
   };
+  H.preGift = function (code, phone) { return K.rpc("pre_gift_check", { p_code: code, p_phone: phone || "" }); };
   H.affHit = function (code, vid, src) { K.rpc("aff_hit", { p_code: code, p_vid: vid, p_src: src }).catch(function () {}); };
   function tk(id) { return TOK[id] || ""; }
   H.cancel = async function (id) { var d = await K.rpc("cancel_order", { p_id: id, p_token: tk(id) }); setOrderIn(DB.orders, d); lastOrdSig = ""; };

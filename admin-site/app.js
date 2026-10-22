@@ -223,7 +223,7 @@ const giftCard=(g,extra="")=>{const im=g.img||giftImg(g.id);return `<span class=
 const giftSurprise=n=>n>1?n+" surprise gifts":"1 surprise gift";
 const giftLines=n=>giftPlan(n).flatMap(x=>x.mode==="random"?[`🎲 ${giftSurprise(x.limit)}`]:x.gifts.map(g=>`🎁 ${g.name}`));
 const GIFT_NOTE="Gifts are subject to availability. Alternative gifts or a delayed shipment may happen.";
-const giftsHTML=(o,cust)=>o.gifts&&o.gifts.length?`<div class="dsec"><h4>🎁 ${cust?"Your gifts":"Free gifts to pack"}</h4><div class="gl">${o.gifts.map(g=>giftChip(g,g.random?" rnd":"")).join("")}</div>${["new","baking","ready","completed"].includes(o.status)?"":`<p class="note" style="margin:8px 0 0">${cust?"Confirmed once we verify your payment.":"Pack it once the payment is confirmed."}</p>`}</div>`:cust&&o.status==="awaiting"&&giftPlan(o.size).length?`<div class="dsec"><h4>🎁 Your free gift</h4><p class="hint" style="margin:0">It's revealed as soon as you send your payment proof.</p></div>`:"";
+const giftsHTML=(o,cust)=>preGiftHTML(o,cust)+(o.gifts&&o.gifts.length?`<div class="dsec"><h4>🎁 ${cust?"Your gifts":"Free gifts to pack"}</h4><div class="gl">${o.gifts.map(g=>giftChip(g,g.random?" rnd":"")).join("")}</div>${["new","baking","ready","completed"].includes(o.status)?"":`<p class="note" style="margin:8px 0 0">${cust?"Confirmed once we verify your payment.":"Pack it once the payment is confirmed."}</p>`}</div>`:cust&&o.status==="awaiting"&&giftPlan(o.size).length?`<div class="dsec"><h4>🎁 Your free gift</h4><p class="hint" style="margin:0">It's revealed as soon as you send your payment proof.</p></div>`:"");
 /* --- optional courier prices from Biteship (does nothing unless the owner switches it on in Shop settings) --- */
 const bsOn=(db=DB)=>!!(SBH.on&&db.settings&&db.settings.biteship&&db.settings.biteship.on);
 const bsFallback=(db=DB)=>!(db.settings&&db.settings.biteship&&db.settings.biteship.fallback===false);
@@ -560,6 +560,7 @@ function ctaState(){
 }
 function renderStore(){
   if(preGate())return;
+  pgInit();
   let q=Q();
   if(S.coupon&&q.couponErr){cpMsg(`Coupon ${S.coupon}: ${q.couponErr}`,false);S.coupon="";q=Q()}
   // custom box
@@ -755,10 +756,10 @@ function giftTeaser(gs,kind){const n=gs.length,sh=gs.slice(0,3),more=n-sh.length
   return `<div class="gteaser"><span class="gtst" aria-hidden="true">${sh.map(g=>{const im=g.img||giftImg(g.id);return im?`<img src="${esc(imgOk(im))}" alt="" loading="lazy">`:`<i>🎁</i>`}).join("")}${more>0?`<i class="more">+${more}</i>`:""}</span><span>${n} ${kind==="possible"?(n===1?"possible gift":"possible gifts"):(n===1?"free gift included":"free gifts included")}</span></div>`}
 function renderGiftBox(){
   const el=$("#giftBox");if(!el)return;const pl=giftPlan(S.size);
-  if(!pl.length){el.hidden=true;el.innerHTML="";return}
+  if(!pl.length&&!PG.info){el.hidden=true;el.innerHTML="";return}
   const cl=(v,d)=>/^(#[0-9a-f]{6}|transparent)$/i.test(v||"")?v:d;
   el.hidden=false;
-  el.innerHTML=pl.map(x=>{const t=x.sale,rnd=x.mode==="random",gv=GV_KEYS.includes(t.view)?t.view:"teaser";
+  el.innerHTML=pgPanelHTML()+pl.map(x=>{const t=x.sale,rnd=x.mode==="random",gv=GV_KEYS.includes(t.view)?t.view:"teaser";
     return `<div class="gb fx-${["shine","pulse","none"].includes(t.fx)?t.fx:"shine"}" style="--gb:${cl(t.bg,"#FFE066")};--gi:${cl(t.ink,"#000096")}"><div class="gh"><span class="gtag">${esc(t.tag||"Gifts")}</span><b class="gt">${esc(t.name)}</b><span class="gend">Ends in <span class="cd" data-exp="${t.end}">${fmtLeft(t.end-Date.now())}</span></span></div>
       <p class="gs">🎁 FREE with your box of ${S.size}. No extra cost:</p><div class="gl big">${rnd?`<span class="gcard rnd"><i aria-hidden="true">🎲</i><b>${giftSurprise(x.limit)}</b><em>FREE</em></span>${gv==="full"?`<div class="gpool">${x.gifts.map(g=>giftChip(g," sm")).join("")}</div>`:gv==="teaser"?giftTeaser(x.gifts,"possible"):""}`:gv==="full"||x.gifts.length<2?(gv==="hidden"?"":x.gifts.map(g=>giftCard(g)).join("")):gv==="teaser"?giftTeaser(x.gifts,"included"):""}</div>
       <button class="gbsee" type="button" data-giftsee="${S.size}">👀 See what you ${rnd?"may get":"get"}</button><p class="gnote">${GIFT_NOTE}</p></div>`}).join("");
@@ -784,11 +785,15 @@ function renderCoupon(q){
   const on=!!(S.coupon&&q.coupon);
   if(on){ap.hidden=false;ap.innerHTML=`<span>🎟 <b>${esc(q.coupon.code)}</b> applied${q.couponDisc>0?` · −${money(q.couponDisc)}`:q.coupon.type==="freedelivery"?(S.mode==="delivery"?" · free delivery":" · free delivery when you pick delivery"):""}</span><button type="button" data-cpnrm aria-label="Remove coupon">✕</button>`}else ap.hidden=true;
   f.hidden=on;
+  {let pa=$("#pgAp");if(!pa){pa=document.createElement("div");pa.id="pgAp";pa.className="pg-ap";ap.parentNode.insertBefore(pa,ap)}
+    pa.hidden=!PG.code;pa.innerHTML=PG.code?`<span>🎁 <b>${esc(PG.code)}</b> ✓ ${esc((PG.info&&PG.info.title)||"Free Gift Set")}</span><button type="button" data-pgrm aria-label="Remove gift code">✕</button>`:""}
   const list=DB.coupons.filter(c=>c.show&&cpState(c)==="live"&&!(on&&q.coupon.code===c.code));
   ch.innerHTML=on?"":list.map(c=>`<button type="button" data-cpnuse="${esc(c.code)}"><b>${esc(c.code)}</b><small>${esc(c.desc||cpOff(c))}${c.minSpend>0?` · min ${money(c.minSpend)}`:""}</small></button>`).join("");
 }
 async function applyCoupon(code){
   code=cpNorm(code);if(!code){cpMsg("Type your coupon code first.",false);return}
+  if(PG.code!==code.toUpperCase()){const g=await pgCheck(code,($("#coPhone")||{}).value||"");
+    if(g.gift){if(g.ok){$("#cpnIn").value="";renderStore();cpMsg(`🎁 Gift code added! Your ${(g.info&&g.info.title)||"Free Gift Set"} is reserved.`,true)}else cpMsg(g.err||"That gift code cannot be used.",false);return}}
   if(SBH.on){const r=await SBH.checkCoupon(code,S.size,($("#coPhone")||{}).value||"",S.editId).catch(ex=>({ok:false,err:ex.message}));if(!r.ok){cpMsg(r.err,false);return}}
   const q0=quote({...S,coupon:code},DB,{withDelivery:S.step===2});
   if(q0.couponErr){cpMsg(q0.couponErr,false);return}
@@ -797,7 +802,7 @@ async function applyCoupon(code){
   const ap=$("#cpnAp");if(ap&&!RM)ap.animate([{transform:"scale(1)"},{transform:"scale(1.06)"},{transform:"scale(1)"}],{duration:400})
 }
 $("#cpnForm").addEventListener("submit",e=>{e.preventDefault();applyCoupon($("#cpnIn").value)});
-$("#cpn").addEventListener("click",e=>{const u=e.target.closest("[data-cpnuse]");if(u){applyCoupon(u.dataset.cpnuse);return}
+$("#cpn").addEventListener("click",e=>{if(e.target.closest("[data-pgrm]")){pgForget();renderStore();return}const u=e.target.closest("[data-cpnuse]");if(u){applyCoupon(u.dataset.cpnuse);return}
   if(e.target.closest("[data-cpnrm]")){S.coupon="";renderStore();cpMsg("Coupon removed.",true)}});
 // tap the cookie picture to add it
 $("#menuGrid").addEventListener("click",e=>{
@@ -1241,6 +1246,7 @@ function renderCoSummary(){
     Object.entries(counts).map(([id,n])=>{const p=prod(id);return `<div class="m"><span>${n} × ${esc(p.name)}</span><span>${p.surcharge>0?"+"+money(p.surcharge*n):""}</span></div>`}).join("")+
     (q.sale?`<div class="sl"><span>${esc(q.sale.name)} (${saleOffText(q.sale)})</span><span class="num">−${money(q.discount)}</span></div>`:"")+
     giftLines(S.size).map(t=>`<div class="sl"><span>${esc(t)}</span><span class="num">${fbHTML("Gift")}</span></div>`).join("")+
+    (PG.info?`<div class="sl"><span>🎁 ${esc(PG.info.title||"Free Gift Set")} · ${esc(PG.code)}</span><span class="num">${fbHTML("Gift")}</span></div>`:"")+
     (q.coupon&&q.couponDisc>0?`<div class="sl"><span>Coupon ${esc(q.coupon.code)}</span><span class="num">−${money(q.couponDisc)}</span></div>`:"")+
     S.addons.map(id=>{const a=DB.addons.find(x=>x.id===id);return a?`<div><span class="withlv">${lvAddon(a,22,true)}${esc(a.name)}</span><span class="num">${addonPr(a)}</span></div>`:""}).join("")+
     `<div><span>${OPT_NAME[optOf(S)]}</span><span class="num">${q.feePending?"Choose a courier below":q.fee?money(q.fee):fbHTML("Del")}</span></div>`+
@@ -1393,7 +1399,8 @@ $("#coForm").addEventListener("submit",e=>{
   if(SBH.on){
     const btn=f.querySelector("button[type=submit]");if(btn)btn.disabled=true;
     const pNote=S.mode==="delivery"&&placeOn("dnoteOn")?String(S.dnote||"").trim():"",pImg=S.mode==="delivery"&&placeOn("dphotoOn")?S.dphoto:"";
-    SBH.place({notify,sdLate:S.mode!=="pickup"&&S.speed==="sameday"&&!samedayOpen()?true:undefined,shuffled:!!S.shuf,size:S.size,items:fields.items,mode:S.mode,speed:S.speed,day:S.day,time:S.time,note:S.note,addons:[...S.addons],coupon:fields.coupon,expectTotal:q.total,customer:cust,ship:q.ship||undefined},ed).then(o=>{
+    SBH.place({notify,sdLate:S.mode!=="pickup"&&S.speed==="sameday"&&!samedayOpen()?true:undefined,shuffled:!!S.shuf,size:S.size,items:fields.items,mode:S.mode,speed:S.speed,day:S.day,time:S.time,note:S.note,addons:[...S.addons],coupon:fields.coupon,preCode:!ed&&PG.code?PG.code:undefined,expectTotal:q.total,customer:cust,ship:q.ship||undefined},ed).then(o=>{
+      if(o&&o.preGift)pgForget();else if(o&&o._preErr)setTimeout(()=>toast("Your gift code was not added: "+o._preErr),900);
       if(pNote||pImg)SBH.placeInfo(o.id,pNote,pImg).catch(err=>toast("Order placed, but the driver note or photo didn't save: "+err.message));
       addMine(o.id);S.editId=null;saveCart();renderDone(o,!!ed);
       S=fresh();$("#coForm").reset();saveCart();sanitizeCart();renderStoreStatic();renderStore();renderEditBar();renderBag();
@@ -1401,7 +1408,8 @@ $("#coForm").addEventListener("submit",e=>{
     return}
   let o;
   if(ed){releaseHold(ed);Object.assign(ed,fields,{editedAt:Date.now()});o=ed;takeHold(o)}
-  else{o={id:uid(),code:newCode(),tracked:true,holds:false,createdAt:Date.now(),expiresAt:payDeadlineMs(fields),status:"awaiting",...fields};DB.orders.unshift(o);takeHold(o)}
+  else{o={id:uid(),code:newCode(),tracked:true,holds:false,createdAt:Date.now(),expiresAt:payDeadlineMs(fields),status:"awaiting",...fields};DB.orders.unshift(o);takeHold(o)
+    if(PG.code){const x=(DB.preRegs||[]).find(z=>z.code===PG.code&&!z.used),I=PG.info||{};if(x&&normPhone(x.phone)===normPhone(o.customer.phone)){const its=I.items||[];x.used=o.code;o.preGift={code:x.code,title:I.title,mode:I.mode,items:I.mode==="surprise"&&its.length>1?[its[Math.floor(Math.random()*its.length)]]:its,pool:its.length,at:Date.now()};pgForget()}}}
   if(!ed)logMsg(o,chanList(o.notify),"awaiting",msgText(o,"awaiting"),"system");
   saveDB();addMine(o.id);S.editId=null;saveCart();
   renderDone(o,!!ed);
@@ -1944,6 +1952,27 @@ async function preSubmit(e){if(e.target.id!=="preForm")return;e.preventDefault()
   if(PRE.st&&!r.again)PRE.st.count=(PRE.st.count||0)+1;
   renderPre(true);scrollTo({top:0,behavior:"smooth"});if(r.again)toast("You're already registered. Here's your code again.")}
 addEventListener("ddlang",()=>{if(!preView().hidden)renderPre(true)});
+/* pre-launch gift code in the shop (after opening): remembered on the phone that registered, or typed in the coupon box.
+   It shows as a gift panel in the box and a line in checkout; the server attaches it to the order right after it is placed. */
+const PG_KEY="delidome-pregift-v1",PG={code:null,info:null,exp:null,checked:false};
+const pgSaved=()=>{try{return localStorage.getItem(PG_KEY)||""}catch(e){return ""}};
+function pgInit(){if(PG.checked)return;PG.checked=true;const c=pgSaved()||(PRE.me&&PRE.me.code)||"";if(c)pgCheck(c,"",true)}
+async function pgCheck(code,phone,quiet){code=String(code||"").trim().toUpperCase();if(!code)return {ok:false,gift:false};let r;
+  if(SBH.on){try{r=await SBH.preGift(code,phone)}catch(e){r={ok:false,gift:false}}}
+  else{const x=(DB.preRegs||[]).find(z=>z.code===code),G=DB.prelaunch.gifts;
+    r=!x?{ok:false,gift:false}:x.used?{ok:false,gift:true,err:"This gift code was already used."}:x.exp&&x.exp<Date.now()?{ok:false,gift:true,err:"This gift code has expired."}
+      :phone&&normPhone(phone).length>=7&&normPhone(phone)!==normPhone(x.phone)?{ok:false,gift:true,err:"This gift code belongs to another WhatsApp number."}
+      :{ok:true,gift:true,code,exp:x.exp,info:{title:G.title||"Free Gift Set",mode:G.mode,items:G.items.map(g=>({name:g.name,img:g.img}))}}}
+  if(r.ok){PG.code=r.code;PG.info=r.info;PG.exp=r.exp||null;try{localStorage.setItem(PG_KEY,r.code)}catch(e){}}
+  else if(r.gift&&quiet)pgForget();
+  if(quiet)renderStore();return r}
+function pgForget(){PG.code=null;PG.info=null;PG.exp=null;try{localStorage.removeItem(PG_KEY)}catch(e){}}
+function pgPanelHTML(){if(!PG.info)return "";const I=PG.info,its=(I.items||[]).filter(g=>g&&(g.name||g.img));
+  return `<div class="gb pgb fx-shine" style="--gb:#FFE9A8;--gi:#000096"><div class="gh"><span class="gtag">PRE-LAUNCH GIFT</span><b class="gt">${esc(I.title||"Free Gift Set")}</b>${PG.exp?`<span class="gend">Claim before ${esc(fmtDT(PG.exp))}</span>`:""}</div>
+    <p class="gs">🎁 Reserved for you with code <b>${esc(PG.code)}</b>${I.mode==="surprise"&&its.length>1?". You get 1 of these, picked at random:":". Comes free with this order:"}</p>
+    <div class="gl big">${its.length?its.map(g=>giftCard(g)).join(""):`<span class="gcard"><i aria-hidden="true">🎁</i><b>${esc(I.title||"Free Gift Set")}</b><em>FREE</em></span>`}</div></div>`}
+const preGiftHTML=(o,cust)=>o.preGift?`<div class="dsec"><h4>🎁 ${cust?"Your pre-launch gift":"Pre-launch gift to pack"} · ${esc(o.preGift.code||"")}</h4><div class="gl">${(o.preGift.items||[]).map(g=>giftChip(g)).join("")||giftChip({name:o.preGift.title||"Free Gift Set"})}</div>${o.preGift.mode==="surprise"&&o.preGift.pool>1?`<p class="note" style="margin:8px 0 0">Picked at random from ${o.preGift.pool} gifts.</p>`:""}</div>`:"";
+
 
 /* ================= ADMIN ================= */
 const A={sel:new Set(),lbl:null,lblPrev:"sample",rvPid:null,tab:"dashboard",nf:{type:"news",title:"",text:"",pid:"",code:"",until:""},dd:"today",vr:"today",dsig:"",filter:"all",od:"all",q:"",pq:"",pcat:"all",modal:null,np:null,bakeDay:null,openOrder:null,
@@ -4737,7 +4766,7 @@ function labelHTML(o,L){
     <div class="lbl-box lbl-to"><small>${del?"Ship to":"Pickup"}</small><div class="nm">${esc(o.customer.name)}</div><div class="ph">${esc(o.customer.phone)}</div>${del&&o.customer.address?`<div class="ad">${esc(o.customer.address)}</div>`:""}<div class="wh">${del?"DELIVER":"PICK UP"}: ${esc(fmtDay(o.day))} · ${esc(o.time)}</div></div>
     ${del?`<div class="lbl-box lbl-awb"><small>Courier: ${esc(o.courier||"—")} · Airway bill</small><div class="no">${esc(o.awb||"")}</div></div>`:""}
     <div class="lbl-box lbl-items"><small>Items</small><ul><li><b>Box of ${o.size}</b></li>${items}${ad}</ul></div>
-    ${o.gifts&&o.gifts.length?`<div class="lbl-box lbl-gift"><small>🎁 Free gift: pack it!</small><ul>${o.gifts.map(g=>`<li>${esc(g.name)}</li>`).join("")}</ul></div>`:""}
+    ${(o.gifts&&o.gifts.length)||o.preGift?`<div class="lbl-box lbl-gift"><small>🎁 Free gift: pack it!</small><ul>${[...(o.gifts||[]),...((o.preGift&&o.preGift.items)||[])].map(g=>`<li>${esc(g.name)}</li>`).join("")}</ul></div>`:""}
     ${notes?`<div class="lbl-note">${esc(notes)}</div>`:""}
     ${L.warnOn&&(L.warn1||L.warn2)?`<div class="lbl-warn">${esc(L.warn1||"")}${L.warn2?`<span>${esc(L.warn2)}</span>`:""}</div>`:""}
     <div class="lbl-f"><div class="lbl-tot">${money(o.total)}<span class="lbl-paid">${paid?"PAID":"UNPAID"}</span></div>${qr}</div></div>`;
@@ -5721,14 +5750,14 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 14:01 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 14:06 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
 /* --- Pre-launch (owner) --- */
 const PRA={list:null,loading:false,err:""};
 const preDT=ms=>{if(!(+ms>0))return "";const d=new Date(+ms),p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};
-async function preLoadList(){if(!SBH.on){PRA.list={count:DB.preRegs.length,max:DB.prelaunch.max,list:DB.preRegs.slice().reverse().map(r=>Object.assign({status:r.exp&&r.exp<Date.now()?"expired":"open"},r))};return}
+async function preLoadList(){if(!SBH.on){PRA.list={count:DB.preRegs.length,max:DB.prelaunch.max,list:DB.preRegs.slice().reverse().map(r=>Object.assign({status:r.used?"claimed":r.exp&&r.exp<Date.now()?"expired":"open",order:r.used||null},r))};return}
   if(PRA.loading)return;PRA.loading=true;try{PRA.list=await SBH.rpc("admin_prelaunch_list",{});PRA.err=""}catch(e){PRA.err=e.message;PRA.list={count:0,max:DB.prelaunch.max,list:[]}}PRA.loading=false;if(A.tab==="prelaunch"){const y=scrollY;renderAdmin();scrollTo(0,y)}}
 function viewPrelaunch(){
   const P=DB.prelaunch,on=!!P.on,L=PRA.list;if(L===null&&!PRA.loading)preLoadList();

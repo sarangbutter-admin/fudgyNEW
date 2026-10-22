@@ -150,6 +150,13 @@ Object.assign(window.DD_ID, {
 "Get directions": "Petunjuk arah", "Closed today": "Tutup hari ini", "Open now": "Buka sekarang", "Sign out": "Keluar"
 });
 Object.assign(window.DD_ID, {
+"PRE-LAUNCH GIFT": "HADIAH PRA-PELUNCURAN", "Pre-launch": "Pra-peluncuran", "Opening in": "Buka dalam", "DAYS": "HARI", "HRS": "JAM", "MIN": "MNT", "SEC": "DTK", "Full name": "Nama lengkap", "Email (optional)": "Email (opsional)",
+"🎁 Claim my free Gift Set": "🎁 Klaim Gift Set gratisku", "🎁 Claim my gift": "🎁 Klaim hadiahku", "🍪 Play while you wait": "🍪 Main sambil menunggu", "📋 Copy code": "📋 Salin kode", "💬 Save to my WhatsApp": "💬 Simpan ke WhatsApp-ku",
+"This phone remembers it for you. Ordering from another phone? Type this code in the coupon box.": "HP ini mengingatnya untukmu. Pesan dari HP lain? Ketik kode ini di kotak kupon.", "📸 Tip: take a screenshot of this page": "📸 Tips: screenshot halaman ini",
+"Everything below is yours:": "Semua di bawah ini untukmu:", "Your Free Gift Set": "Gift Set gratismu", "Something sweet is coming 🍪": "Sesuatu yang manis akan datang 🍪", "Follow us on Instagram": "Ikuti kami di Instagram", "Registration is closed.": "Pendaftaran sudah ditutup.",
+"Thank you for the amazing enthusiasm 💙 Stay tuned, more exciting events are coming soon.": "Terima kasih atas antusiasme yang luar biasa 💙 Nantikan acara seru lainnya segera.", "We open soon! The shop is not taking orders yet.": "Kami segera buka! Toko belum menerima pesanan.",
+"This gift code was already used.": "Kode hadiah ini sudah dipakai.", "This gift code has expired.": "Kode hadiah ini sudah kedaluwarsa.", "This gift code belongs to another WhatsApp number.": "Kode hadiah ini milik nomor WhatsApp lain.", "Code copied": "Kode tersalin",
+"You're already registered. Here's your code again.": "Kamu sudah terdaftar. Ini kodemu lagi.", "Your pre-launch gift": "Hadiah pra-peluncuranmu",
 "delidome home": "beranda delidome", "Baked fresh every morning. Build a box your way. Pickup or local delivery. Order by 8pm for next-day cookies": "Dipanggang segar setiap pagi. Buat kotak sesuai seleramu. Ambil sendiri atau antar lokal. Pesan sebelum jam 8 malam untuk kue besok",
 "👀 See what you may get": "👀 Lihat apa yang mungkin kamu dapat", "👀 See what you get": "👀 Lihat apa yang kamu dapat", "You get": "Kamu dapat", ", picked at random when you send your payment proof. It's confirmed once we verify your payment.": ", dipilih acak saat kamu mengirim bukti pembayaran. Dikonfirmasi setelah kami memverifikasi pembayaranmu.",
 "This gift comes with your box. It's confirmed once we verify your payment.": "Hadiah ini ikut dengan kotakmu. Dikonfirmasi setelah kami memverifikasi pembayaranmu.", "These gifts come with your box. It's confirmed once we verify your payment.": "Hadiah-hadiah ini ikut dengan kotakmu. Dikonfirmasi setelah kami memverifikasi pembayaranmu.",
@@ -169,6 +176,11 @@ const _TIME = "(\\d{1,2}(?::\\d\\d)?(?:\\s*(?:am|pm))?)";
 const _off = s => s.replace(/^(.+?) off$/, "potongan $1");
 window.DD_POST = s => s.replace(new RegExp("\\b" + _TIME + " to " + _TIME + "\\b", "gi"), (m, a, b) => _slot(a, b));
 window.DD_ID_PATTERNS = [
+  [/^Be one of the first (\d+) to register and get a FREE Gift Set on opening day\.$/, "Jadilah salah satu dari $1 orang pertama yang mendaftar dan dapatkan Gift Set GRATIS di hari pembukaan."],
+  [/^(\d+) of (\d+)$/, "$1 dari $2"], [/^Gift Sets left$/, "Gift Set tersisa"], [/^You're in, (.+)!$/, "Kamu terdaftar, $1!"], [/^You're #(\d+) of (\d+)\. Your Free Gift Set is waiting for you on opening day\.$/, "Kamu nomor #$1 dari $2. Gift Set gratismu menunggu di hari pembukaan."],
+  [/^All (\d+) Gift Sets are taken!$/, "Semua $1 Gift Set sudah habis!"], [/^⏳ Claim before (.+)$/, "⏳ Klaim sebelum $1"], [/^Claim before (.+)$/, "Klaim sebelum $1"], [/^Reserved for you with code$/, "Disimpan untukmu dengan kode"],
+  [/^🎁 Gift code added! Your (.+) is reserved\.$/, "🎁 Kode hadiah ditambahkan! $1 kamu sudah disimpan."], [/^Your gift code was not added: (.+)$/, (m, e) => "Kode hadiahmu tidak ditambahkan: " + _T(e)], [/^This gift code expired on (.+)\.$/, "Kode hadiah ini kedaluwarsa pada $1."],
+  [/^Picked at random from (\d+) gifts\.$/, "Dipilih acak dari $1 hadiah."],
   [/^(\d+) possible gifts?$/, "$1 kemungkinan hadiah"], [/^(\d+) free gifts? included$/, "Termasuk $1 hadiah gratis"],
   [/^No driver was free today\. We'll look for a courier again tomorrow from (.+)\.$/, (m, t) => "Belum ada pengemudi tersedia hari ini. Kami akan mencari kurir lagi besok mulai " + (/am|pm/i.test(t) ? _clock(t) : t) + "."],
   [/^No (premium|no-extra-cost) flavors left right now\. Switch to All\.$/, (m, k) => "Tidak ada rasa " + (k === "premium" ? "premium" : "tanpa biaya tambahan") + " tersisa saat ini. Pindah ke Semua."],

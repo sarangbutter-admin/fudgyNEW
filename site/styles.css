@@ -1360,3 +1360,4 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .prsw.on{border-color:#0A6B34;background:#E6F6EC}
 .pre-closed .pcd-n div{background:#FFE066;color:#000096;box-shadow:none}.pre-closed .pcd-n span{color:#000096}
 body.pre-on{background:transparent!important;padding-bottom:0!important}
+.pg-ap{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#FFE9A8;color:#000096;border-radius:14px;padding:8px 12px;margin-bottom:8px;font-size:14px}.pg-ap[hidden]{display:none}.pg-ap button{border:0;background:transparent;font-size:16px;cursor:pointer;color:inherit}
