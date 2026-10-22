@@ -1669,3 +1669,8 @@ body.pre-on{background:transparent!important;padding-bottom:0!important}
 @media (prefers-reduced-motion:reduce){.pgm-big{animation:none}}
 .pre-pv{display:grid;gap:6px;background:#0B0B45;color:#fff;border-radius:16px;padding:10px 12px;margin-top:10px;font-size:13px}.pre-pv div{display:flex;flex-wrap:wrap;gap:6px}.pre-pv button{border:1.5px solid #fff;background:transparent;color:#fff;border-radius:99px;padding:5px 12px;font:inherit;font-weight:700;cursor:pointer}.pre-pv button[aria-pressed="true"]{background:#FFE066;color:#000096;border-color:#FFE066}
 .pre-done{scroll-margin-top:14px}
+
+.pre-done{background:var(--dbx,#fff);color:var(--dink,inherit)}.pre-done h2{color:var(--dttl,var(--pacc,#000096))}
+.pre-done .pre-code{background:var(--dcbg,var(--pbg,#FFF4D6));color:var(--dcink,var(--pacc,#000096));border-color:var(--dcink,var(--pacc,#000096))}
+.pre-done img.pre-big{width:96px;height:96px;object-fit:contain}
+.pre-gifts{background:var(--gbx,#fff);color:var(--gink,inherit)}.pre-gifts h3{color:var(--gttl,var(--pacc,#000096))}.pre-gifts .pg-it{background:var(--gtile,var(--pbg,#FFF4D6))}

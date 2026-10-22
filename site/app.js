@@ -1837,9 +1837,9 @@ function defaultPre(){return {on:false,max:100,openAt:0,autoOpen:true,
   text:"Be one of the first {max} to register and get a FREE Gift Set on opening day.",cdLabel:"Opening in",cdSize:"M",cdStyle:"pulse",cdBg:"#000096",cdInk:"#FFE066",
   bg:"#FFF4D6",ink:"#0B0B45",accent:"#000096",btnBg:"#C8102E",btnInk:"#ffffff",spots:true,
   form:{btn:"🎁 Claim my free Gift Set",email:true},
-  gifts:{on:true,mode:"set",title:"Your Free Gift Set",items:[],fx:"float"},
+  gifts:{on:true,mode:"set",title:"Your Free Gift Set",items:[],fx:"float",icon:"🎁",setText:"Everything below is yours:",surText:"You'll get 1 of these, picked at random:",bg:"#ffffff",ink:"#0B0B45",title2:"#000096",tile:"#FFF4D6"},
   codePrefix:"GIFT-",expMode:"days",expDays:7,expAt:0,
-  done:{title:"You're in, {name}!",text:"You're #{rank} of {max}. Your Free Gift Set is waiting for you on opening day."},
+  done:{title:"You're in, {name}!",text:"You're #{rank} of {max}. Your Free Gift Set is waiting for you on opening day.",icon:"🎁",img:"",fx:"gifts",bg:"#ffffff",ink:"#0B0B45",title2:"#000096",codeBg:"#FFF4D6",codeInk:"#000096",note:"This phone remembers it for you. Ordering from another phone? Type this code in the coupon box.",tip:"📸 Tip: take a screenshot of this page",wa:true},
   closed:{icon:"🎉",img:"",fx:"confetti",title:"All {max} Gift Sets are taken!",text:"Thank you for the amazing enthusiasm 💙 Stay tuned, more exciting events are coming soon.",btn:"Follow us on Instagram",link:"",bg:"#000096",ink:"#ffffff"},
   fx:{on:true,mode:"float",imgs:[],n:8,speed:"normal",size:"M",op:55},
   game:{on:true,imgs:[],gold:"",burnt:"",sec:20,speed:"normal",tap:"crumble",bg:"#FFF4D6",end:"You caught {score} cookies!",share:"I caught {score} cookies 🍪 Join the {shop} pre-launch: {link}"}}}
@@ -1868,7 +1868,8 @@ function preCdHTML(P,dark){if(!(+P.openAt>0))return "";
   return `<div class="pcd pcd-${["S","M","L","XL"].includes(P.cdSize)?P.cdSize:"M"} pcs-${["still","pulse","flip","glow"].includes(P.cdStyle)?P.cdStyle:"pulse"}" data-pcd="${+P.openAt}" style="--pcb:${hexOk(P.cdBg,"#000096")};--pci:${hexOk(P.cdInk,"#FFE066")}">
     ${P.cdLabel?`<p class="pcd-l">${esc(P.cdLabel)}</p>`:""}<div class="pcd-n">${["d","h","m","s"].map((k,i)=>`<div><b data-pk="${k}">00</b><span>${["DAYS","HRS","MIN","SEC"][i]}</span></div>`).join("")}</div></div>`}
 function preGiftsHTML(P){const G=P.gifts;if(!G.on||!G.items.length)return "";
-  return `<section class="pre-gifts"><h3>🎁 ${esc(G.title||"Your Free Gift Set")}</h3><p>${G.mode==="surprise"?`You'll get <b>1 of these</b>, picked at random:`:`Everything below is yours:`}</p>
+  const sub=G.mode==="surprise"?G.surText:G.setText;
+  return `<section class="pre-gifts" style="--gbx:${hexOk(G.bg,"#ffffff")};--gink:${hexOk(G.ink,"#0B0B45")};--gttl:${hexOk(G.title2,"#000096")};--gtile:${hexOk(G.tile,"#FFF4D6")}"><h3>${G.icon?esc(G.icon)+" ":""}${esc(G.title||"Your Free Gift Set")}</h3>${sub?`<p>${esc(sub)}</p>`:""}
     <div class="pg-grid gfx-${["float","wiggle","spin","pulse","shine","none"].includes(G.fx)?G.fx:"float"}">${G.items.map((g,i)=>`<div class="pg-it" style="--d:${(i*.35).toFixed(2)}s">${g.img?`<img src="${esc(imgOk(g.img))}" alt="">`:`<i aria-hidden="true">🎁</i>`}<span>${esc(g.name||"")}</span></div>`).join("")}</div></section>`}
 function preFxHTML(P){const F=P.fx;if(!F.on)return "";const imgs=F.imgs.length?F.imgs:[COOKIE_SVG],n=Math.max(2,Math.min(20,+F.n||8)),sz={S:26,M:38,L:54}[F.size]||38,sp={slow:1.6,normal:1,fast:.6}[F.speed]||1;let h="";
   for(let i=0;i<n;i++){const fall=F.mode==="fall"||(F.mode==="both"&&i%2),s=sz*(.7+Math.random()*.6);
@@ -1885,18 +1886,18 @@ function renderPre(force){const v=preView();if(v.hidden)return;const P=DB.prelau
     body=`<section class="pre-closed" style="--cbg:${hexOk(C.bg,"#000096")};--cink:${hexOk(C.ink,"#ffffff")}">${C.fx!=="none"?preRain(C.fx==="gifts"?["🎁","🍪","🎁"]:["✨","🎉","✨","🎊"]):""}${ic}<h2>${esc(preFill(C.title))}</h2><p>${esc(preFill(C.text))}</p>${preCdHTML(P)}
       ${C.btn&&C.link?`<a class="pre-btn pre-btn-w" href="${esc(socialUrl(C.link)||"#")}" target="_blank" rel="noopener">${esc(C.btn)}</a>`:""}${P.game.on?`<button class="pre-btn pre-btn-y" type="button" data-pregame>🍪 Play while you wait</button>`:""}</section>`}
   else{
-    const reg=me?`<section class="pre-done" id="preForm">${preRain(["🎁","🍪","🎁"])}<div class="pre-big">🎁</div><h2>${esc(preFill(P.done.title,me))}</h2><p>${esc(preFill(P.done.text,me))}</p>
-        <div class="pre-code" data-notr>${esc(me.code)}</div><p class="pre-sm">This phone remembers it for you. Ordering from another phone? Type this code in the coupon box.</p>
-        <div class="pre-row"><button class="pre-btn pre-btn-l" type="button" data-precopy>📋 Copy code</button><a class="pre-btn pre-btn-wa" href="https://wa.me/?text=${encodeURIComponent(`My ${pg.name||"Delidome"} gift code: ${me.code}${me.exp?` (claim before ${fmtDT(me.exp)})`:""}`)}" target="_blank" rel="noopener">💬 Save to my WhatsApp</a></div>
-        ${me.exp?`<p class="pre-exp">⏳ Claim before ${esc(fmtDT(me.exp))}</p>`:""}<p class="pre-sm">📸 Tip: take a screenshot of this page</p></section>`
+    const D=P.done,reg=me?`<section class="pre-done" id="preForm" style="--dbx:${hexOk(D.bg,"#ffffff")};--dink:${hexOk(D.ink,"#0B0B45")};--dttl:${hexOk(D.title2,"#000096")};--dcbg:${hexOk(D.codeBg,"#FFF4D6")};--dcink:${hexOk(D.codeInk,"#000096")}">${D.fx==="none"?"":preRain(D.fx==="confetti"?["✨","🎉","✨","🎊"]:D.fx==="cookies"?["🍪","🍪","✨"]:["🎁","🍪","🎁"])}${D.img?`<img class="pre-big" src="${esc(imgOk(D.img))}" alt="">`:`<div class="pre-big">${esc(D.icon||"🎁")}</div>`}<h2>${esc(preFill(D.title,me))}</h2><p>${esc(preFill(D.text,me))}</p>
+        <div class="pre-code" data-notr>${esc(me.code)}</div>${D.note?`<p class="pre-sm">${esc(D.note)}</p>`:""}
+        <div class="pre-row"><button class="pre-btn pre-btn-l" type="button" data-precopy>📋 Copy code</button>${D.wa===false?"":`<a class="pre-btn pre-btn-wa" href="https://wa.me/?text=${encodeURIComponent(`My ${pg.name||"Delidome"} gift code: ${me.code}${me.exp?` (claim before ${fmtDT(me.exp)})`:""}`)}" target="_blank" rel="noopener">💬 Save to my WhatsApp</a>`}</div>
+        ${me.exp?`<p class="pre-exp">⏳ Claim before ${esc(fmtDT(me.exp))}</p>`:""}${D.tip?`<p class="pre-sm">${esc(D.tip)}</p>`:""}</section>`
       :`<form class="pre-form" id="preForm" novalidate><p class="pre-lead">${esc(preFill(P.text))}</p>
         ${P.spots!==false&&left!==null?`<div class="pre-spots">🔥 <b>${left} of ${st.max}</b> Gift Sets left<div class="pre-bar"><i style="width:${st.max?Math.round(left/st.max*100):0}%"></i></div></div>`:""}
         <input class="pre-in" id="prName" autocomplete="name" maxlength="80" placeholder="Full name" required>
         <input class="pre-in" id="prPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" placeholder="WhatsApp number" required>
         ${P.form.email!==false?`<input class="pre-in" id="prEmail" type="email" autocomplete="email" maxlength="120" placeholder="Email (optional)">`:""}
         ${PRE.err?`<p class="pre-err" role="alert">${esc(PRE.err)}</p>`:""}<button class="pre-btn" type="submit" ${PRE.busy?"disabled":""}>${PRE.busy?"Saving…":esc(P.form.btn||"Claim my free Gift Set")}</button></form>`;
-    body=`${me?reg+preCdHTML(P):""}<div class="dome" id="preDome"><div class="hm" aria-hidden="true"></div><div class="ho" aria-hidden="true"></div><p class="eyebrow"></p><h1></h1><p class="lede"></p><div class="hero-ctas"><a class="btn btn-white" href="#preForm" data-prego="form"></a><a class="btn btn-line" href="#preGame" data-prego="game"></a></div></div>
-      ${me?"":preCdHTML(P)+reg}${preGiftsHTML(P)}${P.game.on&&!me?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:P.game.on?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:""}`}
+    body=`<div class="dome" id="preDome"><div class="hm" aria-hidden="true"></div><div class="ho" aria-hidden="true"></div><p class="eyebrow"></p><h1></h1><p class="lede"></p><div class="hero-ctas"><a class="btn btn-white" href="#preForm" data-prego="form"></a><a class="btn btn-line" href="#preGame" data-prego="game"></a></div></div>
+      ${me?reg+preCdHTML(P):preCdHTML(P)+reg}${preGiftsHTML(P)}${P.game.on&&!me?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:P.game.on?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:""}`}
   const pv=preForced()?`<div class="pre-pv" data-notr><b>👁 Preview</b><span>Like a private window: nothing is saved and nobody is registered.</span><div>${[["form","Form"],["done","You're in"],["full","All taken"]].map(([k,l])=>`<button type="button" data-pvst="${k}" aria-pressed="${(k==="done"&&!!me)||(k==="full"&&full)||(k==="form"&&!me&&!full)}">${l}</button>`).join("")}<button type="button" data-pvgame>Game</button></div></div>`:"";
   v.innerHTML=`${preFxHTML(P)}<div class="pre-wrap">${pv}${top}${body}</div>`;
   const dome=v.querySelector("#preDome");if(dome){const h=JSON.parse(JSON.stringify(P.hero));if(!P.game.on)h.btn2="";if(me)h.btn1="";if(!h.bg)h.bg=pg.brand;heroFill(dome,h)}
@@ -2432,7 +2433,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 16:38 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 16:51 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
