@@ -41,12 +41,13 @@ const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-$
 const fromYmd = s => {const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
 const addDays = (d,n) => {const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()+n);return x};
 const today0 = () => {const n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate())};
-const fmtDay = s => fromYmd(s).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+const LOC = () => window.DDLOC ? window.DDLOC() : "en-US";
+const fmtDay = s => fromYmd(s).toLocaleDateString(LOC(),{weekday:"short",month:"short",day:"numeric"});
 const fmtHour = h => h===0?"12am":h<12?h+"am":h===12?"12pm":(h-12)+"pm";
-const fmtDT = ms => new Date(ms).toLocaleString("en-US",{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+const fmtDT = ms => new Date(ms).toLocaleString(LOC(),{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
 function fmtDur(ms){ms=Math.max(0,ms);const s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),x=s%60,p=n=>String(n).padStart(2,"0");return (d?d+"d ":"")+`${p(h)}:${p(m)}:${p(x)}`}
 function fmtAgo(ms){const m=Math.round((Date.now()-ms)/60000);if(m<1)return "just now";if(m<60)return m+" min ago";const h=Math.round(m/60);if(h<24)return h+" hr ago";return Math.round(h/24)+" d ago"}
-const fmtShort = ms => new Date(ms).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+const fmtShort = ms => new Date(ms).toLocaleDateString(LOC(),{month:"short",day:"numeric"});
 const starStr = n => "★".repeat(n)+"☆".repeat(5-n);
 const uid = () => Math.random().toString(36).slice(2,9);
 const newCode = () => "DD-"+Math.random().toString(36).slice(2,6).toUpperCase();
@@ -5872,6 +5873,7 @@ function route(){
     if(SBH.on&&(prev==="admin"||!SBH.loaded)){if(prev==="admin")SBH.leaveAdmin();else SBH.loadShop();return}
     trackVisit();closeDrawer();closeModal();closeReviews();expireOrders();sanitizeCart();renderBag();renderEditBar();renderStoreStatic();renderStore();if(location.hash==="#shop")window.scrollTo(0,0)}
 }
+addEventListener("ddlang",()=>{try{renderStoreStatic();renderStore();renderBag();renderEditBar()}catch(e){}});
 addEventListener("hashchange",route);
 {const so=$("#signOut");if(so)so.addEventListener("click",()=>SBH.signOut())}
 // browsers refuse to open data: pictures in a new tab, so open them as a blob instead

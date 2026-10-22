@@ -40,12 +40,13 @@ const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-$
 const fromYmd = s => {const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
 const addDays = (d,n) => {const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()+n);return x};
 const today0 = () => {const n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate())};
-const fmtDay = s => fromYmd(s).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+const LOC = () => window.DDLOC ? window.DDLOC() : "en-US";
+const fmtDay = s => fromYmd(s).toLocaleDateString(LOC(),{weekday:"short",month:"short",day:"numeric"});
 const fmtHour = h => h===0?"12am":h<12?h+"am":h===12?"12pm":(h-12)+"pm";
-const fmtDT = ms => new Date(ms).toLocaleString("en-US",{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+const fmtDT = ms => new Date(ms).toLocaleString(LOC(),{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
 function fmtDur(ms){ms=Math.max(0,ms);const s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),x=s%60,p=n=>String(n).padStart(2,"0");return (d?d+"d ":"")+`${p(h)}:${p(m)}:${p(x)}`}
 function fmtAgo(ms){const m=Math.round((Date.now()-ms)/60000);if(m<1)return "just now";if(m<60)return m+" min ago";const h=Math.round(m/60);if(h<24)return h+" hr ago";return Math.round(h/24)+" d ago"}
-const fmtShort = ms => new Date(ms).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+const fmtShort = ms => new Date(ms).toLocaleDateString(LOC(),{month:"short",day:"numeric"});
 const starStr = n => "★".repeat(n)+"☆".repeat(5-n);
 const uid = () => Math.random().toString(36).slice(2,9);
 const newCode = () => "DD-"+Math.random().toString(36).slice(2,6).toUpperCase();
@@ -2247,7 +2248,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-21 22:09 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 01:33 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
@@ -2259,6 +2260,7 @@ function route(){
   trackVisit();closeReviews();expireOrders();sanitizeCart();renderBag();renderEditBar();renderStoreStatic();renderStore();
   if(location.hash==="#shop")window.scrollTo(0,0);
 }
+addEventListener("ddlang",()=>{try{renderStoreStatic();renderStore();renderBag();renderEditBar()}catch(e){}});
 addEventListener("hashchange",route);
 
 // browsers refuse to open data: pictures in a new tab, so open them as a blob instead

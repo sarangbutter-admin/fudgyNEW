@@ -1265,3 +1265,15 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .hero-ctas:has(.hbz-A){width:100%;max-width:520px;margin-left:auto;margin-right:auto}
 .dome.btnfree .hero-ctas .btn.hbz-A{white-space:normal}
 .dome.framed{overflow:clip;min-height:auto}
+
+/* language switch (English / Bahasa Indonesia) */
+.top .wrap{position:relative}
+.langbtn{display:inline-flex;align-items:center;gap:6px;height:42px;padding:0 11px;border:2px solid var(--line);background:var(--white);color:var(--blue);border-radius:var(--r-pill);font:700 12px var(--body);cursor:pointer}
+.langbtn:hover{border-color:var(--blue)}
+.langbtn svg{width:22px;height:15px;border-radius:3px;flex:none;box-shadow:0 0 0 1px rgba(0,0,60,.15)}
+.langtip{position:absolute;z-index:60;top:calc(100% - 4px);right:8px;max-width:min(260px,calc(100vw - 24px));display:grid;gap:3px;background:#0B0B45;color:#fff;border-radius:16px;padding:10px 14px;font-size:12.5px;line-height:1.35;box-shadow:0 10px 30px rgba(0,0,60,.35);animation:tipin .35s ease-out both}
+@keyframes tipin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.langtip::before{content:"";position:absolute;top:-6px;right:26px;width:12px;height:12px;background:#0B0B45;transform:rotate(45deg);border-radius:2px}
+.langtip[hidden]{display:none}.langtip b{font-size:13px}
+@media (max-width:420px){.langbtn{height:34px;padding:0 8px;gap:4px;font-size:11px}.langbtn svg{width:18px;height:12px}}
+.top.hdc .langbtn{background:var(--ic-bg,var(--white));color:var(--ic-ink,var(--blue));border-color:var(--ic-line,var(--line))}

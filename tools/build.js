@@ -100,7 +100,7 @@ const toastEl=(adminBlock.match(/<div[^>]*id="toast"[^>]*><\/div>/)||[])[0];if(!
 let shopHtml=html.slice(0,aS)+toastEl+'\n'+html.slice(aE);
 shopHtml=shopHtml.replace(/\s*<a class="adminlink" href="#admin" aria-label="Admin">Admin<\/a>/,'').replace(/ <a href="#admin">Shop admin<\/a>/,'');
 wr('site/index.html',shopHtml);
-wr('admin-site/index.html',html.replace('<a class="btn btn-white btn-sm viewshop" href="#shop">View shop →</a>','<a class="btn btn-white btn-sm viewshop" id="viewShop" href="#" target="_blank" rel="noopener noreferrer" style="display:none">View shop ↗</a>').replace('<title>Delidome Cookie Boxes</title>','<title>Team sign in</title>\n<meta name="robots" content="noindex, nofollow">').replace(/<link rel="preconnect"[^>]*>\n?/g,''));
+wr('admin-site/index.html',html.replace('<script src="i18n-dict.js"></script>\n<script src="i18n.js"></script>\n','').replace(/\s*<button class="langbtn"[^>]*><\/button>\n\s*<div class="langtip"[^>]*><\/div>/,'').replace('<a class="btn btn-white btn-sm viewshop" href="#shop">View shop →</a>','<a class="btn btn-white btn-sm viewshop" id="viewShop" href="#" target="_blank" rel="noopener noreferrer" style="display:none">View shop ↗</a>').replace('<title>Delidome Cookie Boxes</title>','<title>Team sign in</title>\n<meta name="robots" content="noindex, nofollow">').replace(/<link rel="preconnect"[^>]*>\n?/g,''));
 fs.copyFileSync(R('src/styles.css'),R('admin-site/styles.css'));
 { // map library for the courier pin (shop only), copied as-is
   const cp=(d)=>{for(const f of fs.readdirSync(R('src/'+d),{withFileTypes:true})){if(f.isDirectory()){fs.mkdirSync(R('site/'+d+'/'+f.name),{recursive:true});cp(d+'/'+f.name)}else{fs.mkdirSync(R('site/'+d),{recursive:true});fs.copyFileSync(R('src/'+d+'/'+f.name),R('site/'+d+'/'+f.name))}}};
@@ -123,7 +123,7 @@ fs.copyFileSync(R('src/styles.css'),R('admin-site/styles.css'));
   let o=keep.filter(l=>!/^\/\*.*\b(admin|owner|sign-in|team|staff|activity|password|editor)\b.*\*\/$/i.test(l.trim())).join('\n').replace(/\.adminlink(?:::before)?\{[^}]*\}/g,'').replace(/and a shop admin \(sidebar \+ panels\) sharing one mock data store/,'');
   wr('site/styles.css',o);
 }
-for(const f of ['404.html','robots.txt']){fs.copyFileSync(R('src/'+f),R('site/'+f))}
+for(const f of ['404.html','robots.txt','i18n.js','i18n-dict.js']){fs.copyFileSync(R('src/'+f),R('site/'+f))}
 wr('site/config.js',rd('src/config.js').replace(/,\n  \/\/ team site only[^\n]*\n  shopUrl:[^\n]*\n/,'\n'));
 fs.copyFileSync(R('src/config.js'),R('admin-site/config.js'));
 wr('admin-site/robots.txt','User-agent: *\nDisallow: /\n');
