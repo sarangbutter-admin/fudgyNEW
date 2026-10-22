@@ -1288,3 +1288,10 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 @media (max-width:520px){.top .wrap{padding-inline:10px;gap:8px}.top.hbs-float .wrap,.top.hbs-pill .wrap{padding-inline:10px 8px}}
 @media (max-width:480px){.langbtn{height:34px;padding:0 7px;gap:4px;font-size:10.5px}.langbtn svg{width:18px;height:12px}.top .pill{padding:6px 6px 6px 10px;font-size:12.5px;gap:6px}}
 @media (max-width:380px){.langbtn b{display:none}.langbtn{width:34px;padding:0;justify-content:center}}
+
+/* gifts in the box: short teaser */
+.gteaser{display:flex;align-items:center;gap:10px;margin:2px 2px 0;font-size:13px;font-weight:600}
+.gtst{display:flex;flex:none}
+.gtst img,.gtst i{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--gb,#FFE066);margin-left:-10px;background:#fff;display:grid;place-items:center;font-style:normal;font-size:16px;box-shadow:0 2px 6px rgba(0,0,40,.15)}
+.gtst>:first-child{margin-left:0}
+.gtst i.more{background:var(--gi,#000096);color:#fff;font-size:12px;font-weight:800}

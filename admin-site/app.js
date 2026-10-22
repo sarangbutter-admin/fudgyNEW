@@ -747,14 +747,18 @@ function renderGiftHint(){
   el.hidden=false;
   el.innerHTML=`<span class="ic" aria-hidden="true">🎁</span><span class="t">${one?`Free gift with this box: ${esc(pl[0].gifts[0].name)}`:rnd?"Free surprise gift with this box!":"Free gifts with this box!"}</span><button class="gifthint-b" type="button" data-giftsee="${S.size}">See ${one?"gift":"gifts"} ›</button>`;
 }
+// how the gifts show in the box: a short teaser (default), every gift, or only the "See what you may get" button
+const GV_OPTS=[["teaser","Teaser only","A few small pictures and \"+more\". Customers tap the button to see all gifts."],["full","Full list","Every gift's name and picture."],["hidden","Hidden","Only the \"See what you may get\" button."]],GV_KEYS=GV_OPTS.map(x=>x[0]);
+function giftTeaser(gs,kind){const n=gs.length,sh=gs.slice(0,3),more=n-sh.length;
+  return `<div class="gteaser"><span class="gtst" aria-hidden="true">${sh.map(g=>{const im=g.img||giftImg(g.id);return im?`<img src="${esc(imgOk(im))}" alt="" loading="lazy">`:`<i>🎁</i>`}).join("")}${more>0?`<i class="more">+${more}</i>`:""}</span><span>${n} ${kind==="possible"?(n===1?"possible gift":"possible gifts"):(n===1?"free gift included":"free gifts included")}</span></div>`}
 function renderGiftBox(){
   const el=$("#giftBox");if(!el)return;const pl=giftPlan(S.size);
   if(!pl.length){el.hidden=true;el.innerHTML="";return}
   const cl=(v,d)=>/^(#[0-9a-f]{6}|transparent)$/i.test(v||"")?v:d;
   el.hidden=false;
-  el.innerHTML=pl.map(x=>{const t=x.sale,rnd=x.mode==="random";
+  el.innerHTML=pl.map(x=>{const t=x.sale,rnd=x.mode==="random",gv=GV_KEYS.includes(t.view)?t.view:"teaser";
     return `<div class="gb fx-${["shine","pulse","none"].includes(t.fx)?t.fx:"shine"}" style="--gb:${cl(t.bg,"#FFE066")};--gi:${cl(t.ink,"#000096")}"><div class="gh"><span class="gtag">${esc(t.tag||"Gifts")}</span><b class="gt">${esc(t.name)}</b><span class="gend">Ends in <span class="cd" data-exp="${t.end}">${fmtLeft(t.end-Date.now())}</span></span></div>
-      <p class="gs">🎁 FREE with your box of ${S.size}. No extra cost:</p><div class="gl big">${rnd?`<span class="gcard rnd"><i aria-hidden="true">🎲</i><b>${giftSurprise(x.limit)}</b><em>FREE</em></span><div class="gpool">${x.gifts.map(g=>giftChip(g," sm")).join("")}</div>`:x.gifts.map(g=>giftCard(g)).join("")}</div>
+      <p class="gs">🎁 FREE with your box of ${S.size}. No extra cost:</p><div class="gl big">${rnd?`<span class="gcard rnd"><i aria-hidden="true">🎲</i><b>${giftSurprise(x.limit)}</b><em>FREE</em></span>${gv==="full"?`<div class="gpool">${x.gifts.map(g=>giftChip(g," sm")).join("")}</div>`:gv==="teaser"?giftTeaser(x.gifts,"possible"):""}`:gv==="full"||x.gifts.length<2?(gv==="hidden"?"":x.gifts.map(g=>giftCard(g)).join("")):gv==="teaser"?giftTeaser(x.gifts,"included"):""}</div>
       <button class="gbsee" type="button" data-giftsee="${S.size}">👀 See what you ${rnd?"may get":"get"}</button><p class="gnote">${GIFT_NOTE}</p></div>`}).join("");
 }
 /* pop-up with the gifts a box size earns (opened from the strip under the box sizes and from the gift card) */
@@ -1837,7 +1841,7 @@ setInterval(()=>{tickCountdowns();if(Math.round(Date.now()/1000)%10===0)sweepOrd
 
 /* ================= ADMIN ================= */
 const A={sel:new Set(),lbl:null,lblPrev:"sample",rvPid:null,tab:"dashboard",nf:{type:"news",title:"",text:"",pid:"",code:"",until:""},dd:"today",vr:"today",dsig:"",filter:"all",od:"all",q:"",pq:"",pcat:"all",modal:null,np:null,bakeDay:null,openOrder:null,
-  draft:{kind:"discount",name:"Flash sale",type:"percent",value:20,appliesTo:"all",startMode:"now",startAt:"",durH:1,durM:0,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#000096",fx:"shine"}};
+  draft:{kind:"discount",name:"Flash sale",type:"percent",value:20,appliesTo:"all",startMode:"now",startAt:"",durH:1,durM:0,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#000096",fx:"shine",view:"teaser"}};
 // the page the team is on survives a refresh (and coming back later in the same browser)
 {const KEY="delidome-admin-tab",TABS="dashboard orders complaints customers products badges sales coupons boxes notify announcer hero landing marquee delivery labels settings security affiliates log team".split(" ");
   let cur="dashboard";try{const v=localStorage.getItem(KEY);if(TABS.includes(v))cur=v}catch(e){}
@@ -2929,12 +2933,12 @@ function reuseSale(id){
   const s=DB.sales.find(x=>x.id===id);if(!s)return;
   const mins=Math.max(5,Math.round((s.end-s.start)/60e3)),kind=isFD(s)?"freedelivery":isGift(s)?"gifts":"discount";
   const d={kind,name:s.name,type:s.type==="amount"?"amount":"percent",value:+s.value||20,appliesTo:String(s.appliesTo||"all"),startMode:"now",startAt:"",
-    durH:Math.min(168,Math.floor(mins/60)),durM:Math.min(168,Math.floor(mins/60))>=168?0:mins%60,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#000096",fx:"shine"};
+    durH:Math.min(168,Math.floor(mins/60)),durM:Math.min(168,Math.floor(mins/60))>=168?0:mins%60,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#000096",fx:"shine",view:"teaser"};
   if(kind==="gifts"){
     const gm={};
     d.gifts=(s.gifts||[]).map(g=>{const n=uid();gm[g.id]=n;return {id:n,name:g.name,img:g.img||"",stock:g.stock==null?"":g.stock}});
     d.rules=(s.rules||[]).map(r=>({id:uid(),from:r.from,to:r.to,limit:r.limit,mode:r.mode==="random"?"random":"specific",ids:(r.ids||[]).map(i=>gm[i]).filter(Boolean),custom:!(+r.from===+r.to&&DB.sizes.some(z=>z.n===+r.from))}));
-    Object.assign(d,{tag:s.tag||"Gifts",bg:s.bg||"#FFE066",ink:s.ink||"#000096",fx:s.fx||"shine"});
+    Object.assign(d,{tag:s.tag||"Gifts",bg:s.bg||"#FFE066",ink:s.ink||"#000096",fx:s.fx||"shine",view:GV_KEYS.includes(s.view)?s.view:"teaser"});
   }
   A.draft=d;renderAdmin();showNew("#saleForm",false);
   const f=$("#saleForm");if(f)f.scrollIntoView({behavior:"smooth",block:"start"});
@@ -2978,7 +2982,7 @@ function viewSales(){giftUsageLoad();
       ${list.length?`<div class="sales">${list.map(s=>{const st=saleStatus(s,now);return `<div class="sale ${st}">
         <div><span class="spill ${st}">${st==="live"?"Live":st==="scheduled"?"Scheduled":"Ended"}</span>${isFD(s)?` <span class="spill ${st}" style="background:#0A6B34;color:#fff">🚚 Free delivery</span>`:""}${isGift(s)?` <span class="spill ${st}" style="background:#C8102E;color:#fff">🎁 ${esc(s.tag||"Gifts")}</span>`:""}<h3>${esc(s.name)}</h3><p>${isGift(s)?giftSummary(s):`${saleOffText(s)} ${saleAppliesText(s)}`} · ${fmtDT(s.start)} to ${fmtDT(s.end)}</p></div>
         <div class="cd"><small>${st==="live"?"Ends in":st==="scheduled"?"Starts in":"Ended"}</small><span data-cd="${s.id}"></span></div>
-        <div class="acts">${st==="live"?`<button class="ghost" type="button" data-sale-end="${s.id}">End now</button><button class="ghost" type="button" data-sale-extend="${s.id}">+30 min</button>`:""}${st==="scheduled"?`<button class="ghost" type="button" data-sale-start="${s.id}">Start now</button>`:""}<button class="ghost" type="button" data-sale-reuse="${s.id}">${st==="ended"?"♻ Reuse / edit":"♻ Copy / edit"}</button><button class="danger" type="button" data-sale-del="${s.id}">Delete</button></div>
+        <div class="acts">${st==="live"?`<button class="ghost" type="button" data-sale-end="${s.id}">End now</button><button class="ghost" type="button" data-sale-extend="${s.id}">+30 min</button>`:""}${st==="scheduled"?`<button class="ghost" type="button" data-sale-start="${s.id}">Start now</button>`:""}${isGift(s)&&st!=="ended"?`<label class="gvsel">Gift pictures<select class="in" data-sale-view="${s.id}">${GV_OPTS.map(([k,l])=>`<option value="${k}" ${(GV_KEYS.includes(s.view)?s.view:"teaser")===k?"selected":""}>${l}</option>`).join("")}</select></label>`:""}<button class="ghost" type="button" data-sale-reuse="${s.id}">${st==="ended"?"♻ Reuse / edit":"♻ Copy / edit"}</button><button class="danger" type="button" data-sale-del="${s.id}">Delete</button></div>
       </div>`}).join("")}</div>`:`<div class="empty">No flash sales yet.</div>`}
     </section>
   </div>`;
@@ -2996,6 +3000,7 @@ function giftForm(D){
     <div class="grid2"><label class="af">Red tag text<input class="in" data-draft="tag" maxlength="14" value="${esc(D.tag)}"></label>
       <label class="af">Effect<select class="in" data-draft="fx">${[["shine","Shimmer"],["pulse","Pulse glow"],["none","None"]].map(([k,l])=>`<option value="${k}" ${D.fx===k?"selected":""}>${l}</option>`).join("")}</select></label></div>
     <div class="grid2">${col("Gift card background","bg")}${col("Gift card text color","ink")}</div>
+    <label class="af">Gift pictures in the customer's box<select class="in" data-draft="view">${GV_OPTS.map(([k,l,n])=>`<option value="${k}" ${(D.view||"teaser")===k?"selected":""}>${l} – ${n}</option>`).join("")}</select></label>
     <div class="af">1. Gift pool<p class="note" style="margin:0">Add every gift you may give away. Leave Stock empty for unlimited. The rules below choose which gifts each box size gets.</p></div>
     <div class="stack" style="gap:10px">${D.gifts.map((g,i)=>`<div class="pmcard" style="gap:8px">
       <div class="colin"><div style="width:56px;height:56px;border-radius:12px;background:#EEF0FF;display:grid;place-items:center;overflow:hidden;flex:none">${g.img?`<img src="${esc(g.img)}" alt="" style="width:100%;height:100%;object-fit:cover">`:`<span style="font-size:26px">🎁</span>`}</div>
@@ -3072,7 +3077,7 @@ function createSale(){
   if(D.startMode==="later"){start=new Date(D.startAt).getTime();if(!D.startAt||isNaN(start))return fail("Pick a start date and time.");if(start<Date.now()-60e3)return fail("The start time is in the past.")}
   if(gf){const ov=giftOverlap(D,start,start+mins*60e3);if(ov)return fail(ov);
     const gs=D.gifts.filter(g=>String(g.name||"").trim()),ok=new Set(gs.map(g=>g.id));
-    DB.sales.push({id:uid(),name:D.name.trim(),type:"gifts",value:0,appliesTo:"all",start,end:start+mins*60e3,tag:String(D.tag||"Gifts").trim().slice(0,14)||"Gifts",bg:D.bg,ink:D.ink,fx:D.fx,
+    DB.sales.push({id:uid(),name:D.name.trim(),type:"gifts",value:0,appliesTo:"all",start,end:start+mins*60e3,tag:String(D.tag||"Gifts").trim().slice(0,14)||"Gifts",bg:D.bg,ink:D.ink,fx:D.fx,view:GV_KEYS.includes(D.view)?D.view:"teaser",
       gifts:gs.map(g=>({id:g.id,name:String(g.name).trim().slice(0,40),img:g.img||"",stock:g.stock===""||g.stock==null?null:Math.max(0,Math.round(+g.stock)||0)})),
       rules:D.rules.map(r=>({id:r.id,from:Math.round(+r.from),to:Math.round(+r.to),limit:Math.max(1,Math.min(5,Math.round(+r.limit)||1)),mode:r.mode==="random"?"random":"specific",ids:(r.ids||[]).filter(id=>ok.has(id))}))})}
   else DB.sales.push({id:uid(),name:D.name.trim(),type:fd?"freedelivery":D.type,value:fd?0:val,appliesTo:D.appliesTo,start,end:start+mins*60e3});
@@ -3933,6 +3938,7 @@ am.addEventListener("change",e=>{
   if(el.dataset.statusFor){setOrderStatus(el.dataset.statusFor,el.value);return}
   if(el.dataset.move){moveProduct(el.dataset.move,el.value);return}
   if(el.dataset.upload){uploadPhoto(el.dataset.upload,el.files[0],el.closest(".upl"));return}
+  if(el.dataset.saleView){const s=DB.sales.find(x=>x.id===el.dataset.saleView);if(s&&GV_KEYS.includes(el.value)){s.view=el.value;saveDB();toast("Gift pictures: "+GV_OPTS.find(x=>x[0]===el.value)[1])}return}
   if(el.dataset.draft&&el.tagName==="SELECT"){A.draft[el.dataset.draft]=el.value;updatePreview();return}
   if(el.dataset.slotsel!==undefined){const x=DB.settings.slots[+el.dataset.slotsel];if(x&&!DB.settings.slots.some(y=>y.t===el.value)){x.t=el.value;slotSync();toast("Saved")}renderAdmin();return}
   if(el.dataset.sloton!==undefined){const x=DB.settings.slots[+el.dataset.sloton];if(x){if(!el.checked&&DB.settings.slots.filter(y=>y.on).length<2){el.checked=true;toast("Keep at least one time slot on.");return}x.on=el.checked;slotSync();toast("Saved")}return}
@@ -5605,7 +5611,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 08:37 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 09:31 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

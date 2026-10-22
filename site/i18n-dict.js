@@ -169,6 +169,7 @@ const _TIME = "(\\d{1,2}(?::\\d\\d)?(?:\\s*(?:am|pm))?)";
 const _off = s => s.replace(/^(.+?) off$/, "potongan $1");
 window.DD_POST = s => s.replace(new RegExp("\\b" + _TIME + " to " + _TIME + "\\b", "gi"), (m, a, b) => _slot(a, b));
 window.DD_ID_PATTERNS = [
+  [/^(\d+) possible gifts?$/, "$1 kemungkinan hadiah"], [/^(\d+) free gifts? included$/, "Termasuk $1 hadiah gratis"],
   [/^No driver was free today\. We'll look for a courier again tomorrow from (.+)\.$/, (m, t) => "Belum ada pengemudi tersedia hari ini. Kami akan mencari kurir lagi besok mulai " + (/am|pm/i.test(t) ? _clock(t) : t) + "."],
   [/^No (premium|no-extra-cost) flavors left right now\. Switch to All\.$/, (m, k) => "Tidak ada rasa " + (k === "premium" ? "premium" : "tanpa biaya tambahan") + " tersisa saat ini. Pindah ke Semua."],
   [/^Not enough (premium|no-extra-cost) flavors left to fill the whole box\. Switch to All for more\.$/, (m, k) => "Rasa " + (k === "premium" ? "premium" : "tanpa biaya tambahan") + " tidak cukup untuk mengisi seluruh kotak. Pindah ke Semua untuk lebih banyak."],

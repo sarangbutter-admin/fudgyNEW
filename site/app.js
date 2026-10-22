@@ -734,14 +734,18 @@ function renderGiftHint(){
   el.hidden=false;
   el.innerHTML=`<span class="ic" aria-hidden="true">🎁</span><span class="t">${one?`Free gift with this box: ${esc(pl[0].gifts[0].name)}`:rnd?"Free surprise gift with this box!":"Free gifts with this box!"}</span><button class="gifthint-b" type="button" data-giftsee="${S.size}">See ${one?"gift":"gifts"} ›</button>`;
 }
+// how the gifts show in the box: a short teaser (default), every gift, or only the "See what you may get" button
+const GV_OPTS=[["teaser","Teaser only","A few small pictures and \"+more\". Customers tap the button to see all gifts."],["full","Full list","Every gift's name and picture."],["hidden","Hidden","Only the \"See what you may get\" button."]],GV_KEYS=GV_OPTS.map(x=>x[0]);
+function giftTeaser(gs,kind){const n=gs.length,sh=gs.slice(0,3),more=n-sh.length;
+  return `<div class="gteaser"><span class="gtst" aria-hidden="true">${sh.map(g=>{const im=g.img||giftImg(g.id);return im?`<img src="${esc(imgOk(im))}" alt="" loading="lazy">`:`<i>🎁</i>`}).join("")}${more>0?`<i class="more">+${more}</i>`:""}</span><span>${n} ${kind==="possible"?(n===1?"possible gift":"possible gifts"):(n===1?"free gift included":"free gifts included")}</span></div>`}
 function renderGiftBox(){
   const el=$("#giftBox");if(!el)return;const pl=giftPlan(S.size);
   if(!pl.length){el.hidden=true;el.innerHTML="";return}
   const cl=(v,d)=>/^(#[0-9a-f]{6}|transparent)$/i.test(v||"")?v:d;
   el.hidden=false;
-  el.innerHTML=pl.map(x=>{const t=x.sale,rnd=x.mode==="random";
+  el.innerHTML=pl.map(x=>{const t=x.sale,rnd=x.mode==="random",gv=GV_KEYS.includes(t.view)?t.view:"teaser";
     return `<div class="gb fx-${["shine","pulse","none"].includes(t.fx)?t.fx:"shine"}" style="--gb:${cl(t.bg,"#FFE066")};--gi:${cl(t.ink,"#000096")}"><div class="gh"><span class="gtag">${esc(t.tag||"Gifts")}</span><b class="gt">${esc(t.name)}</b><span class="gend">Ends in <span class="cd" data-exp="${t.end}">${fmtLeft(t.end-Date.now())}</span></span></div>
-      <p class="gs">🎁 FREE with your box of ${S.size}. No extra cost:</p><div class="gl big">${rnd?`<span class="gcard rnd"><i aria-hidden="true">🎲</i><b>${giftSurprise(x.limit)}</b><em>FREE</em></span><div class="gpool">${x.gifts.map(g=>giftChip(g," sm")).join("")}</div>`:x.gifts.map(g=>giftCard(g)).join("")}</div>
+      <p class="gs">🎁 FREE with your box of ${S.size}. No extra cost:</p><div class="gl big">${rnd?`<span class="gcard rnd"><i aria-hidden="true">🎲</i><b>${giftSurprise(x.limit)}</b><em>FREE</em></span>${gv==="full"?`<div class="gpool">${x.gifts.map(g=>giftChip(g," sm")).join("")}</div>`:gv==="teaser"?giftTeaser(x.gifts,"possible"):""}`:gv==="full"||x.gifts.length<2?(gv==="hidden"?"":x.gifts.map(g=>giftCard(g)).join("")):gv==="teaser"?giftTeaser(x.gifts,"included"):""}</div>
       <button class="gbsee" type="button" data-giftsee="${S.size}">👀 See what you ${rnd?"may get":"get"}</button><p class="gnote">${GIFT_NOTE}</p></div>`}).join("");
 }
 /* pop-up with the gifts a box size earns (opened from the strip under the box sizes and from the gift card) */
@@ -2248,7 +2252,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 08:37 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 09:31 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
