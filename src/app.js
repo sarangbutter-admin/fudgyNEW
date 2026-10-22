@@ -5808,7 +5808,7 @@ am.addEventListener("click",async e=>{if(A.tab!=="affiliates")return;const b=e.t
   if(d.afnew!==undefined){AF.form={rate:10,status:"active"};AF.ferr="";renderAdmin();showNew("#afForm")}
   else if(d.afcancel!==undefined){AF.form=null;renderAdmin()}
   else if(d.afsave!==undefined)affSave();
-  else if(d.afflt){AF.afs=d.afflt;renderAdmin()}
+  else if(d.afflt){const fromAlert=!!b.closest(".afalert");AF.afs=d.afflt;renderAdmin();if(fromAlert)requestAnimationFrame(()=>{const c=document.querySelector('.fchip[data-afflt][aria-pressed="true"]');c&&c.scrollIntoView({block:"start",behavior:"smooth"})})}
   else if(d.afedit){const x=AF.list.find(y=>y.id===d.afedit);if(x){AF.form={id:x.id,username:x.username,name:x.name,phone:x.phone,code:x.code,rate:x.rate,coupon:x.coupon,status:x.status,note:x.note};AF.ferr="";renderAdmin();showNew("#afForm")}}
   else if(d.afst){const [id,st]=d.afst.split("|"),x=AF.list.find(y=>y.id===id);if(!x)return;
     const go=async()=>{try{await SBH.rpc("admin_aff_save",{p:{id:x.id,name:x.name,phone:x.phone,code:x.code,rate:x.rate,coupon:x.coupon,status:st,note:x.note}});toast(st==="active"?"Affiliator activated":st==="paused"?"Affiliator paused":"Affiliator switched off");affLoadList()}catch(er){toast(er.message)}};
