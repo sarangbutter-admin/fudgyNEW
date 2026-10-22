@@ -1310,6 +1310,7 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 .pre-top .pre-mk{display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center}.pre-top .pre-mk img,.pre-top .pre-mk svg{max-width:34px;max-height:34px;border-radius:8px}
 .pre-top .langbtn{margin-left:auto}
 #preView .dome{margin:0}
+#preView .dome.framed{margin:0 auto;justify-self:center}
 #preView .hero-ctas .btn{cursor:pointer}
 .pcd{display:grid;justify-items:center;gap:6px}.pcd-l{margin:0;font-weight:800;color:var(--pacc,#000096)}
 .pcd-n{display:flex;gap:8px;justify-content:center}.pcd-n div{background:var(--pcb,#000096);color:var(--pci,#FFE066);border-radius:14px;min-width:62px;padding:8px 6px;text-align:center}
