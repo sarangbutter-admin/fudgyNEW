@@ -1952,6 +1952,46 @@ async function preSubmit(e){if(e.target.id!=="preForm")return;e.preventDefault()
   if(PRE.st&&!r.again)PRE.st.count=(PRE.st.count||0)+1;
   renderPre(true);scrollTo({top:0,behavior:"smooth"});if(r.again)toast("You're already registered. Here's your code again.")}
 addEventListener("ddlang",()=>{if(!preView().hidden)renderPre(true)});
+/* pre-launch mini game "Catch the cookies": runs only on the visitor's phone (no server calls while playing) */
+const PGM={run:false,score:0,best:0,t:0,raf:0,cks:[],combo:0,last:0,acc:0,lt:0};
+try{PGM.best=+localStorage.getItem("delidome-game-best")||0}catch(e){}
+window.preGameStart=function(){const G=DB.prelaunch.game;let ov=document.getElementById("preGame");
+  if(!ov){ov=document.createElement("div");ov.id="preGame";ov.setAttribute("role","dialog");ov.setAttribute("aria-label","Catch the cookies");document.body.appendChild(ov);
+    ov.addEventListener("pointerdown",pgmTap);ov.addEventListener("click",e=>{const b=e.target.closest("button,a");if(!b)return;const d=b.dataset;
+      if(d.pgmgo!==undefined)pgmPlay();else if(d.pgmx!==undefined)pgmClose()})}
+  ov.style.setProperty("--gbg",hexOk(G.bg,"#FFF4D6"));ov.hidden=false;document.body.style.overflow="hidden";pgmIntro()};
+function pgmIntro(){const ov=document.getElementById("preGame");
+  ov.innerHTML=`<div class="pgm-card"><button class="pgm-x" type="button" data-pgmx aria-label="Close">✕</button><div class="pgm-big">🍪</div><h2>Catch the cookies!</h2><p>Tap them before they fall. ✨ Golden +5 · burnt −2</p>${PGM.best?`<p class="pgm-best">Best: <b>${PGM.best}</b></p>`:""}<button class="pre-btn" type="button" data-pgmgo>▶ Play</button></div>`}
+function pgmPlay(){const ov=document.getElementById("preGame"),G=DB.prelaunch.game;cancelAnimationFrame(PGM.raf);
+  ov.innerHTML=`<div class="pgm-stage" id="pgmStage"><div class="pgm-hud"><span>🍪 <b id="pgmScore">0</b></span><span class="pgm-tm">⏱ <b id="pgmTime">${+G.sec||20}</b>s</span><button class="pgm-x2" type="button" data-pgmx aria-label="Close">✕</button></div><div class="pgm-combo" id="pgmCombo"></div></div>`;
+  PGM.cks=[];PGM.score=0;PGM.combo=0;PGM.last=0;PGM.acc=0;PGM.lt=0;PGM.run=true;PGM.end=performance.now()+Math.max(5,Math.min(120,+G.sec||20))*1000;PGM.raf=requestAnimationFrame(pgmLoop)}
+function pgmImg(kind){const G=DB.prelaunch.game,list=G.imgs.length?G.imgs:(DB.prelaunch.fx.imgs.length?DB.prelaunch.fx.imgs:[COOKIE_SVG]);
+  if(kind==="gold")return G.gold?imgOk(G.gold):"";if(kind==="burnt")return G.burnt?imgOk(G.burnt):"";const u=list[Math.floor(Math.random()*list.length)];return u===COOKIE_SVG?u:imgOk(u)}
+function pgmSpawn(st){const r=Math.random(),kind=r<.08?"gold":r<.17?"burnt":"",src=pgmImg(kind)||pgmImg(""),e=document.createElement("i"),W=st.clientWidth,sz=Math.max(48,Math.min(78,W/6));
+  e.className="pgm-ck"+(kind?" "+kind+(kind==="gold"&&DB.prelaunch.game.gold?" own":kind==="burnt"&&DB.prelaunch.game.burnt?" own":""):"");e.innerHTML=`<img src="${esc(src)}" alt="" draggable="false">`;e.style.width=e.style.height=sz+"px";st.appendChild(e);
+  const sp={slow:.7,normal:1,fast:1.4}[DB.prelaunch.game.speed]||1;PGM.cks.push({e,kind,x:Math.random()*(W-sz),y:-sz,s:sz,v:(st.clientHeight*.28+Math.random()*st.clientHeight*.25)*sp,w:4+Math.random()*10,ph:Math.random()*6})}
+function pgmLoop(ts){const st=document.getElementById("pgmStage");if(!st||!PGM.run)return;const dt=Math.min(.05,(ts-(PGM.lt||ts))/1000);PGM.lt=ts;
+  PGM.acc+=dt;const every={slow:.62,normal:.46,fast:.34}[DB.prelaunch.game.speed]||.46;if(PGM.acc>every){PGM.acc=0;pgmSpawn(st)}
+  PGM.cks.forEach(c=>{if(c.dead)return;c.y+=c.v*dt;c.ph+=dt*4;c.e.style.transform=`translate(${c.x+Math.sin(c.ph)*c.w}px,${c.y}px) rotate(${Math.sin(c.ph)*18}deg)`;if(c.y>st.clientHeight){c.dead=1;c.e.remove()}});
+  PGM.cks=PGM.cks.filter(c=>!c.dead);
+  const left=Math.max(0,Math.ceil((PGM.end-ts)/1000)),tm=document.getElementById("pgmTime");if(tm&&tm.textContent!==String(left))tm.textContent=left;
+  if(ts>=PGM.end){pgmOver();return}PGM.raf=requestAnimationFrame(pgmLoop)}
+function pgmTap(ev){if(!PGM.run)return;const st=document.getElementById("pgmStage");if(!st)return;const r=st.getBoundingClientRect(),x=ev.clientX-r.left,y=ev.clientY-r.top;
+  const c=PGM.cks.find(c=>!c.dead&&Math.abs(c.x+Math.sin(c.ph)*c.w+c.s/2-x)<c.s*.62&&Math.abs(c.y+c.s/2-y)<c.s*.62);if(!c)return;ev.preventDefault();c.dead=1;c.e.remove();
+  const now=performance.now();PGM.combo=now-PGM.last<750?PGM.combo+1:1;PGM.last=now;const pts=c.kind==="gold"?5:c.kind==="burnt"?-2:(PGM.combo>=6?3:PGM.combo>=3?2:1);PGM.score=Math.max(0,PGM.score+pts);
+  document.getElementById("pgmScore").textContent=PGM.score;try{if(navigator.vibrate)navigator.vibrate(c.kind==="burnt"?[30,40,30]:15)}catch(e){}
+  const fx=DB.prelaunch.game.tap,cx=c.x+Math.sin(c.ph)*c.w+c.s/2,cy=c.y+c.s/2;
+  for(let i=0;i<(fx==="crumble"?10:8);i++){const k=document.createElement("i");k.className="pgm-p pgm-"+(fx==="sparkle"?"sp":fx==="hearts"?"ht":"cr")+(c.kind?" "+c.kind:"");k.style.left=cx+"px";k.style.top=cy+"px";k.style.setProperty("--dx",(Math.random()*110-55)+"px");k.style.setProperty("--dy",(Math.random()*110-55)+"px");if(fx==="hearts")k.textContent="💛";if(fx==="sparkle")k.textContent="✨";st.appendChild(k);setTimeout(()=>k.remove(),650)}
+  const p=document.createElement("i");p.className="pgm-pop"+(pts<0?" neg":"");p.textContent=(pts>0?"+":"")+pts+(c.kind==="gold"?" ✨":"");p.style.left=(cx-14)+"px";p.style.top=(cy-24)+"px";st.appendChild(p);setTimeout(()=>p.remove(),800);
+  if(PGM.combo===3||PGM.combo===6){const cb=document.getElementById("pgmCombo");cb.textContent=PGM.combo===3?"x2 combo!":"🔥 x3!";cb.classList.remove("on");void cb.offsetWidth;cb.classList.add("on")}}
+function pgmOver(){PGM.run=false;cancelAnimationFrame(PGM.raf);const G=DB.prelaunch.game,best=PGM.score>PGM.best;if(best){PGM.best=PGM.score;try{localStorage.setItem("delidome-game-best",PGM.best)}catch(e){}}
+  const link=location.origin+location.pathname,txt=preFill(G.share).replace(/\{score\}/g,PGM.score).replace(/\{link\}/g,link);
+  document.getElementById("preGame").innerHTML=`<div class="pgm-card"><button class="pgm-x" type="button" data-pgmx aria-label="Close">✕</button><div class="pgm-big">🏆</div><h2>${esc(preFill(G.end).replace(/\{score\}/g,PGM.score))}</h2><p>${best?"🎉 New best score!":`Best: <b>${PGM.best}</b>`}</p>${PGM.score>=10?`<p class="pgm-badge">🏅 Cookie Catcher</p>`:""}
+    <button class="pre-btn" type="button" data-pgmgo>↻ Play again</button><a class="pre-btn pre-btn-wa" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">💬 Share my score</a></div>`}
+function pgmClose(){PGM.run=false;cancelAnimationFrame(PGM.raf);const ov=document.getElementById("preGame");if(ov){ov.hidden=true;ov.innerHTML=""}document.body.style.overflow=""}
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&PGM.run){PGM.run=false;cancelAnimationFrame(PGM.raf);const ov=document.getElementById("preGame");if(ov&&!ov.hidden)pgmIntro()}});
+addEventListener("keydown",e=>{if(e.key==="Escape"){const ov=document.getElementById("preGame");if(ov&&!ov.hidden)pgmClose()}});
+
 /* pre-launch gift code in the shop (after opening): remembered on the phone that registered, or typed in the coupon box.
    It shows as a gift panel in the box and a line in checkout; the server attaches it to the order right after it is placed. */
 const PG_KEY="delidome-pregift-v1",PG={code:null,info:null,exp:null,checked:false};
@@ -5816,7 +5856,7 @@ function affRender(){let v=document.getElementById("affView");
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 14:09 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-22 14:10 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
@@ -5872,6 +5912,12 @@ function viewPrelaunch(){
     <div class="af" style="margin-top:8px">Your cookie pictures (up to 8, a cookie drawing is used if you add none)${thumbs("fx.imgs",8)}</div>
     <div class="grid3" style="margin-top:8px"><label class="af">How many: ${+P.fx.n||8}<input type="range" min="2" max="20" value="${+P.fx.n||8}" data-pre="fx.n" data-prenum="1" data-prerr="1"></label><div class="af">Speed${chips("fx.speed",[["slow","Slow"],["normal","Normal"],["fast","Fast"]])}</div><div class="af">Size${chips("fx.size",[["S","S"],["M","M"],["L","L"]])}</div></div>
     <label class="af" style="margin-top:8px">How visible: ${+P.fx.op||55}%<input type="range" min="10" max="100" step="5" value="${+P.fx.op||55}" data-pre="fx.op" data-prenum="1" data-prerr="1"></label></section>
+  <section class="panel"><h2>🎮 Mini game "Catch the cookies"</h2>${sw("game.on","Show the \"Play while you wait\" game (it runs on the visitor's phone only, no server cost)")}
+    <div class="af" style="margin-top:8px">Game cookies (up to 8; your page cookies are used if you add none)${thumbs("game.imgs",8)}</div>
+    <div class="grid2" style="margin-top:8px"><div class="af">Golden cookie (+5, a gold glow is used if empty)<div class="prth">${preGet("game.gold")?`<span><img src="${esc(imgOk(preGet("game.gold")))}" alt=""><button class="ghost sm" type="button" data-preclr="game.gold" aria-label="Remove">✕</button></span>`:`<label class="ghost mqbtn">+ Upload<input type="file" accept="image/*" hidden data-preup="game.gold"></label>`}</div></div><div class="af">Burnt cookie (−2, a dark cookie is used if empty)<div class="prth">${preGet("game.burnt")?`<span><img src="${esc(imgOk(preGet("game.burnt")))}" alt=""><button class="ghost sm" type="button" data-preclr="game.burnt" aria-label="Remove">✕</button></span>`:`<label class="ghost mqbtn">+ Upload<input type="file" accept="image/*" hidden data-preup="game.burnt"></label>`}</div></div></div>
+    <div class="grid3" style="margin-top:8px"><label class="af">Round length (seconds)<input class="in" type="number" min="5" max="120" data-pre="game.sec" data-prenum="1" value="${+P.game.sec||20}"></label><div class="af">Speed${chips("game.speed",[["slow","Slow"],["normal","Normal"],["fast","Fast"]])}</div><div class="af">Tap effect${chips("game.tap",[["crumble","Crumble"],["sparkle","Sparkle"],["hearts","Hearts"]])}</div></div>
+    <div class="grid2" style="margin-top:8px">${col("Game background (buttercream by default)","game.bg","#FFF4D6")}${inp("End text ({score})","game.end",{max:80})}</div>
+    ${inp("Share text ({score}, {shop}, {link})","game.share",{rows:2,max:200})}</section>
   <section class="panel"><div class="phead"><div><h2>📋 Registrations${L?` · ${L.count} / ${L.max}`:""}</h2></div><div class="colin" style="gap:8px"><button class="ghost" type="button" data-precsv ${L&&L.list.length?"":"disabled"}>⬇ Export CSV</button><button class="ghost" type="button" data-prereload>Refresh</button></div></div>
     ${PRA.err?`<p class="err">${esc(PRA.err)}</p>`:""}
     ${L===null?`<div class="empty">Loading…</div>`:L.list.length?`<div class="prtbl"><div class="prh"><span>#</span><span>Name</span><span>WhatsApp</span><span>Code</span><span>Status</span><span></span></div>${L.list.map(r=>`<div><span>${r.rank}</span><span>${esc(r.name)}</span><span>${esc(r.phone)}</span><span><b>${esc(r.code)}</b></span><span>${st(r.status)}${r.order?` · ${esc(r.order)}`:""}</span><span><a class="ghost sm" href="${esc(waLink({customer:{phone:r.phone}},preMsg(r)))}" target="_blank" rel="noopener">💬</a></span></div>`).join("")}</div>`:`<div class="empty">Nobody has registered yet.</div>`}

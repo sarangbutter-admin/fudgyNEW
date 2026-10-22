@@ -150,7 +150,7 @@ Object.assign(window.DD_ID, {
 "Get directions": "Petunjuk arah", "Closed today": "Tutup hari ini", "Open now": "Buka sekarang", "Sign out": "Keluar"
 });
 Object.assign(window.DD_ID, {
-"PRE-LAUNCH GIFT": "HADIAH PRA-PELUNCURAN", "Pre-launch": "Pra-peluncuran", "Opening in": "Buka dalam", "DAYS": "HARI", "HRS": "JAM", "MIN": "MNT", "SEC": "DTK", "Full name": "Nama lengkap", "Email (optional)": "Email (opsional)",
+"PRE-LAUNCH GIFT": "HADIAH PRA-PELUNCURAN", "Catch the cookies!": "Tangkap kuenya!", "Tap them before they fall. ✨ Golden +5 · burnt −2": "Ketuk sebelum jatuh. ✨ Emas +5 · gosong −2", "▶ Play": "▶ Main", "↻ Play again": "↻ Main lagi", "💬 Share my score": "💬 Bagikan skorku", "🎉 New best score!": "🎉 Skor terbaik baru!", "🏅 Cookie Catcher": "🏅 Penangkap Kue", "x2 combo!": "kombo x2!", "Pre-launch": "Pra-peluncuran", "Opening in": "Buka dalam", "DAYS": "HARI", "HRS": "JAM", "MIN": "MNT", "SEC": "DTK", "Full name": "Nama lengkap", "Email (optional)": "Email (opsional)",
 "🎁 Claim my free Gift Set": "🎁 Klaim Gift Set gratisku", "🎁 Claim my gift": "🎁 Klaim hadiahku", "🍪 Play while you wait": "🍪 Main sambil menunggu", "📋 Copy code": "📋 Salin kode", "💬 Save to my WhatsApp": "💬 Simpan ke WhatsApp-ku",
 "This phone remembers it for you. Ordering from another phone? Type this code in the coupon box.": "HP ini mengingatnya untukmu. Pesan dari HP lain? Ketik kode ini di kotak kupon.", "📸 Tip: take a screenshot of this page": "📸 Tips: screenshot halaman ini",
 "Everything below is yours:": "Semua di bawah ini untukmu:", "Your Free Gift Set": "Gift Set gratismu", "Something sweet is coming 🍪": "Sesuatu yang manis akan datang 🍪", "Follow us on Instagram": "Ikuti kami di Instagram", "Registration is closed.": "Pendaftaran sudah ditutup.",
@@ -176,6 +176,7 @@ const _TIME = "(\\d{1,2}(?::\\d\\d)?(?:\\s*(?:am|pm))?)";
 const _off = s => s.replace(/^(.+?) off$/, "potongan $1");
 window.DD_POST = s => s.replace(new RegExp("\\b" + _TIME + " to " + _TIME + "\\b", "gi"), (m, a, b) => _slot(a, b));
 window.DD_ID_PATTERNS = [
+  [/^You caught (\d+) cookies!$/, "Kamu menangkap $1 kue!"], [/^Best: (\d+)$/, "Terbaik: $1"],
   [/^Be one of the first (\d+) to register and get a FREE Gift Set on opening day\.$/, "Jadilah salah satu dari $1 orang pertama yang mendaftar dan dapatkan Gift Set GRATIS di hari pembukaan."],
   [/^(\d+) of (\d+)$/, "$1 dari $2"], [/^Gift Sets left$/, "Gift Set tersisa"], [/^You're in, (.+)!$/, "Kamu terdaftar, $1!"], [/^You're #(\d+) of (\d+)\. Your Free Gift Set is waiting for you on opening day\.$/, "Kamu nomor #$1 dari $2. Gift Set gratismu menunggu di hari pembukaan."],
   [/^All (\d+) Gift Sets are taken!$/, "Semua $1 Gift Set sudah habis!"], [/^⏳ Claim before (.+)$/, "⏳ Klaim sebelum $1"], [/^Claim before (.+)$/, "Klaim sebelum $1"], [/^Reserved for you with code$/, "Disimpan untukmu dengan kode"],
