@@ -1101,6 +1101,7 @@ function bsPopOpen(){
   const body=$("#bsPopBody");body.appendChild($("#addrFields"));body.appendChild($("#bsBox"));
   $("#addrFields").hidden=false;$("#coAddr").required=false;prefillCust();placeFieldsShow();bsBoxOpen();
   $("#bsPhone").value=$("#coPhone").value;
+  bsTipShow();
   $("#bsPop").hidden=false;document.body.style.overflow="hidden";
 }
 // checkout form: one line with the chosen courier and a Change button (the full courier box lives in the pop-up)
@@ -1108,6 +1109,10 @@ function bsSumDraw(){
   const el=$("#bsSum");if(!el)return;const on=bsOn()&&S.mode==="delivery";el.hidden=!on;if(!on)return;const sh=bsShip(S);
   el.innerHTML=`<span class="flbl" style="font-weight:600;font-size:14px">Courier</span><div class="bssumrow${sh||S.bsSkip?"":" need"}"><span>${sh?`<b>${esc(sh.courierName||sh.courier)}</b> ${esc(sh.serviceName||sh.service)}${sh.eta?` <small>${esc(sh.eta)}</small>`:""}`:S.bsSkip?"Standard delivery":"No courier chosen yet"}</span>${sh?`<span class="num">${money(sh.price)}</span>`:""}<button type="button" class="ghost" data-bscourier>${sh||S.bsSkip?"Change":"🛵 Choose courier"}</button></div>`;
 }
+const BS_TIP="delidome-courier-tip";
+function bsTipShow(){const t=$("#bsTip");let seen=false;try{seen=!!localStorage.getItem(BS_TIP)}catch(e){}t.hidden=seen}
+function bsTipHide(){const t=$("#bsTip");if(t.hidden)return;t.hidden=true;try{localStorage.setItem(BS_TIP,"1")}catch(e){}}
+$("#bsTipX").addEventListener("click",bsTipHide);
 function bsPopClose(){
   const f=$("#coForm"),err=$("#coErr");f.insertBefore($("#addrFields"),err);f.insertBefore($("#bsBox"),err);$("#bsBox").hidden=true;
   if(!$("#sheet").hidden){$("#addrFields").hidden=S.mode!=="delivery";$("#coAddr").required=S.mode==="delivery";bsSumDraw();renderCoSummary()}
@@ -1118,6 +1123,7 @@ document.addEventListener("click",e=>{if(e.target.closest("[data-bscourier]"))bs
 $("#bsPopX").addEventListener("click",bsPopClose);$("#bsPopDone").addEventListener("click",bsPopClose);
 $("#bsPop").addEventListener("click",e=>{if(e.target.id==="bsPop")bsPopClose()});
 $("#bsPop").addEventListener("input",e=>{if(e.target.id==="coAddr"||e.target.id==="coDNote")saveCust()});
+$("#bsPop").addEventListener("input",e=>{if(e.target.id==="bsPhone"||e.target.id==="bsArea")bsTipHide()});
 $("#bsPhone").addEventListener("input",e=>{const v=e.target.value.replace(/\D/g,"");if(v!==e.target.value)e.target.value=v;$("#coPhone").value=v;saveCust();if(normPhone(v).length>=7&&BSD.err&&/WhatsApp/.test(BSD.err)){BSD.err="";bsDraw()}});
 
 const CUST_KEY="delidome-cust-v1";

@@ -264,3 +264,5 @@ window.DD_ID_PATTERNS = [
 ];
 
 Object.assign(window.DD_ID, { "We need it to find your address and show courier prices.": "Kami butuh nomor ini untuk mencari alamatmu dan menampilkan harga kurir." });
+Object.assign(window.DD_ID, { "👋 First time here?": "👋 Pertama kali di sini?", "Got it": "Mengerti" });
+Object.assign(window.DD_ID, { "1. Type your WhatsApp number": "1. Ketik nomor WhatsApp kamu", "2. Search your area (or pick it on the map)": "2. Cari areamu (atau pilih di peta)", "3. Choose a courier. You'll see the price right away.": "3. Pilih kurir. Harganya langsung muncul." });
