@@ -1111,6 +1111,41 @@ function bsSumDraw(){
   el.innerHTML=`<span class="flbl" style="font-weight:600;font-size:14px">Courier</span><div class="bssumrow${sh||S.bsSkip?"":" need"}"><span>${sh?`<b>${esc(sh.courierName||sh.courier)}</b> ${esc(sh.serviceName||sh.service)}${sh.eta?` <small>${esc(sh.eta)}</small>`:""}`:S.bsSkip?"Standard delivery":"No courier chosen yet"}</span>${sh?`<span class="num">${money(sh.price)}</span>`:""}<button type="button" class="ghost" data-bscourier>${sh||S.bsSkip?"Change":"🛵 Choose courier"}</button></div>`;
 }
 /* guided tour for the courier pop-up: shows once, can be skipped, replay with the "?" button */
+/* guided tour of the shop for a new visitor: starts when they tap the main button, follows them through the box, the day and time, and checkout. It can be skipped and replayed with "How does it work?". */
+const GT_KEY="delidome-shop-tour",GT={i:-1,on:false,iv:0};
+const gtShown=el=>!!(el&&el.getClientRects().length);
+const gtCta=()=>[$("#barCta"),$("#panelCta")].find(gtShown)||null;
+const GT_STEPS=[
+  {t:"Pick a box size",m:"How many cookies do you want in your box? Tap a size to choose.",el:()=>$("#sizes"),done:()=>GT.sizeTap},
+  {t:"Fill your box",m:"Tap a flavor to add a cookie to your box. Tap again to add more. Or press “Fill the rest for me”.",el:()=>$("#menuGrid"),done:()=>S.box.filter(Boolean).length>=S.size&&S.size>0},
+  {t:"This is your box",m:"Here you can see what is in your box. Double-tap a cookie in the box to take it out. When it is full, the button below lights up.",el:()=>$(".boxpanel"),next:true},
+  {t:"Go to the next step",m:"When your box is full, tap this button to close the box. Then tap it again to choose the day and time.",el:()=>gtCta(),done:()=>S.step===2},
+  {t:"Choose when you want it",m:"Pick pickup or delivery, then the day and the time. You can add extras and a note too.",el:()=>S.step===2?$("#step2"):null,next:true,after:true},
+  {t:"Almost done",m:"Type your name, WhatsApp number and email, then place your order. We show you how to pay on the next screen.",el:()=>!$("#sheet").hidden?$("#coForm"):null,next:true,after:true,last:true}];
+function gtEnd(done){clearInterval(GT.iv);GT.iv=0;GT.on=false;GT.i=-1;$("#gt").hidden=true;try{localStorage.setItem(GT_KEY,"1")}catch(e){}if(done)toast("Enjoy your cookies! 🍪")}
+function gtStart(force){if(GT.on)return;if(!force){let seen=false;try{seen=!!localStorage.getItem(GT_KEY)}catch(e){}if(seen)return}
+  if(!$("#storeView")||$("#storeView").hidden||document.body.classList.contains("pre-on"))return;
+  GT.on=true;GT.i=0;GT.sizeTap=false;GT.shownFor=-1;$("#gtD").innerHTML=GT_STEPS.map(()=>"<i></i>").join("");clearInterval(GT.iv);GT.iv=setInterval(gtTick,350);gtTick()}
+function gtShow(){const s=GT_STEPS[GT.i],el=s.el();if(!el){$("#gt").hidden=true;return false}
+  if(GT.shownFor!==GT.i){GT.shownFor=GT.i;$("#gtT").textContent=`Step ${GT.i+1} of ${GT_STEPS.length} · ${s.t}`;$("#gtM").textContent=s.m;[...$("#gtD").children].forEach((d,k)=>d.classList.toggle("on",k===GT.i));
+    $("#gtN").textContent=GT.i===GT_STEPS.length-1?"Finish":"Next";
+    if(!/^(barCta|panelCta)$/.test(el.id)&&!getComputedStyle(el).position.match(/fixed/))scrollToEl(el)}
+  $("#gt").hidden=false;gtPlace(el);return true}
+function gtPlace(el){const r=el.getBoundingClientRect(),h=$("#gtHole"),c=$("#gtCard"),pad=6,top=Math.max(2,r.top-pad),bot=Math.min(innerHeight-2,r.bottom+pad);
+  h.style.cssText=`left:${Math.max(2,r.left-pad)}px;top:${top}px;width:${Math.min(innerWidth-4,r.width+pad*2)}px;height:${Math.max(24,bot-top)}px`;
+  const ch=c.offsetHeight,below=innerHeight-bot-12,above=top-12;c.style.top=(below>=ch?bot+12:above>=ch?top-ch-12:Math.max(8,innerHeight-ch-10))+"px"}
+function gtTick(){if(!GT.on)return;if(!$("#bsPop").hidden||!$("#storeView")||$("#storeView").hidden||document.body.classList.contains("pre-on")){$("#gt").hidden=true;return}
+  const s=GT_STEPS[GT.i];if(!s)return gtEnd(false);
+  if(s.done&&s.done()){if(GT.i>=GT_STEPS.length-1)return gtEnd(true);GT.i++;GT.shownFor=-1;return gtTick()}
+  // a step further on is already on screen (they moved ahead on their own): jump to it
+  for(let k=GT_STEPS.length-1;k>GT.i;k--){const n=GT_STEPS[k];if(n.after&&n.el()){GT.i=k;GT.shownFor=-1;break}}
+  gtShow()}
+$("#gtN").addEventListener("click",()=>{if(GT.i>=GT_STEPS.length-1)return gtEnd(true);GT.i++;GT.shownFor=-1;gtTick()});
+$("#gtSkip").addEventListener("click",()=>gtEnd(false));
+$("#gtBtn").addEventListener("click",()=>{GT.sizeTap=false;gtStart(true)});
+$("#sizes").addEventListener("click",()=>{if(GT.on)GT.sizeTap=true});
+document.addEventListener("click",e=>{const a=e.target.closest(".hero-ctas a");if(a&&a===$("#dome .hero-ctas a"))setTimeout(()=>gtStart(false),700)});
+addEventListener("resize",()=>{if(GT.on)gtTick()});document.addEventListener("scroll",()=>{if(GT.on&&!$("#gt").hidden){const s=GT_STEPS[GT.i],el=s&&s.el();if(el)gtPlace(el)}},true);
 const BS_TIP="delidome-courier-tour",BST={i:-1};
 const BS_STEPS=[
   {el:()=>$("#bsPhoneF"),t:"WhatsApp",m:"Type your WhatsApp number. We use it to find your address and show courier prices.",ex:"Example: 81234567890"},
@@ -6078,7 +6113,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-23 21:27 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-23 21:35 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

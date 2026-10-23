@@ -274,3 +274,13 @@ Object.assign(window.DD_ID, {
 });
 Object.assign(window.DD_ID, { "Find your spot": "Tentukan lokasimu", "Pick a courier": "Pilih kurir" });
 window.DD_ID_PATTERNS.push([/^Step (\d+) of (\d+) · (.+)$/, (m, a, b, r) => "Langkah " + a + " dari " + b + " · " + _T(r)]);
+Object.assign(window.DD_ID, {
+ "Pick a box size": "Pilih ukuran box", "Fill your box": "Isi boxmu", "This is your box": "Ini boxmu", "Go to the next step": "Lanjut ke langkah berikutnya", "Choose when you want it": "Pilih kapan kamu mau", "Almost done": "Hampir selesai",
+ "How many cookies do you want in your box? Tap a size to choose.": "Kamu mau berapa cookies dalam box? Ketuk satu ukuran untuk memilih.",
+ "Tap a flavor to add a cookie to your box. Tap again to add more. Or press “Fill the rest for me”.": "Ketuk satu rasa untuk menambah cookie ke box. Ketuk lagi untuk menambah. Atau tekan “Isikan sisanya untukku”.",
+ "Here you can see what is in your box. Double-tap a cookie in the box to take it out. When it is full, the button below lights up.": "Di sini kamu bisa melihat isi boxmu. Ketuk dua kali cookie di box untuk mengeluarkannya. Kalau sudah penuh, tombol di bawah menyala.",
+ "When your box is full, tap this button to close the box. Then tap it again to choose the day and time.": "Kalau boxmu sudah penuh, ketuk tombol ini untuk menutup box. Lalu ketuk lagi untuk memilih hari dan jam.",
+ "Pick pickup or delivery, then the day and the time. You can add extras and a note too.": "Pilih ambil sendiri atau diantar, lalu hari dan jamnya. Kamu juga bisa menambah ekstra dan catatan.",
+ "Type your name, WhatsApp number and email, then place your order. We show you how to pay on the next screen.": "Ketik nama, nomor WhatsApp dan emailmu, lalu buat pesanan. Cara bayar kami tunjukkan di layar berikutnya.",
+ "How does it work?": "Bagaimana cara kerjanya?", "Enjoy your cookies! 🍪": "Selamat menikmati cookiesmu! 🍪"
+});

@@ -1443,3 +1443,14 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 /* banner 2: only a tap pauses it (a touch screen keeps ":hover" on after a tap, which used to keep it stopped) */
 #marq2 .track,#mq2Prev .track{animation-play-state:running}
 #marq2.paused .track,#mq2Prev.paused .track{animation-play-state:paused}
+
+/* shop tour */
+.gtbtn{margin-top:6px;font-weight:700}
+#gt{position:fixed;inset:0;z-index:1005;pointer-events:none}#gt[hidden]{display:none}
+#gtHole{position:fixed;border-radius:18px;box-shadow:0 0 0 9999px rgba(5,5,40,.62);outline:3px solid #FFE066;outline-offset:2px;transition:all .35s ease;animation:bshp 1.4s infinite}
+#gtCard{position:fixed;left:16px;right:16px;max-width:420px;margin:0 auto;pointer-events:auto;background:#fff;color:#0B0B45;border-radius:20px;padding:14px 16px;box-shadow:0 12px 36px rgba(0,0,60,.4);transition:top .35s ease;font-size:14px;line-height:1.45}
+#gtCard h4{margin:0 0 4px;font-size:16px;color:#000096}#gtCard p{margin:0}
+.gtrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
+.gtdots{display:flex;gap:5px}.gtdots i{width:8px;height:8px;border-radius:50%;background:#d6d8f5}.gtdots i.on{background:#000096;width:20px;border-radius:6px}
+.gtskip{border:0;background:none;color:#6a6a92;font:700 13px var(--body,inherit);text-decoration:underline;padding:8px 4px}.gtnext{border:0;background:#000096;color:#fff;font:800 14px var(--body,inherit);border-radius:999px;padding:9px 18px}
+@media (prefers-reduced-motion:reduce){#gtHole{animation:none;transition:none}#gtCard{transition:none}}
