@@ -2093,9 +2093,10 @@ function mqEnsureFont(m){
   try{if(mqFace)document.fonts.delete(mqFace);mqFace=new FontFace("DD Custom",`url(${m.fontData})`);document.fonts.add(mqFace);mqFaceKey=key;mqFace.load().then(()=>mqFit()).catch(()=>{})}catch(e){}
 }
 function mqFamily(m){return m.font==="custom"&&m.fontData?'"DD Custom",var(--body)':(MQ_FONTS[m.font]||MQ_FONTS.display)[1]}
+const mqIsVideo=s=>/^data:video\//i.test(s||"")||/\.(mp4|webm|m4v|mov)(\?[^#]*)?(#.*)?$/i.test(s||"");
 function mqSeq(m,n){ // n repeats. "both": a random photo after each sentence (never the same twice in a row); "pics": only the photos; "text": only sentences
   const out=[],imgs=m.images||[],L=m.links||[],mode=m.mode||"both";let last=-1;
-  const pic=i=>{const src=imgOk(imgs[i]);if(!src)return "";const im=`<img class="mi" src="${esc(src)}" alt="" draggable="false">`,lk=safeUrl(L[i]);return lk?`<a class="mia" href="${esc(lk)}" ${lk[0]==="#"?"":'target="_blank" rel="noopener"'}>${im}</a>`:im};
+  const pic=i=>{const src=m.noFont?safeMedia(imgs[i]):imgOk(imgs[i]);if(!src)return "";const im=mqIsVideo(src)?`<video class="mi" src="${esc(src)}" muted loop autoplay playsinline preload="metadata"></video>`:`<img class="mi" src="${esc(src)}" alt="" draggable="false">`,lk=safeUrl(L[i]);return lk?`<a class="mia" href="${esc(lk)}" ${lk[0]==="#"?"":'target="_blank" rel="noopener"'}>${im}</a>`:im};
   for(let k=0;k<n;k++){
     if(mode==="pics"&&imgs.length){imgs.forEach((u,i)=>out.push(pic(i)))}
     else m.texts.forEach(t=>{out.push(`<span class="mt">${esc(t)}</span>`);
@@ -2105,7 +2106,7 @@ function mqSeq(m,n){ // n repeats. "both": a random photo after each sentence (n
 }
 function renderMarquee(el,m){
   if(!el)return;m=m||DB.marquee;
-  const texts=(m.texts||[]).filter(Boolean),pics=(m.images||[]).filter(imgOk);
+  const texts=(m.texts||[]).filter(Boolean),pics=(m.images||[]).filter(u=>m.noFont?safeMedia(u):imgOk(u));
   el.hidden=!m.on||((m.mode||"both")==="pics"?!pics.length:!texts.length);if(el.hidden)return;
   if(!m.noFont)mqEnsureFont(m);
   el.style.setProperty("--mbg",m.bg);el.style.setProperty("--mfg",m.color);el.style.setProperty("--msz",(MQ_SIZE[m.size]||18)+"px");{const ih=Math.max(0,Math.min(300,+m.imgH||0));el.style.setProperty("--mih",ih?ih+"px":"2.2em");el.classList.toggle("bigimg",ih>0)}el.style.setProperty("--mfont",mqFamily(m));
@@ -2121,6 +2122,7 @@ function mqBuild(el){
   const w1=el.querySelector(".set").scrollWidth||1;
   const n=Math.max(1,Math.ceil(cw/w1));
   if(n>1)draw(n);
+  el.querySelectorAll("video").forEach(v=>{v.muted=true;const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})});
   const w=el.querySelector(".set").scrollWidth;
   el.style.setProperty("--mdur",Math.max(6,w/(MQ_SPEED[m.speed]||70))+"s");
 }
@@ -2508,7 +2510,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-23 20:50 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-23 20:58 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
