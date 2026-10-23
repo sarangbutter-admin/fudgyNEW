@@ -1699,3 +1699,5 @@ body:has(.dome.edge){overflow-x:clip;margin:0}
 html.bgx-shop body.in-store:not(.aff-on):not(.pre-on) #pgBg,html.bgx-aff body.aff-on #pgBg,html.bgx-admin body:not(.in-store):not(.aff-on) #pgBg{display:block}
 html.bgx-admin body:not(.in-store):not(.aff-on) .admin{background:transparent}
 html.bgx-aff body.aff-on #affView{background:transparent}
+
+#snowCv{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;display:none}

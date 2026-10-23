@@ -2123,7 +2123,8 @@ function mqBuild(el){
 }
 function mqFit(){document.querySelectorAll(".marq").forEach(el=>{if(el._m&&!el.hidden)mqBuild(el);else if(el._ai&&!el.hidden)anMqBuild(el)})}
 const LP_DEFAULT_SVG=`<svg viewBox="0 0 30 24" aria-hidden="true"><path d="M3 21a12 12 0 0 1 24 0Z" fill="currentColor"/><circle cx="15" cy="5" r="2.6" fill="currentColor"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="currentColor"/></svg>`;
-function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
+function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},
+  snow:{on:false,icon:"❄️",imgs:[],n:40,speed:4,size:30,op:80,layer:"front",sway:true,spin:false,shop:true,aff:true,admin:false},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
   hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,waitVideo:true,swipe:true,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
   build:{title:"Build your box",intro:"Choose a size, fill every spot, then tell us when you want it. Each box is baked the morning it leaves the oven room."},
@@ -2308,7 +2309,7 @@ function renderLanding(){
   const nm=pg.name||"delidome";document.title=`${nm} Cookie Boxes`;
   $("#brandTxt").textContent=nm;$("#ftBrand").textContent=nm;$(".top .logo").setAttribute("aria-label",`${nm} home`);
   const lg=safeMedia(pg.logo);const mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG;$("#logoMark").innerHTML=mark;$("#ftMark").innerHTML=mark;
-  lpFavicon(pg);applyHeader();applyBgx();
+  lpFavicon(pg);applyHeader();applyBgx();applySnow();
   heroFill($("#dome"),pg.hero);
   // strip
   const set=DB.settings,closed=set.closedWeekdays.slice().sort().map(d=>DOW_LONG[d]),tok={sizes:listJoin(activeSizes().map(x=>x.n)),cutoff:fmtHour(set.cutoffHour),closed:listJoin(closed).replace(" or "," and ")};
@@ -2339,6 +2340,29 @@ function applyBgx(){const pg=DB.page;if(!pg||!document.body)return;const b=Objec
   const on=b.mode==="color"||(b.mode==="image"&&!!u);h.classList.toggle("bgx-shop",on&&b.shop!==false);h.classList.toggle("bgx-aff",on&&b.aff!==false);h.classList.toggle("bgx-admin",on&&b.admin!==false);
   const st=L.style;st.cssText="";if(!on)return;st.backgroundColor=col;st.opacity=String(Math.max(10,Math.min(100,+b.op||100))/100);
   if(u){st.backgroundImage=`url("${String(u).replace(/["\\]/g,"")}")`;st.backgroundSize=b.fit==="tile"?"auto":"cover";st.backgroundRepeat=b.fit==="tile"?"repeat":"no-repeat";st.setProperty("--bgx-veil",String(Math.max(0,Math.min(90,+b.veil||0))/100))}}
+const SNOW={cv:null,ctx:null,fl:[],spr:[],key:"",raf:0,last:0,w:0,h:0,dpr:1,run:false,iv:0};
+const snowScope=()=>{const c=document.body.classList;return c.contains("aff-on")?"aff":c.contains("in-store")?"shop":"admin"};
+function snowStop(){SNOW.run=false;cancelAnimationFrame(SNOW.raf);if(SNOW.cv)SNOW.cv.style.display="none"}
+function snowSprites(S){const key=JSON.stringify([S.icon,S.imgs]);if(key===SNOW.key)return;SNOW.key=key;SNOW.fl=[];SNOW.spr=[];
+  (S.imgs||[]).forEach(u=>{const src=imgOk(u);if(!src)return;const im=new Image();im.onload=()=>{SNOW.spr.push(im)};im.src=src});
+  if(!(S.imgs||[]).some(imgOk)){const c=document.createElement("canvas");c.width=c.height=96;const x=c.getContext("2d");x.font='72px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';x.textAlign="center";x.textBaseline="middle";x.fillText(String(S.icon||"❄️").slice(0,4),48,52);SNOW.spr.push(c)}}
+function snowFlake(S,top){const mx=Math.max(8,Math.min(120,+S.size||30)),sz=mx*(.55+.45*Math.random());
+  return {x:Math.random()*SNOW.w,y:top?-sz-Math.random()*SNOW.h*.2:Math.random()*SNOW.h,s:sz,k:Math.random(),ph:Math.random()*6.28,sw:.6+Math.random()*1.2,am:S.sway===false?0:8+Math.random()*26,rot:Math.random()*6.28,rs:S.spin?(Math.random()-.5)*1.6:0,sp:0}}
+function snowFrame(t){if(!SNOW.run)return;SNOW.raf=requestAnimationFrame(snowFrame);const S=DB.page&&DB.page.snow;if(!S||document.hidden){SNOW.last=t;return}
+  const dt=Math.min(.05,(t-(SNOW.last||t))/1000);SNOW.last=t;const ctx=SNOW.ctx,n=Math.max(5,Math.min(200,+S.n||40)),base=22+Math.max(1,Math.min(10,+S.speed||4))*22;
+  while(SNOW.fl.length<n)SNOW.fl.push(snowFlake(S,false));if(SNOW.fl.length>n)SNOW.fl.length=n;
+  ctx.clearRect(0,0,SNOW.cv.width,SNOW.cv.height);if(!SNOW.spr.length)return;
+  for(let i=0;i<SNOW.fl.length;i++){const f=SNOW.fl[i];f.y+=base*(.6+.8*f.s/Math.max(8,+S.size||30))*dt;f.ph+=f.sw*dt;f.rot+=f.rs*dt;const x=f.x+Math.sin(f.ph)*f.am;
+    if(f.y>SNOW.h+f.s){SNOW.fl[i]=snowFlake(S,true);continue}
+    const im=SNOW.spr[i%SNOW.spr.length];ctx.save();ctx.translate((x)*SNOW.dpr,f.y*SNOW.dpr);if(f.rs)ctx.rotate(f.rot);const w=f.s*SNOW.dpr,r=(im.naturalWidth||im.width)&&(im.naturalHeight||im.height)?(im.naturalHeight||im.height)/(im.naturalWidth||im.width):1;ctx.drawImage(im,-w/2,-w*r/2,w,w*r);ctx.restore()}}
+function snowSize(){if(!SNOW.cv)return;SNOW.dpr=Math.min(2,devicePixelRatio||1);SNOW.w=innerWidth;SNOW.h=innerHeight;SNOW.cv.width=Math.round(SNOW.w*SNOW.dpr);SNOW.cv.height=Math.round(SNOW.h*SNOW.dpr)}
+function applySnow(){const pg=DB.page,S=pg&&pg.snow;if(!S||!document.body)return;
+  const ok=!!S.on&&S[snowScope()]!==false&&!matchMedia("(prefers-reduced-motion:reduce)").matches&&!document.body.classList.contains("pre-on");
+  if(!SNOW.iv)SNOW.iv=setInterval(applySnow,1500);
+  if(!ok){snowStop();return}
+  if(!SNOW.cv){const c=document.createElement("canvas");c.id="snowCv";c.setAttribute("aria-hidden","true");const bg=document.getElementById("pgBg");document.body.insertBefore(c,bg?bg.nextSibling:document.body.firstChild);SNOW.cv=c;SNOW.ctx=c.getContext("2d");snowSize();addEventListener("resize",snowSize)}
+  snowSprites(S);const st=SNOW.cv.style;st.display="block";st.zIndex=S.layer==="back"?"-1":"900";st.opacity=String(Math.max(10,Math.min(100,+S.op||80))/100);
+  if(!SNOW.run){SNOW.run=true;SNOW.last=0;SNOW.raf=requestAnimationFrame(snowFrame)}}
 const HEX_OK=/^(#[0-9a-f]{6}|transparent)$/i;
 const AF={list:null,orders:null,loading:false,err:"",range:"30d",from:"",to:"",group:"day",sel:null,rep:null,repLoading:false,form:null,ferr:"",prods:null,sf:"all",afs:"all",act:null,proof:"",busy:false,cfg:null,pf:null,perr:""};
 const AF_SRC={ig:"Instagram",tt:"TikTok",wa:"WhatsApp",fb:"Facebook",ads:"Ads",x:"X / Twitter",yt:"YouTube",google:"Google",direct:"Direct / unknown",coupon:"Coupon code",web:"Website"};
@@ -2466,13 +2490,13 @@ function afBellClick(e){const tb=e.target.closest("[data-afntab]");if(tb){AFN.ta
     if(AFN.open&&AFN.d){AFN.was=AFN.d.seen;if(AFN.d.unseen){AFN.d.unseen=0;SBH.rpc("aff_notes_seen",{}).catch(()=>{})}}
     afBellDraw()}
   else if(AFN.open&&!e.target.closest(".afpop")){AFN.open=false;afBellDraw()}}
-function affRender(){try{applyBgx()}catch(e){}let v=document.getElementById("affView");
+function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
     v.addEventListener("click",e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut()});
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-23 18:43 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-23 18:50 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

@@ -619,6 +619,13 @@ textarea.in{resize:vertical;border-radius:10px}
 .chips .fchip.outc{border-color:#F2C2CC;background:#FFF7F8}
 .chips .fchip.outc i{color:#A3001F;font-weight:700}
 .pfoot .left{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.sw{position:relative;display:inline-block;width:42px;height:24px;flex:none}
+.sw input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.sw span{position:absolute;inset:0;background:var(--line);border-radius:99px;transition:background .15s;pointer-events:none}
+.sw span::after{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:var(--white);border-radius:50%;transition:transform .15s}
+.sw input:checked + span{background:var(--blue)}
+.sw input:checked + span::after{transform:translateX(18px)}
+.sw input:focus-visible + span{outline:3px solid var(--blue-2);outline-offset:2px}
 .sales{display:grid;gap:12px}
 .sale{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;padding:16px;border-radius:16px;border:1.5px solid var(--ice-2);align-items:center}
 .sale.live{border-color:var(--red);background:#FFF7F8}
@@ -1412,3 +1419,5 @@ body:has(.dome.edge){overflow-x:clip;margin:0}
 html.bgx-shop body.in-store:not(.aff-on):not(.pre-on) #pgBg,html.bgx-aff body.aff-on #pgBg,html.bgx-admin body:not(.in-store):not(.aff-on) #pgBg{display:block}
 html.bgx-admin body:not(.in-store):not(.aff-on) .admin{background:transparent}
 html.bgx-aff body.aff-on #affView{background:transparent}
+
+#snowCv{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;display:none}
