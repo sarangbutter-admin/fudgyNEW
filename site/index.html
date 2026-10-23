@@ -188,11 +188,12 @@
 
 <div class="sheet" id="bsPop" hidden role="dialog" aria-modal="true" aria-labelledby="bsPopTitle">
   <div class="sheet-card">
-    <div class="sheet-top"><h3 id="bsPopTitle">Choose a courier</h3><button class="x" id="bsPopX" type="button" aria-label="Close">✕</button></div>
-    <div class="form" id="bsPopBody"><div class="bstip" id="bsTip" role="note" hidden><b>👋 First time here?</b><span>1. Type your WhatsApp number<br>2. Search your area (or pick it on the map)<br>3. Choose a courier. You'll see the price right away.</span><button type="button" class="bstipx" id="bsTipX">Got it</button></div><div class="field" id="bsPhoneF"><label for="bsPhone">WhatsApp number</label><input id="bsPhone" type="tel" inputmode="numeric" maxlength="24" autocomplete="tel-national" placeholder="Numbers only, e.g. 81234567890"><p class="note" style="margin:4px 0 0">We need it to find your address and show courier prices.</p></div></div>
+    <div class="sheet-top"><h3 id="bsPopTitle">Choose a courier</h3><span class="bsbr"><button class="x" id="bsTourBtn" type="button" aria-label="Show the tour">?</button><button class="x" id="bsPopX" type="button" aria-label="Close">✕</button></span></div>
+    <div class="form" id="bsPopBody"><div class="field" id="bsPhoneF"><label for="bsPhone">WhatsApp number</label><input id="bsPhone" type="tel" inputmode="numeric" maxlength="24" autocomplete="tel-national" placeholder="Numbers only, e.g. 81234567890"><p class="note" style="margin:4px 0 0">We need it to find your address and show courier prices.</p></div></div>
     <button class="btn btn-blue" id="bsPopDone" type="button" style="width:100%;margin-top:14px">Done</button>
   </div>
 </div>
+<div id="bsTour" hidden><div id="bsHole"></div><div id="bsTcard" role="dialog" aria-live="polite"><h4 id="bsTt"></h4><p id="bsTm"></p><p class="bstex" id="bsTe" hidden></p><div class="bstrow"><button type="button" class="bsskip" id="bsTskip">Skip tour</button><span class="bsdots" id="bsTdots"></span><button type="button" class="bsnext" id="bsTnext">Next</button></div></div></div>
 <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
   <div class="sheet-card">
     <div id="checkoutView">

@@ -264,5 +264,13 @@ window.DD_ID_PATTERNS = [
 ];
 
 Object.assign(window.DD_ID, { "We need it to find your address and show courier prices.": "Kami butuh nomor ini untuk mencari alamatmu dan menampilkan harga kurir." });
-Object.assign(window.DD_ID, { "👋 First time here?": "👋 Pertama kali di sini?", "Got it": "Mengerti" });
-Object.assign(window.DD_ID, { "1. Type your WhatsApp number": "1. Ketik nomor WhatsApp kamu", "2. Search your area (or pick it on the map)": "2. Cari areamu (atau pilih di peta)", "3. Choose a courier. You'll see the price right away.": "3. Pilih kurir. Harganya langsung muncul." });
+Object.assign(window.DD_ID, {
+ "Step 1 of 4 · WhatsApp": "Langkah 1 dari 4 · WhatsApp", "Step 2 of 4 · Delivery address": "Langkah 2 dari 4 · Alamat pengantaran", "Step 3 of 4 · Find your spot": "Langkah 3 dari 4 · Tentukan lokasimu", "Step 4 of 4 · Pick a courier": "Langkah 4 dari 4 · Pilih kurir",
+ "Type your WhatsApp number. We use it to find your address and show courier prices.": "Ketik nomor WhatsApp kamu. Kami pakai untuk mencari alamatmu dan menampilkan harga kurir.", "Example: 81234567890": "Contoh: 81234567890",
+ "Type your full address, in this order:": "Ketik alamat lengkapmu, dengan urutan ini:", "Place / Residence / Apartment · City · Street name · House or location number · Postal code": "Tempat / Perumahan / Apartemen · Kota · Nama jalan · Nomor rumah atau lokasi · Kode pos",
+ "Tap “Find my address on the map” or “Use my current location”. Then check that the pin is on your door.": "Ketuk “Cari alamatku di peta” atau “Pakai lokasiku saat ini”. Lalu pastikan pin ada di depan pintumu.",
+ "Prices appear for your location. Tap the courier you like, then press Done.": "Harga muncul sesuai lokasimu. Ketuk kurir yang kamu mau, lalu tekan Selesai.",
+ "Skip tour": "Lewati panduan", "Next": "Lanjut", "Finish": "Selesai", "You're all set! Check your courier and tap Done.": "Siap! Cek kurirmu lalu ketuk Selesai."
+});
+Object.assign(window.DD_ID, { "Find your spot": "Tentukan lokasimu", "Pick a courier": "Pilih kurir" });
+window.DD_ID_PATTERNS.push([/^Step (\d+) of (\d+) · (.+)$/, (m, a, b, r) => "Langkah " + a + " dari " + b + " · " + _T(r)]);

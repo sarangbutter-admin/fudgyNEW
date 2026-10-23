@@ -1101,19 +1101,42 @@ function bsPopOpen(){
   const body=$("#bsPopBody");body.appendChild($("#addrFields"));body.appendChild($("#bsBox"));
   $("#addrFields").hidden=false;$("#coAddr").required=false;prefillCust();placeFieldsShow();bsBoxOpen();
   $("#bsPhone").value=$("#coPhone").value;
-  bsTipShow();
   $("#bsPop").hidden=false;document.body.style.overflow="hidden";
+  bsTourStart(false);
 }
 // checkout form: one line with the chosen courier and a Change button (the full courier box lives in the pop-up)
 function bsSumDraw(){
   const el=$("#bsSum");if(!el)return;const on=bsOn()&&S.mode==="delivery";el.hidden=!on;if(!on)return;const sh=bsShip(S);
   el.innerHTML=`<span class="flbl" style="font-weight:600;font-size:14px">Courier</span><div class="bssumrow${sh||S.bsSkip?"":" need"}"><span>${sh?`<b>${esc(sh.courierName||sh.courier)}</b> ${esc(sh.serviceName||sh.service)}${sh.eta?` <small>${esc(sh.eta)}</small>`:""}`:S.bsSkip?"Standard delivery":"No courier chosen yet"}</span>${sh?`<span class="num">${money(sh.price)}</span>`:""}<button type="button" class="ghost" data-bscourier>${sh||S.bsSkip?"Change":"🛵 Choose courier"}</button></div>`;
 }
-const BS_TIP="delidome-courier-tip";
-function bsTipShow(){const t=$("#bsTip");let seen=false;try{seen=!!localStorage.getItem(BS_TIP)}catch(e){}t.hidden=seen}
-function bsTipHide(){const t=$("#bsTip");if(t.hidden)return;t.hidden=true;try{localStorage.setItem(BS_TIP,"1")}catch(e){}}
-$("#bsTipX").addEventListener("click",bsTipHide);
+/* guided tour for the courier pop-up: shows once, can be skipped, replay with the "?" button */
+const BS_TIP="delidome-courier-tour",BST={i:-1};
+const BS_STEPS=[
+  {el:()=>$("#bsPhoneF"),t:"WhatsApp",m:"Type your WhatsApp number. We use it to find your address and show courier prices.",ex:"Example: 81234567890"},
+  {el:()=>$("#coAddr"),t:"Delivery address",m:"Type your full address, in this order:",ex:"Place / Residence / Apartment · City · Street name · House or location number · Postal code"},
+  {el:()=>$("#bsBox .bsbtns")||$("#bsBox"),t:"Find your spot",m:"Tap “Find my address on the map” or “Use my current location”. Then check that the pin is on your door."},
+  {el:()=>{const o=$("#bsOpts");return o&&o.offsetHeight>20?o:$("#bsBox")},t:"Pick a courier",m:"Prices appear for your location. Tap the courier you like, then press Done."}];
+function bsTourSeen(){try{return !!localStorage.getItem(BS_TIP)}catch(e){return false}}
+function bsTourEnd(done){$("#bsTour").hidden=true;BST.i=-1;try{localStorage.setItem(BS_TIP,"1")}catch(e){}if(done)toast("You're all set! Check your courier and tap Done.")}
+let BS_LIST=[];
+const bsVis=s=>{const e=s.el();return !!(e&&e.getClientRects().length)};
+function bsTourStart(force){if(!force&&bsTourSeen())return;BS_LIST=BS_STEPS.filter(bsVis);if(!BS_LIST.length)return;$("#bsTdots").innerHTML=BS_LIST.map(()=>"<i></i>").join("");$("#bsTour").hidden=false;bsTourGo(0)}
+function bsTourGo(i){BST.i=i;const s=BS_LIST[i],el=s.el();if(!el){bsTourEnd(false);return}
+  $("#bsTt").textContent=`Step ${i+1} of ${BS_LIST.length} · ${s.t}`;$("#bsTm").textContent=s.m;const e=$("#bsTe");e.hidden=!s.ex;e.textContent=s.ex||"";
+  [...$("#bsTdots").children].forEach((d,k)=>d.classList.toggle("on",k===i));$("#bsTnext").textContent=i===BS_LIST.length-1?"Finish":"Next";
+  const r0=el.getBoundingClientRect();el.scrollIntoView({block:r0.height>innerHeight*.4?"start":"center",behavior:"auto"});bsTourPlace()}
+function bsTourPlace(){if(BST.i<0||$("#bsTour").hidden)return;const el=BS_LIST[BST.i].el();if(!el)return;const r=el.getBoundingClientRect(),h=$("#bsHole"),c=$("#bsTcard");
+  const pad=6,top=Math.max(2,r.top-pad),bot=Math.min(innerHeight-2,r.bottom+pad);
+  h.style.cssText=`left:${Math.max(2,r.left-pad)}px;top:${top}px;width:${Math.min(innerWidth-4,r.width+pad*2)}px;height:${Math.max(20,bot-top)}px`;
+  const ch=c.offsetHeight,below=innerHeight-bot-12,above=top-12;
+  c.style.top=(below>=ch?bot+12:above>=ch?top-ch-12:Math.max(8,innerHeight-ch-10))+"px"}
+$("#bsTnext").addEventListener("click",()=>{if(BST.i>=BS_LIST.length-1)bsTourEnd(true);else bsTourGo(BST.i+1)});
+$("#bsTskip").addEventListener("click",()=>bsTourEnd(false));
+$("#bsTourBtn").addEventListener("click",()=>bsTourStart(true));
+addEventListener("resize",bsTourPlace);document.addEventListener("scroll",bsTourPlace,true);
+$("#bsPop").addEventListener("input",()=>{if(BST.i>=0)requestAnimationFrame(bsTourPlace)});
 function bsPopClose(){
+  if(BST.i>=0)$("#bsTour").hidden=true,BST.i=-1;
   const f=$("#coForm"),err=$("#coErr");f.insertBefore($("#addrFields"),err);f.insertBefore($("#bsBox"),err);$("#bsBox").hidden=true;
   if(!$("#sheet").hidden){$("#addrFields").hidden=S.mode!=="delivery";$("#coAddr").required=S.mode==="delivery";bsSumDraw();renderCoSummary()}
   $("#bsPop").hidden=true;if($("#sheet").hidden)document.body.style.overflow="";
@@ -1123,7 +1146,6 @@ document.addEventListener("click",e=>{if(e.target.closest("[data-bscourier]"))bs
 $("#bsPopX").addEventListener("click",bsPopClose);$("#bsPopDone").addEventListener("click",bsPopClose);
 $("#bsPop").addEventListener("click",e=>{if(e.target.id==="bsPop")bsPopClose()});
 $("#bsPop").addEventListener("input",e=>{if(e.target.id==="coAddr"||e.target.id==="coDNote")saveCust()});
-$("#bsPop").addEventListener("input",e=>{if(e.target.id==="bsPhone"||e.target.id==="bsArea")bsTipHide()});
 $("#bsPhone").addEventListener("input",e=>{const v=e.target.value.replace(/\D/g,"");if(v!==e.target.value)e.target.value=v;$("#coPhone").value=v;saveCust();if(normPhone(v).length>=7&&BSD.err&&/WhatsApp/.test(BSD.err)){BSD.err="";bsDraw()}});
 
 const CUST_KEY="delidome-cust-v1";
