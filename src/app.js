@@ -4413,7 +4413,7 @@ am.addEventListener("click",e=>{
 
 /* --- landing page editor --- */
 const LP_DEFAULT_SVG=`<svg viewBox="0 0 30 24" aria-hidden="true"><path d="M3 21a12 12 0 0 1 24 0Z" fill="currentColor"/><circle cx="15" cy="5" r="2.6" fill="currentColor"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="currentColor"/></svg>`;
-function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,shop:true,aff:true,admin:true},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
+function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
   hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,waitVideo:true,swipe:true,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
   build:{title:"Build your box",intro:"Choose a size, fill every spot, then tell us when you want it. Each box is baked the morning it leaves the oven room."},
@@ -4637,11 +4637,11 @@ function renderLanding(){
 }
 
 /* page background: a plain color or a picture behind every page (shop, affiliator page, admin), chosen in the Landing page tab */
-function applyBgx(){const pg=DB.page;if(!pg||!document.body)return;const b=Object.assign({mode:"off",color:"",img:"",fit:"cover",veil:25,shop:true,aff:true,admin:true},pg.bgx||{}),h=document.documentElement;
+function applyBgx(){const pg=DB.page;if(!pg||!document.body)return;const b=Object.assign({mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},pg.bgx||{}),h=document.documentElement;
   let L=document.getElementById("pgBg");if(!L){L=document.createElement("div");L.id="pgBg";L.setAttribute("aria-hidden","true");document.body.insertBefore(L,document.body.firstChild)}
   const col=/^#[0-9a-f]{6}$/i.test(b.color||"")?b.color:(/^#[0-9a-f]{6}$/i.test(pg.bg||"")?pg.bg:"#ffffff"),u=b.mode==="image"?safeMedia(b.img):"";
   const on=b.mode==="color"||(b.mode==="image"&&!!u);h.classList.toggle("bgx-shop",on&&b.shop!==false);h.classList.toggle("bgx-aff",on&&b.aff!==false);h.classList.toggle("bgx-admin",on&&b.admin!==false);
-  const st=L.style;st.cssText="";if(!on)return;st.backgroundColor=col;
+  const st=L.style;st.cssText="";if(!on)return;st.backgroundColor=col;st.opacity=String(Math.max(10,Math.min(100,+b.op||100))/100);
   if(u){st.backgroundImage=`url("${String(u).replace(/["\\]/g,"")}")`;st.backgroundSize=b.fit==="tile"?"auto":"cover";st.backgroundRepeat=b.fit==="tile"?"repeat":"no-repeat";st.setProperty("--bgx-veil",String(Math.max(0,Math.min(90,+b.veil||0))/100))}}
 const lpGet=path=>path.split(".").reduce((o,k)=>o==null?o:o[k],DB.page);
 function lpSet(path,v){const ks=path.split(".");let o=DB.page;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v;if(ks[0]==="bgx")applyBgx()}
@@ -4697,6 +4697,8 @@ function viewLanding(){
       <div class="grid2"><label class="af">Picture size<select class="in" data-lp="bgx.fit">${[["cover","Fill the screen"],["tile","Repeat as a pattern"]].map(([k,l])=>`<option value="${k}" ${pg.bgx.fit===k?"selected":""}>${l}</option>`).join("")}</select></label>
       <label class="af">Soften the picture: ${+pg.bgx.veil||0}%<input type="range" min="0" max="90" step="5" value="${+pg.bgx.veil||0}" data-lp="bgx.veil" data-num="1" data-rr="1"></label></div>
       ${pg.bgx.img?"":`<p class="note">Add a picture to see it.</p>`}`:""}
+    ${pg.bgx.mode!=="off"?`<label class="af">Opacity: ${Math.max(10,Math.min(100,+pg.bgx.op||100))}%<input type="range" min="10" max="100" step="5" value="${Math.max(10,Math.min(100,+pg.bgx.op||100))}" data-lp="bgx.op" data-num="1" data-rr="1"></label>
+      <p class="note" style="margin:-4px 0 0">100% shows the color or picture fully. Lower it to let your page color show through.</p>`:""}
     ${pg.bgx.mode!=="off"?`<div class="af">Show it on<div style="display:grid;gap:6px;margin-top:6px">${[["shop","The shop"],["aff","The affiliator page"],["admin","The admin pages"]].map(([k,l])=>`<label class="chk"><input type="checkbox" data-lp="bgx.${k}" ${pg.bgx[k]!==false?"checked":""}> ${l}</label>`).join("")}</div></div>`:""}`,false)}
   ${sec(`Extra sections (${pg.blocks.length})`,`
     <p class="sub" style="margin:0">Add image, video or text sections above or below the box builder. Use the Marquee banner tab for the running text strip.</p>
