@@ -125,7 +125,7 @@ function defaultAnnouncer(){return {on:true,sticky:true,size:"M",cdColor:"#C8102
   giftsoon:{text:"Coming up: {name}, free gifts with {applies}.",label:"Starts in",bg:"#FFF7D6",ink:"#000096",img:""},
   mq:{bg:"#000096",ink:"#FFFFFF",font:"display",fontData:"",fontName:"",size:"M",speed:"medium",sepOn:true,sepImg:""},
   custom:{on:false,text:"Free delivery this weekend!",label:"Ends in",endsAt:"",bg:"#000096",ink:"#FFFFFF",img:""}}}
-function defaultMarquee(){return {on:true,texts:["Baked fresh every morning","Build a box your way","Pickup or local delivery","Order by 8pm for next-day cookies"],images:[],bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium",fontData:null,fontName:""}}
+function defaultMarquee(){return {on:true,texts:["Baked fresh every morning","Build a box your way","Pickup or local delivery","Order by 8pm for next-day cookies"],images:[],bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium",fontData:null,fontName:"",mode:"both",imgH:0,links:[],pos:"top"}}
 function defaultThanks(){return {logo:"",cookies:[],fx:true,amount:28,title:"Order placed",titleUpd:"Order updated",
   text:"Thanks, {name}! Your box of {size} is set for {mode} on {when}.",
   urgent:"Your cookies are waiting! Pay within {hours} to keep them.",
@@ -159,6 +159,7 @@ function migrate(db){
     db.page.strip={items:st.mode==="off"?d.map(x=>({...x,on:false})):st.mode==="custom"?String(st.text||"").split("\n").map(x=>x.trim()).filter(Boolean).map(t=>({t,on:true})):d}}
   db.page=deepFill(defaultPage(),db.page);
   if(!db.marquee)db.marquee=defaultMarquee();
+  db.marquee=Object.assign({mode:"both",imgH:0,links:[],pos:"top"},db.marquee);if(!Array.isArray(db.marquee.links))db.marquee.links=[];
   db.announcer=deepFill(defaultAnnouncer(),db.announcer);
   if(db.settings.complaintWindowH===undefined)db.settings.complaintWindowH=24;
   if(db.settings.waCountry===undefined)db.settings.waCountry="62";
@@ -2093,19 +2094,25 @@ function mqEnsureFont(m){
   try{if(mqFace)document.fonts.delete(mqFace);mqFace=new FontFace("DD Custom",`url(${m.fontData})`);document.fonts.add(mqFace);mqFaceKey=key;mqFace.load().then(()=>mqFit()).catch(()=>{})}catch(e){}
 }
 function mqFamily(m){return m.font==="custom"&&m.fontData?'"DD Custom",var(--body)':(MQ_FONTS[m.font]||MQ_FONTS.display)[1]}
-function mqSeq(m,n){ // n repeats of the sentences, a random photo after each one (never the same twice in a row)
-  const out=[];let last=-1;const imgs=m.images||[];
-  for(let k=0;k<n;k++)m.texts.forEach(t=>{out.push(`<span class="mt">${esc(t)}</span>`);
-    if(imgs.length){let i=Math.floor(Math.random()*imgs.length);if(imgs.length>1&&i===last)i=(i+1+Math.floor(Math.random()*(imgs.length-1)))%imgs.length;last=i;out.push(`<img class="mi" src="${esc(imgOk(imgs[i]))}" alt="" draggable="false">`)}
-    else out.push(`<span class="mdot" aria-hidden="true">✦</span>`)});
+function mqSeq(m,n){ // n repeats. "both": a random photo after each sentence (never the same twice in a row); "pics": only the photos; "text": only sentences
+  const out=[],imgs=m.images||[],L=m.links||[],mode=m.mode||"both";let last=-1;
+  const pic=i=>{const src=imgOk(imgs[i]);if(!src)return "";const im=`<img class="mi" src="${esc(src)}" alt="" draggable="false">`,lk=safeUrl(L[i]);return lk?`<a class="mia" href="${esc(lk)}" ${lk[0]==="#"?"":'target="_blank" rel="noopener"'}>${im}</a>`:im};
+  for(let k=0;k<n;k++){
+    if(mode==="pics"&&imgs.length){imgs.forEach((u,i)=>out.push(pic(i)))}
+    else m.texts.forEach(t=>{out.push(`<span class="mt">${esc(t)}</span>`);
+      if(mode!=="text"&&imgs.length){let i=Math.floor(Math.random()*imgs.length);if(imgs.length>1&&i===last)i=(i+1+Math.floor(Math.random()*(imgs.length-1)))%imgs.length;last=i;out.push(pic(i))}
+      else out.push(`<span class="mdot" aria-hidden="true">✦</span>`)})}
   return out.join("");
 }
+function mqPlace(el,m){if(el.id!=="marq")return;if(!el._home)el._home={p:el.parentNode,n:el.nextSibling};
+  const v=document.getElementById("visit");if(m.pos==="visit"&&v&&v.parentNode){if(el.nextSibling!==v)v.parentNode.insertBefore(el,v)}
+  else if(el.parentNode!==el._home.p||(el._home.n&&el.nextSibling!==el._home.n)){el._home.p.insertBefore(el,el._home.n&&el._home.n.parentNode===el._home.p?el._home.n:null)}}
 function renderMarquee(el,m){
   if(!el)return;m=m||DB.marquee;
-  const texts=(m.texts||[]).filter(Boolean);
-  el.hidden=!m.on||!texts.length;if(el.hidden)return;
-  mqEnsureFont(m);
-  el.style.setProperty("--mbg",m.bg);el.style.setProperty("--mfg",m.color);el.style.setProperty("--msz",(MQ_SIZE[m.size]||18)+"px");el.style.setProperty("--mfont",mqFamily(m));
+  const texts=(m.texts||[]).filter(Boolean),pics=(m.images||[]).filter(imgOk);
+  el.hidden=!m.on||((m.mode||"both")==="pics"?!pics.length:!texts.length);if(el.hidden)return;
+  mqPlace(el,m);mqEnsureFont(m);
+  el.style.setProperty("--mbg",m.bg);el.style.setProperty("--mfg",m.color);el.style.setProperty("--msz",(MQ_SIZE[m.size]||18)+"px");{const ih=Math.max(0,Math.min(300,+m.imgH||0));el.style.setProperty("--mih",ih?ih+"px":"2.2em");el.classList.toggle("bigimg",ih>0)}el.style.setProperty("--mfont",mqFamily(m));
   el.setAttribute("aria-label",texts.join(". "));
   el._m={...m,texts};mqBuild(el);
 }
@@ -2123,7 +2130,7 @@ function mqBuild(el){
 }
 function mqFit(){document.querySelectorAll(".marq").forEach(el=>{if(el._m&&!el.hidden)mqBuild(el);else if(el._ai&&!el.hidden)anMqBuild(el)})}
 const LP_DEFAULT_SVG=`<svg viewBox="0 0 30 24" aria-hidden="true"><path d="M3 21a12 12 0 0 1 24 0Z" fill="currentColor"/><circle cx="15" cy="5" r="2.6" fill="currentColor"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="currentColor"/></svg>`;
-function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},
+function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",logoSize:0,adm:{name:"",show:true,size:0,logo:""},bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},
   snow:{on:false,icon:"❄️",imgs:[],n:40,speed:4,size:30,op:80,layer:"front",sway:true,spin:false,shop:true,aff:true,admin:false},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
   hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,waitVideo:true,swipe:true,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
@@ -2309,7 +2316,7 @@ function renderLanding(){
   const nm=pg.name||"delidome";document.title=`${nm} Cookie Boxes`;
   $("#brandTxt").textContent=nm;$("#ftBrand").textContent=nm;$(".top .logo").setAttribute("aria-label",`${nm} home`);
   const lg=safeMedia(pg.logo);const mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG;$("#logoMark").innerHTML=mark;$("#ftMark").innerHTML=mark;
-  lpFavicon(pg);applyHeader();applyBgx();applySnow();
+  lpFavicon(pg);applyHeader();applyBrandSize();applyBgx();applySnow();
   heroFill($("#dome"),pg.hero);
   // strip
   const set=DB.settings,closed=set.closedWeekdays.slice().sort().map(d=>DOW_LONG[d]),tok={sizes:listJoin(activeSizes().map(x=>x.n)),cutoff:fmtHour(set.cutoffHour),closed:listJoin(closed).replace(" or "," and ")};
@@ -2340,6 +2347,11 @@ function applyBgx(){const pg=DB.page;if(!pg||!document.body)return;const b=Objec
   const on=b.mode==="color"||(b.mode==="image"&&!!u);h.classList.toggle("bgx-shop",on&&b.shop!==false);h.classList.toggle("bgx-aff",on&&b.aff!==false);h.classList.toggle("bgx-admin",on&&b.admin!==false);
   const st=L.style;st.cssText="";if(!on)return;st.backgroundColor=col;st.opacity=String(Math.max(10,Math.min(100,+b.op||100))/100);
   if(u){st.backgroundImage=`url("${String(u).replace(/["\\]/g,"")}")`;st.backgroundSize=b.fit==="tile"?"auto":"cover";st.backgroundRepeat=b.fit==="tile"?"repeat":"no-repeat";st.setProperty("--bgx-veil",String(Math.max(0,Math.min(90,+b.veil||0))/100))}}
+const admName=()=>{const a=(DB.page&&DB.page.adm)||{};return a.name||(DB.page&&DB.page.name)||"delidome"};
+function applyBrandSize(){const pg=DB.page,top=document.querySelector(".top");if(!pg||!top)return;const z=Math.max(0,Math.min(72,+pg.logoSize||0));top.classList.toggle("lgsz",z>0);if(z)document.documentElement.style.setProperty("--logo-h",z+"px");else document.documentElement.style.removeProperty("--logo-h")}
+function applyAdminBrand(){const pg=DB.page,box=document.getElementById("adLogo");if(!pg||!box)return;const a=pg.adm||{},mk=document.getElementById("adLogoMark"),nm=document.getElementById("adLogoName"),z=Math.max(0,Math.min(72,+a.size||0));
+  const lg=safeMedia(a.logo)||safeMedia(pg.logo);if(lg)mk.innerHTML=`<img src="${esc(lg)}" alt="">`;else if(!mk.querySelector("svg"))mk.innerHTML=LP_DEFAULT_SVG.replace(/currentColor/g,"#fff");
+  nm.textContent=admName();nm.hidden=a.show===false;box.classList.toggle("lgsz",z>0);if(z)box.style.setProperty("--ad-logo-h",z+"px");else box.style.removeProperty("--ad-logo-h")}
 const SNOW={cv:null,ctx:null,fl:[],spr:[],key:"",raf:0,last:0,w:0,h:0,dpr:1,run:false,iv:0};
 const snowScope=()=>{const c=document.body.classList;return c.contains("aff-on")?"aff":c.contains("in-store")?"shop":"admin"};
 function snowStop(){SNOW.run=false;cancelAnimationFrame(SNOW.raf);if(SNOW.cv)SNOW.cv.style.display="none"}
@@ -2496,7 +2508,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-23 18:50 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc(admName())} <small>Affiliate</small></span><small class="afver">build 2026-10-23 20:33 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

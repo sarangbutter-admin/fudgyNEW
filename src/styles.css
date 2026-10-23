@@ -1701,3 +1701,12 @@ html.bgx-admin body:not(.in-store):not(.aff-on) .admin{background:transparent}
 html.bgx-aff body.aff-on #affView{background:transparent}
 
 #snowCv{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;display:none}
+
+/* logo size (shop top bar, admin top bar) */
+.top.lgsz #logoMark img,.top.lgsz #logoMark svg{height:var(--logo-h,28px);width:auto}
+#adLogo{display:flex;align-items:center;gap:8px}#adLogoMark{display:inline-flex;align-items:center}#adLogoMark svg{width:30px;height:24px}#adLogoMark img{height:28px;width:auto;border-radius:6px;display:block}
+#adLogo.lgsz #adLogoMark img,#adLogo.lgsz #adLogoMark svg{height:var(--ad-logo-h,28px);width:auto}
+#adLogoName[hidden]{display:none}
+/* marquee: picture height, pictures that are links */
+.marq .mi{height:var(--mih,2.2em)}.marq.bigimg .mi{margin:.2em .6em}.marq.bigimg{padding:.3em 0}
+.marq .mia{display:block;flex:none}.marq .mia .mi{cursor:pointer}
