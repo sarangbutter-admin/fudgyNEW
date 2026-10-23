@@ -4322,7 +4322,7 @@ function mqTap(el){
   el.querySelectorAll("img.mi").forEach(im=>{if(im._fb)return;im._fb=1;im.addEventListener("error",()=>{const v=document.createElement("video");v.className="mi";v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.addEventListener("error",()=>{(v.parentNode&&v.parentNode.classList.contains("mia")?v.parentNode:v).remove()});v.src=im.src;im.replaceWith(v);const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})})});
   el.querySelectorAll("video.mi").forEach(v=>{if(v._fb)return;v._fb=1;v.addEventListener("error",()=>{(v.parentNode&&v.parentNode.classList.contains("mia")?v.parentNode:v).remove()})});
   if(el._tp)return;el._tp=1;let last=0;
-  el.addEventListener("click",e=>{if(e.target.closest("a"))return;const t=Date.now(),dbl=t-last<350;last=t;if(dbl){el.classList.remove("paused");mqVids(el,true)}else{el.classList.add("paused");mqVids(el,false)}})}
+  el.addEventListener("click",e=>{if(e.target.closest("a"))return;const t=Date.now(),dbl=t-last<450;last=t;if(dbl){el.classList.remove("paused");mqVids(el,true)}else{el.classList.add("paused");mqVids(el,false)}})}
 function mqBuild(el){
   const m=el._m;if(!m)return;
   el.classList.toggle("still",RM);
