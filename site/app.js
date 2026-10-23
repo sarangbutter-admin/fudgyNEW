@@ -125,7 +125,7 @@ function defaultAnnouncer(){return {on:true,sticky:true,size:"M",cdColor:"#C8102
   giftsoon:{text:"Coming up: {name}, free gifts with {applies}.",label:"Starts in",bg:"#FFF7D6",ink:"#000096",img:""},
   mq:{bg:"#000096",ink:"#FFFFFF",font:"display",fontData:"",fontName:"",size:"M",speed:"medium",sepOn:true,sepImg:""},
   custom:{on:false,text:"Free delivery this weekend!",label:"Ends in",endsAt:"",bg:"#000096",ink:"#FFFFFF",img:""}}}
-function defaultMarquee(){return {on:true,texts:["Baked fresh every morning","Build a box your way","Pickup or local delivery","Order by 8pm for next-day cookies"],images:[],bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium",fontData:null,fontName:""}}
+function defaultMarquee(){return {on:true,texts:["Baked fresh every morning","Build a box your way","Pickup or local delivery","Order by 8pm for next-day cookies"],images:[],bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium",fontData:null,fontName:"",mode:"both",imgH:0,links:[],rich:true}}
 function defaultThanks(){return {logo:"",cookies:[],fx:true,amount:28,title:"Order placed",titleUpd:"Order updated",
   text:"Thanks, {name}! Your box of {size} is set for {mode} on {when}.",
   urgent:"Your cookies are waiting! Pay within {hours} to keep them.",
@@ -159,6 +159,7 @@ function migrate(db){
     db.page.strip={items:st.mode==="off"?d.map(x=>({...x,on:false})):st.mode==="custom"?String(st.text||"").split("\n").map(x=>x.trim()).filter(Boolean).map(t=>({t,on:true})):d}}
   db.page=deepFill(defaultPage(),db.page);
   if(!db.marquee)db.marquee=defaultMarquee();
+  db.marquee=Object.assign({mode:"both",imgH:0,links:[],rich:true},db.marquee);if(!Array.isArray(db.marquee.links))db.marquee.links=[];
   db.announcer=deepFill(defaultAnnouncer(),db.announcer);
   if(db.settings.complaintWindowH===undefined)db.settings.complaintWindowH=24;
   if(db.settings.waCountry===undefined)db.settings.waCountry="62";
@@ -2101,7 +2102,7 @@ function mqNorm(u){u=String(u||"").trim();if(!/^https:\/\//i.test(u))return {err
 const mqIsVideo=s=>/^data:video\//i.test(s||"")||/\.(mp4|webm|m4v|mov)(\?[^#]*)?(#.*)?$/i.test(s||"");
 function mqSeq(m,n){ // n repeats. "both": a random photo after each sentence (never the same twice in a row); "pics": only the photos; "text": only sentences
   const out=[],imgs=m.images||[],L=m.links||[],mode=m.mode||"both";let last=-1;
-  const pic=i=>{const src=m.noFont?safeMedia(imgs[i]):imgOk(imgs[i]);if(!src)return "";const yt=m.noFont?ytId(src):"",vm=m.noFont&&!yt?vimeoId(src):"";
+  const pic=i=>{const rich=m.noFont||m.rich,src=rich?safeMedia(imgs[i]):imgOk(imgs[i]);if(!src)return "";const yt=rich?ytId(src):"",vm=rich&&!yt?vimeoId(src):"";
     const im=yt||vm?`<span class="mv${/shorts\//i.test(src)?" v916":""}"><iframe src="${yt?`https://www.youtube-nocookie.com/embed/${yt}?autoplay=1&mute=1&loop=1&playlist=${yt}&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1`:`https://player.vimeo.com/video/${vm}?background=1&autoplay=1&muted=1&loop=1&dnt=1`}" title="" tabindex="-1" aria-hidden="true" allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin"></iframe></span>`:mqIsVideo(src)?`<video class="mi" src="${esc(src)}" muted loop autoplay playsinline preload="metadata"></video>`:`<img class="mi" src="${esc(src)}" alt="" draggable="false">`,lk=safeUrl(L[i]);return lk?`<a class="mia" href="${esc(lk)}" ${lk[0]==="#"?"":'target="_blank" rel="noopener"'}>${im}</a>`:im};
   for(let k=0;k<n;k++){
     if(mode==="pics"&&imgs.length){imgs.forEach((u,i)=>out.push(pic(i)))}
@@ -2112,7 +2113,7 @@ function mqSeq(m,n){ // n repeats. "both": a random photo after each sentence (n
 }
 function renderMarquee(el,m){
   if(!el)return;m=m||DB.marquee;
-  const texts=(m.texts||[]).filter(Boolean),pics=(m.images||[]).filter(u=>m.noFont?safeMedia(u):imgOk(u));
+  const texts=(m.texts||[]).filter(Boolean),pics=(m.images||[]).filter(u=>(m.noFont||m.rich)?safeMedia(u):imgOk(u));
   el.hidden=!m.on||((m.mode||"both")==="pics"?!pics.length:!texts.length);if(el.hidden)return;
   if(!m.noFont)mqEnsureFont(m);
   el.style.setProperty("--mbg",m.bg);el.style.setProperty("--mfg",m.color);el.style.setProperty("--msz",(MQ_SIZE[m.size]||18)+"px");{const ih=Math.max(0,Math.min(300,+m.imgH||0));el.style.setProperty("--mih",ih?ih+"px":"2.2em");el.classList.toggle("bigimg",ih>0)}el.style.setProperty("--mfont",mqFamily(m));
@@ -2120,10 +2121,10 @@ function renderMarquee(el,m){
   el._m={...m,texts};mqBuild(el);
 }
 function mqVids(el,on){el.querySelectorAll("video").forEach(v=>{if(on){const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})}else v.pause()})}
-function mqTap(el){
+function mqTap(el,tap){
   el.querySelectorAll("img.mi").forEach(im=>{if(im._fb)return;im._fb=1;im.addEventListener("error",()=>{const v=document.createElement("video");v.className="mi";v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.addEventListener("error",()=>{(v.parentNode&&v.parentNode.classList.contains("mia")?v.parentNode:v).remove()});v.src=im.src;im.replaceWith(v);const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})})});
   el.querySelectorAll("video.mi").forEach(v=>{if(v._fb)return;v._fb=1;v.addEventListener("error",()=>{(v.parentNode&&v.parentNode.classList.contains("mia")?v.parentNode:v).remove()})});
-  if(el._tp)return;el._tp=1;let last=0;
+  if(!tap||el._tp)return;el._tp=1;let last=0;
   el.addEventListener("click",e=>{if(e.target.closest("a"))return;const t=Date.now(),dbl=t-last<450;last=t;if(dbl){el.classList.remove("paused");mqVids(el,true)}else{el.classList.add("paused");mqVids(el,false)}})}
 function mqBuild(el){
   const m=el._m;if(!m)return;
@@ -2135,7 +2136,7 @@ function mqBuild(el){
   const n=Math.max(1,Math.ceil(cw/w1));
   if(n>1)draw(n);
   el.querySelectorAll("video").forEach(v=>{v.muted=true;if(el.classList.contains("paused"))v.pause();else{const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})}});
-  if(m.noFont)mqTap(el);
+  if(m.noFont||m.rich)mqTap(el,!!m.noFont);
   const w=el.querySelector(".set").scrollWidth;
   el.style.setProperty("--mdur",Math.max(6,w/(MQ_SPEED[m.speed]||70))+"s");
 }
@@ -2523,7 +2524,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-23 21:11 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-23 21:27 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

@@ -128,7 +128,7 @@ function defaultAnnouncer(){return {on:true,sticky:true,size:"M",cdColor:"#C8102
   giftsoon:{text:"Coming up: {name}, free gifts with {applies}.",label:"Starts in",bg:"#FFF7D6",ink:"#000096",img:""},
   mq:{bg:"#000096",ink:"#FFFFFF",font:"display",fontData:"",fontName:"",size:"M",speed:"medium",sepOn:true,sepImg:""},
   custom:{on:false,text:"Free delivery this weekend!",label:"Ends in",endsAt:"",bg:"#000096",ink:"#FFFFFF",img:""}}}
-function defaultMarquee(){return {on:true,texts:["Baked fresh every morning","Build a box your way","Pickup or local delivery","Order by 8pm for next-day cookies"],images:[],bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium",fontData:null,fontName:""}}
+function defaultMarquee(){return {on:true,texts:["Baked fresh every morning","Build a box your way","Pickup or local delivery","Order by 8pm for next-day cookies"],images:[],bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium",fontData:null,fontName:"",mode:"both",imgH:0,links:[],rich:true}}
 function defaultThanks(){return {logo:"",cookies:[],fx:true,amount:28,title:"Order placed",titleUpd:"Order updated",
   text:"Thanks, {name}! Your box of {size} is set for {mode} on {when}.",
   urgent:"Your cookies are waiting! Pay within {hours} to keep them.",
@@ -162,6 +162,7 @@ function migrate(db){
     db.page.strip={items:st.mode==="off"?d.map(x=>({...x,on:false})):st.mode==="custom"?String(st.text||"").split("\n").map(x=>x.trim()).filter(Boolean).map(t=>({t,on:true})):d}}
   db.page=deepFill(defaultPage(),db.page);
   if(!db.marquee)db.marquee=defaultMarquee();
+  db.marquee=Object.assign({mode:"both",imgH:0,links:[],rich:true},db.marquee);if(!Array.isArray(db.marquee.links))db.marquee.links=[];
   db.announcer=deepFill(defaultAnnouncer(),db.announcer);
   if(db.settings.complaintWindowH===undefined)db.settings.complaintWindowH=24;
   if(db.settings.waCountry===undefined)db.settings.waCountry="62";
@@ -4298,7 +4299,7 @@ function mqNorm(u){u=String(u||"").trim();if(!/^https:\/\//i.test(u))return {err
 const mqIsVideo=s=>/^data:video\//i.test(s||"")||/\.(mp4|webm|m4v|mov)(\?[^#]*)?(#.*)?$/i.test(s||"");
 function mqSeq(m,n){ // n repeats. "both": a random photo after each sentence (never the same twice in a row); "pics": only the photos; "text": only sentences
   const out=[],imgs=m.images||[],L=m.links||[],mode=m.mode||"both";let last=-1;
-  const pic=i=>{const src=m.noFont?safeMedia(imgs[i]):imgOk(imgs[i]);if(!src)return "";const yt=m.noFont?ytId(src):"",vm=m.noFont&&!yt?vimeoId(src):"";
+  const pic=i=>{const rich=m.noFont||m.rich,src=rich?safeMedia(imgs[i]):imgOk(imgs[i]);if(!src)return "";const yt=rich?ytId(src):"",vm=rich&&!yt?vimeoId(src):"";
     const im=yt||vm?`<span class="mv${/shorts\//i.test(src)?" v916":""}"><iframe src="${yt?`https://www.youtube-nocookie.com/embed/${yt}?autoplay=1&mute=1&loop=1&playlist=${yt}&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1`:`https://player.vimeo.com/video/${vm}?background=1&autoplay=1&muted=1&loop=1&dnt=1`}" title="" tabindex="-1" aria-hidden="true" allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin"></iframe></span>`:mqIsVideo(src)?`<video class="mi" src="${esc(src)}" muted loop autoplay playsinline preload="metadata"></video>`:`<img class="mi" src="${esc(src)}" alt="" draggable="false">`,lk=safeUrl(L[i]);return lk?`<a class="mia" href="${esc(lk)}" ${lk[0]==="#"?"":'target="_blank" rel="noopener"'}>${im}</a>`:im};
   for(let k=0;k<n;k++){
     if(mode==="pics"&&imgs.length){imgs.forEach((u,i)=>out.push(pic(i)))}
@@ -4309,7 +4310,7 @@ function mqSeq(m,n){ // n repeats. "both": a random photo after each sentence (n
 }
 function renderMarquee(el,m){
   if(!el)return;m=m||DB.marquee;
-  const texts=(m.texts||[]).filter(Boolean),pics=(m.images||[]).filter(u=>m.noFont?safeMedia(u):imgOk(u));
+  const texts=(m.texts||[]).filter(Boolean),pics=(m.images||[]).filter(u=>(m.noFont||m.rich)?safeMedia(u):imgOk(u));
   el.hidden=!m.on||((m.mode||"both")==="pics"?!pics.length:!texts.length);if(el.hidden)return;
   if(!m.noFont)mqEnsureFont(m);
   el.style.setProperty("--mbg",m.bg);el.style.setProperty("--mfg",m.color);el.style.setProperty("--msz",(MQ_SIZE[m.size]||18)+"px");{const ih=Math.max(0,Math.min(300,+m.imgH||0));el.style.setProperty("--mih",ih?ih+"px":"2.2em");el.classList.toggle("bigimg",ih>0)}el.style.setProperty("--mfont",mqFamily(m));
@@ -4318,10 +4319,10 @@ function renderMarquee(el,m){
 }
 // second marquee: tap to pause, double tap to play again; a picture link that fails to load is tried as a video, then dropped
 function mqVids(el,on){el.querySelectorAll("video").forEach(v=>{if(on){const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})}else v.pause()})}
-function mqTap(el){
+function mqTap(el,tap){
   el.querySelectorAll("img.mi").forEach(im=>{if(im._fb)return;im._fb=1;im.addEventListener("error",()=>{const v=document.createElement("video");v.className="mi";v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.addEventListener("error",()=>{(v.parentNode&&v.parentNode.classList.contains("mia")?v.parentNode:v).remove()});v.src=im.src;im.replaceWith(v);const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})})});
   el.querySelectorAll("video.mi").forEach(v=>{if(v._fb)return;v._fb=1;v.addEventListener("error",()=>{(v.parentNode&&v.parentNode.classList.contains("mia")?v.parentNode:v).remove()})});
-  if(el._tp)return;el._tp=1;let last=0;
+  if(!tap||el._tp)return;el._tp=1;let last=0;
   el.addEventListener("click",e=>{if(e.target.closest("a"))return;const t=Date.now(),dbl=t-last<450;last=t;if(dbl){el.classList.remove("paused");mqVids(el,true)}else{el.classList.add("paused");mqVids(el,false)}})}
 function mqBuild(el){
   const m=el._m;if(!m)return;
@@ -4333,7 +4334,7 @@ function mqBuild(el){
   const n=Math.max(1,Math.ceil(cw/w1));
   if(n>1)draw(n);
   el.querySelectorAll("video").forEach(v=>{v.muted=true;if(el.classList.contains("paused"))v.pause();else{const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})}});
-  if(m.noFont)mqTap(el);
+  if(m.noFont||m.rich)mqTap(el,!!m.noFont);
   const w=el.querySelector(".set").scrollWidth;
   el.style.setProperty("--mdur",Math.max(6,w/(MQ_SPEED[m.speed]||70))+"s");
 }
@@ -4348,7 +4349,7 @@ function viewMarquee(){return viewMarquee1()+mq2Section()}
 function viewMarquee1(){
   const m=DB.marquee,ok=mqContrast(m.bg,m.color)>=3;
   const fontOpts=Object.entries(MQ_FONTS).map(([k,v])=>`<option value="${k}" ${m.font===k?"selected":""}>${v[0]}</option>`).join("")+(m.fontData?`<option value="custom" ${m.font==="custom"?"selected":""}>${esc(m.fontName||"Your font")} (uploaded)</option>`:"");
-  return head("Marquee banner","The running text above “Build your box”. Add 1 to 5 photos and they pop up at random between the sentences.")+MOCK+`
+  return head("Marquee banner","The running text above “Build your box”. Add 1 to 5 photos, GIFs or short videos. Show text only, photos only, or both, and make the photos bigger.")+MOCK+`
   <div class="stack">
     <section class="panel">
       <div class="phead"><div><h2>Preview</h2><p class="sub">Updates as you type. Reload the shop to see the photos reshuffle.</p></div>
@@ -4359,9 +4360,12 @@ function viewMarquee1(){
     <section class="panel mqgrid">
       <div><h2>Text</h2><p class="sub">One sentence per line, up to 12.</p>
         <label class="af"><span class="vh" style="position:absolute;left:-9999px">Marquee sentences</span><textarea class="in" rows="5" data-mq="texts" maxlength="1200" aria-label="Marquee sentences">${esc(m.texts.join("\n"))}</textarea></label></div>
-      <div><h2>Photos <span class="note" id="mqCount">${m.images.length} of 5</span></h2><p class="sub">Shown at random between sentences. They are resized small automatically. Transparent PNGs keep their see-through background.</p>
-        <div class="mqimgs">${m.images.map((src,i)=>`<div class="th"><img src="${esc(imgOk(src))}" alt="Marquee photo ${i+1}"><button type="button" data-mqrm="${i}" aria-label="Remove photo ${i+1}">×</button></div>`).join("")}
-          ${m.images.length<5?`<label class="ghost mqbtn">+ Add photo<input type="file" accept="image/*" multiple hidden data-mqimg></label>`:`<span class="note">Maximum reached</span>`}</div></div>
+      <div><h2>Photos <span class="note" id="mqCount">${m.images.length} of 5</span></h2><p class="sub">Shown at random between sentences. Photos are resized small automatically. GIFs and videos play by themselves, muted and looping. Transparent PNGs keep their see-through background.</p>
+        <div class="mqimgs">${m.images.map((src,i)=>`<div class="th">${ytId(src)||vimeoId(src)?`<span class="mqyt" title="YouTube or Vimeo video">▶</span>`:mqIsVideo(src)?`<video src="${esc(safeMedia(src))}" muted playsinline preload="metadata" aria-label="Video ${i+1}" onerror="this.parentNode.classList.add('bad')"></video>`:`<img src="${esc(safeMedia(src))}" alt="Marquee item ${i+1}" onerror="this.parentNode.classList.add('bad')">`}<button type="button" data-mqrm="${i}" aria-label="Remove item ${i+1}">×</button></div>`).join("")}
+          ${m.images.length<5?`<label class="ghost mqbtn">+ Add photo<input type="file" accept="image/*" multiple hidden data-mqimg></label><label class="ghost mqbtn">+ Add GIF or video<input type="file" accept="image/gif,video/mp4,video/webm" hidden data-mqraw></label>`:`<span class="note">Maximum reached</span>`}</div>
+        ${m.images.length<5?`<div class="colin" style="margin-top:8px"><input class="in" id="mqLink" maxlength="400" placeholder="Or paste a link: photo, GIF or .mp4 / .webm video (https)"><button class="ghost" type="button" data-mqadd>Add link</button></div>
+        <p class="note">Uploaded GIFs and videos can be up to 1.5 MB. For bigger ones, paste a link to the file. YouTube, Vimeo and Giphy links also work. A ⚠ on an item means its link can't be loaded.</p>`:""}
+        ${m.images.length?`<div class="stack" style="gap:8px;margin-top:10px">${m.images.map((src,i)=>`<label class="af" style="font-size:13px">Link for item ${i+1} (optional)<input class="in" data-mqlink="${i}" maxlength="300" value="${esc((m.links||[])[i]||"")}" placeholder="https://… or #build"></label>`).join("")}</div>`:""}</div>
     </section>
     <section class="panel">
       <h2>Look</h2>
@@ -4369,6 +4373,10 @@ function viewMarquee1(){
         <label class="af">Text color<div class="colin"><input type="color" data-mqc="color" value="${m.color}" aria-label="Text color picker"><input class="in" data-mqc="color" value="${m.color}" maxlength="7" aria-label="Text color hex"></div></label>
         <label class="af">Background color<div class="colin"><input type="color" data-mqc="bg" value="${m.bg}" aria-label="Background color picker"><input class="in" data-mqc="bg" value="${m.bg}" maxlength="7" aria-label="Background color hex"></div></label>
         <label class="af">Font<select class="in" data-mq="font">${fontOpts}</select></label>
+      </div>
+      <div class="grid3" style="margin-top:12px;align-items:end">
+        <label class="af">What to show<select class="in" data-mq="mode">${[["both","Text and photos"],["pics","Photos only"],["text","Text only"]].map(([k,l])=>`<option value="${k}" ${(m.mode||"both")===k?"selected":""}>${l}</option>`).join("")}</select></label>
+        <label class="af">Photo height: ${+m.imgH?m.imgH+"px":"Auto"}<input type="range" min="0" max="240" step="10" value="${+m.imgH||0}" data-mq="imgH" data-rr="1"></label>
       </div>
       <div class="grid3" style="margin-top:12px;align-items:end">
         <label class="af">Text size<select class="in" data-mq="size"><option value="S" ${m.size==="S"?"selected":""}>Small</option><option value="M" ${m.size==="M"?"selected":""}>Medium</option><option value="L" ${m.size==="L"?"selected":""}>Large</option></select></label>
@@ -4440,6 +4448,7 @@ am.addEventListener("click",e=>{const b=e.target.closest("[data-mq2rm],[data-mq2
   else armed(b,()=>{DB.page.mq2=deepFill(defaultPage().mq2,{on:m.on});saveDB();toast("Banner reset");renderAdmin()})});
 function afterViewMarquee(){renderMarquee($("#mqPrev"),DB.marquee)}
 let mqSaveT;
+function mqPush(u){const m=DB.marquee;if(m.images.length>=5){toast("Up to 5 items.");return false}m.images.push(u);if(!saveDB()){m.images.pop();toast("Not enough storage space. Remove another item first.");return false}return true}
 function mqSave(msg){clearTimeout(mqSaveT);mqSaveT=setTimeout(()=>{if(saveDB())toast(msg||"Saved");else toast("Not enough storage space. Remove a photo or font.")},350)}
 function mqPreview(){renderMarquee($("#mqPrev"),DB.marquee);const w=$("#mqWarn");if(w)w.hidden=mqContrast(DB.marquee.bg,DB.marquee.color)>=3}
 async function mqSmall(file){
@@ -4458,13 +4467,18 @@ async function mqSmall(file){
 am.addEventListener("input",e=>{
   const el=e.target,m=DB.marquee;
   if(el.dataset.mq==="texts"){m.texts=el.value.split("\n").map(x=>x.trim().slice(0,90)).filter(Boolean).slice(0,12);mqPreview();mqSave()}
+  else if(el.dataset.mqlink!==undefined){const i=+el.dataset.mqlink;if(!Array.isArray(m.links))m.links=[];m.links[i]=el.value.trim().slice(0,300);mqPreview();mqSave()}
   else if(el.dataset.mqc){const k=el.dataset.mqc,h=hexNorm(el.value);if(!HEX6.test(h))return;m[k]=h;
     am.querySelectorAll(`[data-mqc="${k}"]`).forEach(o=>{if(o!==el&&o.value.toLowerCase()!==h)o.value=h});mqPreview();mqSave()}
 });
 am.addEventListener("change",async e=>{
   const el=e.target,m=DB.marquee;
   if(el.dataset.mq&&el.dataset.mq!=="texts"){
-    const k=el.dataset.mq;m[k]=el.type==="checkbox"?el.checked:el.value;saveDB();toast("Saved");mqPreview();return}
+    const k=el.dataset.mq;m[k]=el.type==="checkbox"?el.checked:(k==="imgH"?Math.max(0,Math.min(240,+el.value||0)):el.value);saveDB();toast("Saved");mqPreview();if(el.dataset.rr)renderAdmin();return}
+  if(el.dataset.mqraw!==undefined){const f=el.files[0];el.value="";if(!f)return;
+    if(!/^(image\/gif|video\/(mp4|webm))$/.test(f.type)){toast("Use a .gif, .mp4 or .webm file.");return}
+    if(f.size>1.5e6){toast("That file is over 1.5 MB. Paste a link to it instead.");return}
+    try{if(mqPush(await readData(f)))renderAdmin()}catch(err){toast(err.message)}return}
   if(el.dataset.mqimg!==undefined){
     const files=[...el.files].slice(0,5-m.images.length);if(!files.length)return;
     for(const f of files){try{const prev=m.images.slice();m.images.push(await mqSmall(f));if(!saveDB()){m.images=prev;toast("Not enough storage space. Remove another photo first.");break}}catch(err){toast(err.message);break}}
@@ -4485,7 +4499,8 @@ am.addEventListener("change",async e=>{
 });
 am.addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;const d=b.dataset,m=DB.marquee;
-  if(d.mqrm!==undefined){m.images.splice(+d.mqrm,1);saveDB();toast("Photo removed");renderAdmin()}
+  if(d.mqadd!==undefined){const r=mqNorm(($("#mqLink")||{}).value);if(r.err){toast(r.err);return}if(mqPush(r.url))renderAdmin();return}
+  if(d.mqrm!==undefined){m.images.splice(+d.mqrm,1);if(Array.isArray(m.links))m.links.splice(+d.mqrm,1);saveDB();toast("Photo removed");renderAdmin()}
   else if(d.mqfontrm!==undefined){m.fontData=null;m.fontName="";if(m.font==="custom")m.font="display";saveDB();toast("Font removed");renderAdmin()}
   else if(d.mqreset!==undefined){armed(b,()=>{DB.marquee=defaultMarquee();saveDB();toast("Banner reset");renderAdmin()})}
 });
