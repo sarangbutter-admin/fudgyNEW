@@ -4289,10 +4289,17 @@ function mqEnsureFont(m){
   try{if(mqFace)document.fonts.delete(mqFace);mqFace=new FontFace("DD Custom",`url(${m.fontData})`);document.fonts.add(mqFace);mqFaceKey=key;mqFace.load().then(()=>mqFit()).catch(()=>{})}catch(e){}
 }
 function mqFamily(m){return m.font==="custom"&&m.fontData?'"DD Custom",var(--body)':(MQ_FONTS[m.font]||MQ_FONTS.display)[1]}
+// pasted links for the second marquee: turn share pages into the real file where we can, and say so when we can't
+function mqNorm(u){u=String(u||"").trim();if(!/^https:\/\//i.test(u))return {err:"Paste a link that starts with https://"};
+  let m=u.match(/^https:\/\/(?:www\.)?giphy\.com\/(?:gifs|stickers|clips)\/(?:[^\/?#]*-)?([A-Za-z0-9]+)(?:[\/?#]|$)/i);if(m)return {url:`https://media.giphy.com/media/${m[1]}/giphy.gif`};
+  if(/^https:\/\/www\.dropbox\.com\//i.test(u))return {url:u.replace("://www.dropbox.com","://dl.dropboxusercontent.com").replace(/([?&])dl=0&?/,"$1").replace(/[?&]$/,"")};
+  if(/^https:\/\/([a-z0-9-]+\.)?(instagram|tiktok|facebook|fb)\.com\/|tenor\.com\/view|drive\.google\.com\/|photos\.app\.goo\.gl|pin\.it\/|pinterest\./i.test(u))return {err:"That link is a web page, not the picture or video file itself. Use a direct link to the file (ending in .mp4, .webm or .gif), a YouTube or Vimeo link, or upload a small file."};
+  return {url:u}}
 const mqIsVideo=s=>/^data:video\//i.test(s||"")||/\.(mp4|webm|m4v|mov)(\?[^#]*)?(#.*)?$/i.test(s||"");
 function mqSeq(m,n){ // n repeats. "both": a random photo after each sentence (never the same twice in a row); "pics": only the photos; "text": only sentences
   const out=[],imgs=m.images||[],L=m.links||[],mode=m.mode||"both";let last=-1;
-  const pic=i=>{const src=m.noFont?safeMedia(imgs[i]):imgOk(imgs[i]);if(!src)return "";const im=mqIsVideo(src)?`<video class="mi" src="${esc(src)}" muted loop autoplay playsinline preload="metadata"></video>`:`<img class="mi" src="${esc(src)}" alt="" draggable="false">`,lk=safeUrl(L[i]);return lk?`<a class="mia" href="${esc(lk)}" ${lk[0]==="#"?"":'target="_blank" rel="noopener"'}>${im}</a>`:im};
+  const pic=i=>{const src=m.noFont?safeMedia(imgs[i]):imgOk(imgs[i]);if(!src)return "";const yt=m.noFont?ytId(src):"",vm=m.noFont&&!yt?vimeoId(src):"";
+    const im=yt||vm?`<span class="mv${/shorts\//i.test(src)?" v916":""}"><iframe src="${yt?`https://www.youtube-nocookie.com/embed/${yt}?autoplay=1&mute=1&loop=1&playlist=${yt}&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1`:`https://player.vimeo.com/video/${vm}?background=1&autoplay=1&muted=1&loop=1&dnt=1`}" title="" tabindex="-1" aria-hidden="true" allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin"></iframe></span>`:mqIsVideo(src)?`<video class="mi" src="${esc(src)}" muted loop autoplay playsinline preload="metadata"></video>`:`<img class="mi" src="${esc(src)}" alt="" draggable="false">`,lk=safeUrl(L[i]);return lk?`<a class="mia" href="${esc(lk)}" ${lk[0]==="#"?"":'target="_blank" rel="noopener"'}>${im}</a>`:im};
   for(let k=0;k<n;k++){
     if(mode==="pics"&&imgs.length){imgs.forEach((u,i)=>out.push(pic(i)))}
     else m.texts.forEach(t=>{out.push(`<span class="mt">${esc(t)}</span>`);
@@ -4309,6 +4316,13 @@ function renderMarquee(el,m){
   el.setAttribute("aria-label",texts.join(". "));
   el._m={...m,texts};mqBuild(el);
 }
+// second marquee: tap to pause, double tap to play again; a picture link that fails to load is tried as a video, then dropped
+function mqVids(el,on){el.querySelectorAll("video").forEach(v=>{if(on){const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})}else v.pause()})}
+function mqTap(el){
+  el.querySelectorAll("img.mi").forEach(im=>{if(im._fb)return;im._fb=1;im.addEventListener("error",()=>{const v=document.createElement("video");v.className="mi";v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.addEventListener("error",()=>{(v.parentNode&&v.parentNode.classList.contains("mia")?v.parentNode:v).remove()});v.src=im.src;im.replaceWith(v);const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})})});
+  el.querySelectorAll("video.mi").forEach(v=>{if(v._fb)return;v._fb=1;v.addEventListener("error",()=>{(v.parentNode&&v.parentNode.classList.contains("mia")?v.parentNode:v).remove()})});
+  if(el._tp)return;el._tp=1;let last=0;
+  el.addEventListener("click",e=>{if(e.target.closest("a"))return;const t=Date.now(),dbl=t-last<350;last=t;if(dbl){el.classList.remove("paused");mqVids(el,true)}else{el.classList.add("paused");mqVids(el,false)}})}
 function mqBuild(el){
   const m=el._m;if(!m)return;
   el.classList.toggle("still",RM);
@@ -4318,7 +4332,8 @@ function mqBuild(el){
   const w1=el.querySelector(".set").scrollWidth||1;
   const n=Math.max(1,Math.ceil(cw/w1));
   if(n>1)draw(n);
-  el.querySelectorAll("video").forEach(v=>{v.muted=true;const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})});
+  el.querySelectorAll("video").forEach(v=>{v.muted=true;if(el.classList.contains("paused"))v.pause();else{const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})}});
+  if(m.noFont)mqTap(el);
   const w=el.querySelector(".set").scrollWidth;
   el.style.setProperty("--mdur",Math.max(6,w/(MQ_SPEED[m.speed]||70))+"s");
 }
@@ -4373,7 +4388,7 @@ function mq2Section(){
   return `
   <div class="stack" style="margin-top:34px;padding-top:22px;border-top:2px dashed var(--line)">
     <section class="panel">
-      <h2 style="margin-bottom:4px">Marquee banner 2</h2><p class="sub">A second running banner, shown just above the “Hello there” visit section of your shop. It can also show GIFs and short videos. The banner above is not changed.</p>
+      <h2 style="margin-bottom:4px">Marquee banner 2</h2><p class="sub">A second running banner, shown just above the “Hello there” visit section of your shop. It can also show GIFs and short videos. Tap it to pause, double tap to play again. The banner above is not changed.</p>
       <div class="phead"><div><h2>Preview</h2><p class="sub">Updates as you type.</p></div>
         <label class="sw"><input type="checkbox" data-mq2="on" ${m.on?"checked":""} aria-label="Show the second marquee in the shop"><span></span></label></div>
       <div class="marq prev" id="mq2Prev"></div>
@@ -4387,11 +4402,11 @@ function mq2Section(){
         <label class="af"><span class="vh" style="position:absolute;left:-9999px">Second marquee sentences</span><textarea class="in" rows="5" data-mq2="texts" maxlength="1200" aria-label="Second marquee sentences">${esc(m.texts.join("\n"))}</textarea></label></div>
     </section>
     <section class="panel">
-      <h2>Photos, GIFs and videos <span class="note">${m.images.length} of 5</span></h2><p class="sub">Each one can open a link when tapped. Videos play by themselves, muted and looping. Transparent PNGs keep their see-through background.</p>
-      <div class="mqimgs">${m.images.map((src,i)=>`<div class="th">${mqIsVideo(src)?`<video src="${esc(safeMedia(src))}" muted playsinline preload="metadata" aria-label="Video ${i+1}"></video>`:`<img src="${esc(safeMedia(src))}" alt="Item ${i+1}">`}<button type="button" data-mq2rm="${i}" aria-label="Remove item ${i+1}">×</button></div>`).join("")}
+      <h2>Photos, GIFs and videos <span class="note">${m.images.length} of 5</span></h2><p class="sub">Each one can open a link when tapped. Videos play by themselves, muted and looping. A ⚠ on a picture means that link can't be loaded: use a direct link to the file. Transparent PNGs keep their see-through background.</p>
+      <div class="mqimgs">${m.images.map((src,i)=>`<div class="th">${ytId(src)||vimeoId(src)?`<span class="mqyt" title="YouTube or Vimeo video">▶</span>`:mqIsVideo(src)?`<video src="${esc(safeMedia(src))}" muted playsinline preload="metadata" aria-label="Video ${i+1}" onerror="this.parentNode.classList.add('bad')"></video>`:`<img src="${esc(safeMedia(src))}" alt="Item ${i+1}" onerror="this.parentNode.classList.add('bad')">`}<button type="button" data-mq2rm="${i}" aria-label="Remove item ${i+1}">×</button></div>`).join("")}
         ${m.images.length<5?`<label class="ghost mqbtn">+ Add photo<input type="file" accept="image/*" multiple hidden data-mq2img></label><label class="ghost mqbtn">+ Add GIF or video<input type="file" accept="image/gif,video/mp4,video/webm" hidden data-mq2raw></label>`:`<span class="note">Maximum reached</span>`}</div>
       ${m.images.length<5?`<div class="colin" style="margin-top:8px"><input class="in" id="mq2Link" maxlength="400" placeholder="Or paste a link: photo, GIF or .mp4 / .webm video (https)"><button class="ghost" type="button" data-mq2add>Add link</button></div>
-      <p class="note">Uploaded GIFs and videos can be up to 1.5 MB. For bigger or longer ones, paste a link to the file (it must end in .mp4, .webm or .gif, or be a picture link).</p>`:""}
+      <p class="note">Uploaded GIFs and videos can be up to 1.5 MB. For bigger or longer ones, paste a link to the file (it must end in .mp4, .webm or .gif, or be a picture link). YouTube, Vimeo and Giphy links also work.</p>`:""}
       ${m.images.length?`<div class="stack" style="gap:8px;margin-top:10px">${m.images.map((src,i)=>`<label class="af" style="font-size:13px">Link for photo ${i+1} (optional)<input class="in" data-mq2link="${i}" maxlength="300" value="${esc((m.links||[])[i]||"")}" placeholder="https://… or #build"></label>`).join("")}</div>`:""}
     </section>
     <section class="panel">
@@ -4420,7 +4435,7 @@ am.addEventListener("change",async e=>{const el=e.target;if(el.dataset.mq2raw===
   if(f.size>1.5e6){toast("That file is over 1.5 MB. Paste a link to it instead.");return}
   try{if(mq2Push(await readData(f)))renderAdmin()}catch(err){toast(err.message)}});
 am.addEventListener("click",e=>{const b=e.target.closest("[data-mq2rm],[data-mq2reset],[data-mq2add]");if(!b)return;const m=DB.page.mq2;
-  if(b.dataset.mq2add!==undefined){const u=safeMedia(($("#mq2Link")||{}).value);if(!/^https:\/\//i.test(u)){toast("Paste a link that starts with https://");return}if(mq2Push(u))renderAdmin();return}
+  if(b.dataset.mq2add!==undefined){const r=mqNorm(($("#mq2Link")||{}).value);if(r.err){toast(r.err);return}if(mq2Push(r.url))renderAdmin();return}
   if(b.dataset.mq2rm!==undefined){m.images.splice(+b.dataset.mq2rm,1);if(Array.isArray(m.links))m.links.splice(+b.dataset.mq2rm,1);saveDB();toast("Photo removed");renderAdmin()}
   else armed(b,()=>{DB.page.mq2=deepFill(defaultPage().mq2,{on:m.on});saveDB();toast("Banner reset");renderAdmin()})});
 function afterViewMarquee(){renderMarquee($("#mqPrev"),DB.marquee)}
