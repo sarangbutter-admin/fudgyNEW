@@ -128,7 +128,7 @@ function defaultAnnouncer(){return {on:true,sticky:true,size:"M",cdColor:"#C8102
   giftsoon:{text:"Coming up: {name}, free gifts with {applies}.",label:"Starts in",bg:"#FFF7D6",ink:"#000096",img:""},
   mq:{bg:"#000096",ink:"#FFFFFF",font:"display",fontData:"",fontName:"",size:"M",speed:"medium",sepOn:true,sepImg:""},
   custom:{on:false,text:"Free delivery this weekend!",label:"Ends in",endsAt:"",bg:"#000096",ink:"#FFFFFF",img:""}}}
-function defaultMarquee(){return {on:true,texts:["Baked fresh every morning","Build a box your way","Pickup or local delivery","Order by 8pm for next-day cookies"],images:[],bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium",fontData:null,fontName:"",mode:"both",imgH:0,links:[],pos:"top"}}
+function defaultMarquee(){return {on:true,texts:["Baked fresh every morning","Build a box your way","Pickup or local delivery","Order by 8pm for next-day cookies"],images:[],bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium",fontData:null,fontName:""}}
 function defaultThanks(){return {logo:"",cookies:[],fx:true,amount:28,title:"Order placed",titleUpd:"Order updated",
   text:"Thanks, {name}! Your box of {size} is set for {mode} on {when}.",
   urgent:"Your cookies are waiting! Pay within {hours} to keep them.",
@@ -162,7 +162,6 @@ function migrate(db){
     db.page.strip={items:st.mode==="off"?d.map(x=>({...x,on:false})):st.mode==="custom"?String(st.text||"").split("\n").map(x=>x.trim()).filter(Boolean).map(t=>({t,on:true})):d}}
   db.page=deepFill(defaultPage(),db.page);
   if(!db.marquee)db.marquee=defaultMarquee();
-  db.marquee=Object.assign({mode:"both",imgH:0,links:[],pos:"top"},db.marquee);if(!Array.isArray(db.marquee.links))db.marquee.links=[];
   db.announcer=deepFill(defaultAnnouncer(),db.announcer);
   if(db.settings.complaintWindowH===undefined)db.settings.complaintWindowH=24;
   if(db.settings.waCountry===undefined)db.settings.waCountry="62";
@@ -2059,7 +2058,7 @@ const preGiftHTML=(o,cust)=>o.preGift?`<div class="dsec"><h4>🎁 ${cust?"Your p
 const A={sel:new Set(),lbl:null,lblPrev:"sample",rvPid:null,tab:"dashboard",nf:{type:"news",title:"",text:"",pid:"",code:"",until:""},dd:"today",vr:"today",dsig:"",filter:"all",od:"all",q:"",pq:"",pcat:"all",modal:null,np:null,bakeDay:null,openOrder:null,
   draft:{kind:"discount",name:"Flash sale",type:"percent",value:20,appliesTo:"all",startMode:"now",startAt:"",durH:1,durM:0,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#000096",fx:"shine",view:"teaser"}};
 // the page the team is on survives a refresh (and coming back later in the same browser)
-{const KEY="delidome-admin-tab",TABS="dashboard orders complaints customers products badges sales coupons boxes notify announcer hero landing marquee delivery labels settings security affiliates prelaunch log team".split(" ");
+{const KEY="delidome-admin-tab",TABS="dashboard orders complaints customers products badges sales coupons boxes notify announcer hero landing marquee marquee2 delivery labels settings security affiliates prelaunch log team".split(" ");
   let cur="dashboard";try{const v=localStorage.getItem(KEY);if(TABS.includes(v))cur=v}catch(e){}
   Object.defineProperty(A,"tab",{enumerable:true,get:()=>cur,set:v=>{cur=v;if(TABS.includes(v))try{localStorage.setItem(KEY,v)}catch(e){}}})}
 function toast(msg){if(typeof toastHook==="function")msg=toastHook(msg);const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,Math.max(1600,msg.length*45))}
@@ -2085,7 +2084,7 @@ function renderAdmin(){try{applyBgx();applySnow();applyAdminBrand()}catch(e){}
   $("#cSales").textContent=nLive?nLive+" live":"";$("#cSales").hidden=!nLive;
   const lowN=DB.products.filter(isLow).length;
   $("#cProducts").textContent=lowN?lowN+" low":DB.products.filter(p=>p.status==="available").length;$("#cProducts").classList.toggle("live",!!lowN);
-  $("#amain").innerHTML=({notify:viewNotify,prelaunch:viewPrelaunch,dashboard:viewDashboard,orders:viewOrders,sales:viewSales,products:viewProducts,complaints:viewComplaints,boxes:viewBoxes,marquee:viewMarquee,announcer:viewAnnouncer,coupons:viewCoupons,hero:viewHero,labels:viewLabels,landing:viewLanding,settings:viewSettings,delivery:viewDelivery,customers:viewCustomers,team:viewTeam,badges:viewBadges,log:viewLog,security:viewSecurity,affiliates:viewAffiliates})[A.tab]();
+  $("#amain").innerHTML=({notify:viewNotify,prelaunch:viewPrelaunch,dashboard:viewDashboard,orders:viewOrders,sales:viewSales,products:viewProducts,complaints:viewComplaints,boxes:viewBoxes,marquee:viewMarquee,marquee2:viewMarquee2,announcer:viewAnnouncer,coupons:viewCoupons,hero:viewHero,labels:viewLabels,landing:viewLanding,settings:viewSettings,delivery:viewDelivery,customers:viewCustomers,team:viewTeam,badges:viewBadges,log:viewLog,security:viewSecurity,affiliates:viewAffiliates})[A.tab]();
   if(A.tab==="log"&&LG.list===null)loadLog();
   if(A.tab==="customers"&&(CU.list===null||CU.stale))loadCustomers();
   if(A.tab==="team"&&TM.list===null)loadTeam();
@@ -2095,6 +2094,7 @@ function renderAdmin(){try{applyBgx();applySnow();applyAdminBrand()}catch(e){}
   tickAdmin();
   if(A.tab==="sales")updatePreview();if(A.tab==="boxes"&&typeof fpInit==="function")fpInit();
   if(A.tab==="marquee")afterViewMarquee();
+  if(A.tab==="marquee2")mq2Preview();
   if(A.tab==="announcer")anDrawPrev();
   if(A.tab==="hero")hrDraw();
   if(A.tab==="labels")fitLabel();
@@ -2106,8 +2106,8 @@ function renderAdmin(){try{applyBgx();applySnow();applyAdminBrand()}catch(e){}
 /* drafts: each screen publishes (or discards) only the changes made on that screen.
    Shop settings, Boxes & extras, Delivery & courier and Security share one settings document, and Landing page and
    Top banner share the page document, so every changed field remembers the screen it was changed on. */
-const DRAFT_TABS={settings:["settings","boxes","delivery","security","badges"],marquee:["marquee"],page:["landing","hero"],prelaunch:["prelaunch"],thanks:["settings"],proofpop:["settings"],payMethods:["settings"],badges:["badges"]};
-const DRAFT_TAB_NAME={prelaunch:"Pre-launch",settings:"Shop settings",boxes:"Boxes & extras",delivery:"Delivery & courier",security:"Security",badges:"Badges",marquee:"Marquee banner",landing:"Landing page",hero:"Top banner"};
+const DRAFT_TABS={settings:["settings","boxes","delivery","security","badges"],marquee:["marquee"],page:["landing","hero","marquee2"],prelaunch:["prelaunch"],thanks:["settings"],proofpop:["settings"],payMethods:["settings"],badges:["badges"]};
+const DRAFT_TAB_NAME={prelaunch:"Pre-launch",settings:"Shop settings",boxes:"Boxes & extras",delivery:"Delivery & courier",security:"Security",badges:"Badges",marquee:"Marquee banner",marquee2:"Marquee banner 2",landing:"Landing page",hero:"Top banner"};
 const DRAFT_ALL=[...new Set(Object.values(DRAFT_TABS).flat())];
 const DTAG={};   // doc -> {field: screen}
 function draftScan(tab){
@@ -4300,15 +4300,11 @@ function mqSeq(m,n){ // n repeats. "both": a random photo after each sentence (n
       else out.push(`<span class="mdot" aria-hidden="true">✦</span>`)})}
   return out.join("");
 }
-// the shop strip can sit under the intro (default) or just above the visit section
-function mqPlace(el,m){if(el.id!=="marq")return;if(!el._home)el._home={p:el.parentNode,n:el.nextSibling};
-  const v=document.getElementById("visit");if(m.pos==="visit"&&v&&v.parentNode){if(el.nextSibling!==v)v.parentNode.insertBefore(el,v)}
-  else if(el.parentNode!==el._home.p||(el._home.n&&el.nextSibling!==el._home.n)){el._home.p.insertBefore(el,el._home.n&&el._home.n.parentNode===el._home.p?el._home.n:null)}}
 function renderMarquee(el,m){
   if(!el)return;m=m||DB.marquee;
   const texts=(m.texts||[]).filter(Boolean),pics=(m.images||[]).filter(imgOk);
   el.hidden=!m.on||((m.mode||"both")==="pics"?!pics.length:!texts.length);if(el.hidden)return;
-  mqPlace(el,m);mqEnsureFont(m);
+  if(!m.noFont)mqEnsureFont(m);
   el.style.setProperty("--mbg",m.bg);el.style.setProperty("--mfg",m.color);el.style.setProperty("--msz",(MQ_SIZE[m.size]||18)+"px");{const ih=Math.max(0,Math.min(300,+m.imgH||0));el.style.setProperty("--mih",ih?ih+"px":"2.2em");el.classList.toggle("bigimg",ih>0)}el.style.setProperty("--mfont",mqFamily(m));
   el.setAttribute("aria-label",texts.join(". "));
   el._m={...m,texts};mqBuild(el);
@@ -4348,8 +4344,7 @@ function viewMarquee(){
         <label class="af"><span class="vh" style="position:absolute;left:-9999px">Marquee sentences</span><textarea class="in" rows="5" data-mq="texts" maxlength="1200" aria-label="Marquee sentences">${esc(m.texts.join("\n"))}</textarea></label></div>
       <div><h2>Photos <span class="note" id="mqCount">${m.images.length} of 5</span></h2><p class="sub">Shown at random between sentences. They are resized small automatically. Transparent PNGs keep their see-through background.</p>
         <div class="mqimgs">${m.images.map((src,i)=>`<div class="th"><img src="${esc(imgOk(src))}" alt="Marquee photo ${i+1}"><button type="button" data-mqrm="${i}" aria-label="Remove photo ${i+1}">×</button></div>`).join("")}
-          ${m.images.length<5?`<label class="ghost mqbtn">+ Add photo<input type="file" accept="image/*" multiple hidden data-mqimg></label>`:`<span class="note">Maximum reached</span>`}</div>
-        ${m.images.length?`<div class="stack" style="gap:8px;margin-top:10px">${m.images.map((src,i)=>`<label class="af" style="font-size:13px">Link for photo ${i+1} (optional)<input class="in" data-mqlink="${i}" maxlength="300" value="${esc((m.links||[])[i]||"")}" placeholder="https://… or #build"></label>`).join("")}</div>`:""}</div>
+          ${m.images.length<5?`<label class="ghost mqbtn">+ Add photo<input type="file" accept="image/*" multiple hidden data-mqimg></label>`:`<span class="note">Maximum reached</span>`}</div></div>
     </section>
     <section class="panel">
       <h2>Look</h2>
@@ -4357,11 +4352,6 @@ function viewMarquee(){
         <label class="af">Text color<div class="colin"><input type="color" data-mqc="color" value="${m.color}" aria-label="Text color picker"><input class="in" data-mqc="color" value="${m.color}" maxlength="7" aria-label="Text color hex"></div></label>
         <label class="af">Background color<div class="colin"><input type="color" data-mqc="bg" value="${m.bg}" aria-label="Background color picker"><input class="in" data-mqc="bg" value="${m.bg}" maxlength="7" aria-label="Background color hex"></div></label>
         <label class="af">Font<select class="in" data-mq="font">${fontOpts}</select></label>
-      </div>
-      <div class="grid3" style="margin-top:12px;align-items:end">
-        <label class="af">What to show<select class="in" data-mq="mode">${[["both","Text and photos"],["pics","Photos only"],["text","Text only"]].map(([k,l])=>`<option value="${k}" ${(m.mode||"both")===k?"selected":""}>${l}</option>`).join("")}</select></label>
-        <label class="af">Photo height: ${+m.imgH?m.imgH+"px":"Auto"}<input type="range" min="0" max="240" step="10" value="${+m.imgH||0}" data-mq="imgH" data-rr="1"></label>
-        <label class="af">Where in the shop<select class="in" data-mq="pos">${[["top","Under the intro (default)"],["visit","Just above the visit section"]].map(([k,l])=>`<option value="${k}" ${(m.pos||"top")===k?"selected":""}>${l}</option>`).join("")}</select></label>
       </div>
       <div class="grid3" style="margin-top:12px;align-items:end">
         <label class="af">Text size<select class="in" data-mq="size"><option value="S" ${m.size==="S"?"selected":""}>Small</option><option value="M" ${m.size==="M"?"selected":""}>Medium</option><option value="L" ${m.size==="L"?"selected":""}>Large</option></select></label>
@@ -4373,6 +4363,55 @@ function viewMarquee(){
     </section>
   </div>`;
 }
+/* --- second marquee banner: sits just above the visit section ("Hello there..."), kept in the page doc --- */
+function mq2Preview(){const m=DB.page.mq2,el=$("#mq2Prev");if(el)renderMarquee(el,m);const w=$("#mq2Warn");if(w)w.hidden=mqContrast(m.bg,m.color)>=3}
+function viewMarquee2(){
+  const m=DB.page.mq2,ok=mqContrast(m.bg,m.color)>=3,fontOpts=Object.entries(MQ_FONTS).map(([k,v])=>`<option value="${k}" ${m.font===k?"selected":""}>${v[0]}</option>`).join("");
+  const sel=(k,l,opts)=>`<label class="af">${l}<select class="in" data-mq2="${k}">${opts.map(([v,n])=>`<option value="${v}" ${(m[k]||opts[0][0])===v?"selected":""}>${n}</option>`).join("")}</select></label>`;
+  return head("Marquee banner 2","A second running banner, shown just above the “Hello there” visit section of your shop. Your first marquee banner is not changed.")+MOCK+`
+  <div class="stack">
+    <section class="panel">
+      <div class="phead"><div><h2>Preview</h2><p class="sub">Updates as you type.</p></div>
+        <label class="sw"><input type="checkbox" data-mq2="on" ${m.on?"checked":""} aria-label="Show the second marquee in the shop"><span></span></label></div>
+      <div class="marq prev" id="mq2Prev"></div>
+      <p class="note" id="mq2Warn" style="margin-top:8px;color:var(--red)" ${ok?"hidden":""}>Text and background look too similar. Pick colors that contrast more.</p>
+    </section>
+    <section class="panel mqgrid">
+      <div><h2>What to show</h2>${sel("mode","Show",[["both","Text and photos"],["pics","Photos only"],["text","Text only"]])}
+        <label class="af" style="margin-top:10px">Photo height: ${+m.imgH?m.imgH+"px":"Auto"}<input type="range" min="0" max="240" step="10" value="${+m.imgH||0}" data-mq2="imgH" data-rr="1"></label>
+        <p class="note">Make the photos bigger with this slider. Auto keeps them the size of the text.</p></div>
+      <div><h2>Text</h2><p class="sub">One sentence per line, up to 12. Not used when you show photos only.</p>
+        <label class="af"><span class="vh" style="position:absolute;left:-9999px">Second marquee sentences</span><textarea class="in" rows="5" data-mq2="texts" maxlength="1200" aria-label="Second marquee sentences">${esc(m.texts.join("\n"))}</textarea></label></div>
+    </section>
+    <section class="panel">
+      <h2>Photos <span class="note">${m.images.length} of 5</span></h2><p class="sub">Each photo can open a link when tapped. Transparent PNGs keep their see-through background.</p>
+      <div class="mqimgs">${m.images.map((src,i)=>`<div class="th"><img src="${esc(imgOk(src))}" alt="Photo ${i+1}"><button type="button" data-mq2rm="${i}" aria-label="Remove photo ${i+1}">×</button></div>`).join("")}
+        ${m.images.length<5?`<label class="ghost mqbtn">+ Add photo<input type="file" accept="image/*" multiple hidden data-mq2img></label>`:`<span class="note">Maximum reached</span>`}</div>
+      ${m.images.length?`<div class="stack" style="gap:8px;margin-top:10px">${m.images.map((src,i)=>`<label class="af" style="font-size:13px">Link for photo ${i+1} (optional)<input class="in" data-mq2link="${i}" maxlength="300" value="${esc((m.links||[])[i]||"")}" placeholder="https://… or #build"></label>`).join("")}</div>`:""}
+    </section>
+    <section class="panel">
+      <h2>Look</h2>
+      <div class="grid3" style="margin-top:12px;align-items:end">
+        <label class="af">Text color<input type="color" data-mq2c="color" value="${m.color}" style="width:100%;height:42px"></label>
+        <label class="af">Background color<input type="color" data-mq2c="bg" value="${m.bg}" style="width:100%;height:42px"></label>
+        <label class="af">Font<select class="in" data-mq2="font">${fontOpts}</select></label></div>
+      <div class="grid3" style="margin-top:12px;align-items:end">
+        ${sel("size","Text size",[["S","Small"],["M","Medium"],["L","Large"]])}${sel("speed","Speed",[["slow","Slow"],["medium","Medium"],["fast","Fast"]])}
+        <div class="af"><button class="ghost" type="button" data-mq2reset>Reset this banner</button></div></div>
+    </section>
+  </div>`}
+let mq2T;const mq2Save=()=>{clearTimeout(mq2T);mq2T=setTimeout(()=>{if(saveDB())toast("Saved");else toast("Not enough storage space. Remove a photo.")},350)};
+am.addEventListener("input",e=>{const el=e.target,m=DB.page.mq2;
+  if(el.dataset.mq2==="texts"){m.texts=el.value.split("\n").map(x=>x.trim().slice(0,90)).filter(Boolean).slice(0,12);mq2Preview();mq2Save()}
+  else if(el.dataset.mq2link!==undefined){if(!Array.isArray(m.links))m.links=[];m.links[+el.dataset.mq2link]=el.value.trim().slice(0,300);mq2Preview();mq2Save()}
+  else if(el.dataset.mq2c){const h=hexNorm(el.value);if(!HEX6.test(h))return;m[el.dataset.mq2c]=h;mq2Preview();mq2Save()}});
+am.addEventListener("change",async e=>{const el=e.target,m=DB.page.mq2;
+  if(el.dataset.mq2&&el.dataset.mq2!=="texts"){const k=el.dataset.mq2;m[k]=el.type==="checkbox"?el.checked:(k==="imgH"?Math.max(0,Math.min(240,+el.value||0)):el.value);saveDB();toast("Saved");mq2Preview();if(el.dataset.rr)renderAdmin();return}
+  if(el.dataset.mq2img!==undefined){const files=[...el.files].slice(0,5-m.images.length);el.value="";if(!files.length)return;
+    for(const f of files){try{const prev=m.images.slice();m.images.push(await mqSmall(f));if(!saveDB()){m.images=prev;toast("Not enough storage space. Remove another photo first.");break}}catch(err){toast(err.message);break}}renderAdmin()}});
+am.addEventListener("click",e=>{const b=e.target.closest("[data-mq2rm],[data-mq2reset]");if(!b)return;const m=DB.page.mq2;
+  if(b.dataset.mq2rm!==undefined){m.images.splice(+b.dataset.mq2rm,1);if(Array.isArray(m.links))m.links.splice(+b.dataset.mq2rm,1);saveDB();toast("Photo removed");renderAdmin()}
+  else armed(b,()=>{DB.page.mq2=deepFill(defaultPage().mq2,{on:m.on});saveDB();toast("Banner reset");renderAdmin()})});
 function afterViewMarquee(){renderMarquee($("#mqPrev"),DB.marquee)}
 let mqSaveT;
 function mqSave(msg){clearTimeout(mqSaveT);mqSaveT=setTimeout(()=>{if(saveDB())toast(msg||"Saved");else toast("Not enough storage space. Remove a photo or font.")},350)}
@@ -4393,14 +4432,13 @@ async function mqSmall(file){
 am.addEventListener("input",e=>{
   const el=e.target,m=DB.marquee;
   if(el.dataset.mq==="texts"){m.texts=el.value.split("\n").map(x=>x.trim().slice(0,90)).filter(Boolean).slice(0,12);mqPreview();mqSave()}
-  else if(el.dataset.mqlink!==undefined){const i=+el.dataset.mqlink;if(!Array.isArray(m.links))m.links=[];m.links[i]=el.value.trim().slice(0,300);mqPreview();mqSave()}
   else if(el.dataset.mqc){const k=el.dataset.mqc,h=hexNorm(el.value);if(!HEX6.test(h))return;m[k]=h;
     am.querySelectorAll(`[data-mqc="${k}"]`).forEach(o=>{if(o!==el&&o.value.toLowerCase()!==h)o.value=h});mqPreview();mqSave()}
 });
 am.addEventListener("change",async e=>{
   const el=e.target,m=DB.marquee;
   if(el.dataset.mq&&el.dataset.mq!=="texts"){
-    const k=el.dataset.mq;m[k]=el.type==="checkbox"?el.checked:(k==="imgH"?Math.max(0,Math.min(240,+el.value||0)):el.value);saveDB();toast("Saved");mqPreview();if(el.dataset.rr)renderAdmin();return}
+    const k=el.dataset.mq;m[k]=el.type==="checkbox"?el.checked:el.value;saveDB();toast("Saved");mqPreview();return}
   if(el.dataset.mqimg!==undefined){
     const files=[...el.files].slice(0,5-m.images.length);if(!files.length)return;
     for(const f of files){try{const prev=m.images.slice();m.images.push(await mqSmall(f));if(!saveDB()){m.images=prev;toast("Not enough storage space. Remove another photo first.");break}}catch(err){toast(err.message);break}}
@@ -4421,14 +4459,15 @@ am.addEventListener("change",async e=>{
 });
 am.addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;const d=b.dataset,m=DB.marquee;
-  if(d.mqrm!==undefined){m.images.splice(+d.mqrm,1);if(Array.isArray(m.links))m.links.splice(+d.mqrm,1);saveDB();toast("Photo removed");renderAdmin()}
+  if(d.mqrm!==undefined){m.images.splice(+d.mqrm,1);saveDB();toast("Photo removed");renderAdmin()}
   else if(d.mqfontrm!==undefined){m.fontData=null;m.fontName="";if(m.font==="custom")m.font="display";saveDB();toast("Font removed");renderAdmin()}
   else if(d.mqreset!==undefined){armed(b,()=>{DB.marquee=defaultMarquee();saveDB();toast("Banner reset");renderAdmin()})}
 });
 
 /* --- landing page editor --- */
 const LP_DEFAULT_SVG=`<svg viewBox="0 0 30 24" aria-hidden="true"><path d="M3 21a12 12 0 0 1 24 0Z" fill="currentColor"/><circle cx="15" cy="5" r="2.6" fill="currentColor"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="currentColor"/></svg>`;
-function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",logoSize:0,adm:{name:"",show:true,size:0,logo:""},bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},
+function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",logoSize:0,adm:{name:"",show:true,size:0,logo:""},
+  mq2:{on:false,noFont:true,texts:["Hello there! Fresh cookies, baked daily"],images:[],links:[],mode:"both",imgH:0,bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium"},bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},
   snow:{on:false,icon:"❄️",imgs:[],n:40,speed:4,size:30,op:80,layer:"front",sway:true,spin:false,shop:true,aff:true,admin:false},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
   hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,waitVideo:true,swipe:true,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
@@ -4626,7 +4665,7 @@ function renderLanding(){
   const nm=pg.name||"delidome";document.title=`${nm} Cookie Boxes`;
   $("#brandTxt").textContent=nm;$("#ftBrand").textContent=nm;$(".top .logo").setAttribute("aria-label",`${nm} home`);
   const lg=safeMedia(pg.logo);const mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG;$("#logoMark").innerHTML=mark;$("#ftMark").innerHTML=mark;
-  lpFavicon(pg);applyHeader();applyBrandSize();applyBgx();applySnow();
+  lpFavicon(pg);applyHeader();applyBrandSize();applyBgx();applySnow();renderMarquee($("#marq2"),pg.mq2);
   heroFill($("#dome"),pg.hero);
   // strip
   const set=DB.settings,closed=set.closedWeekdays.slice().sort().map(d=>DOW_LONG[d]),tok={sizes:listJoin(activeSizes().map(x=>x.n)),cutoff:fmtHour(set.cutoffHour),closed:listJoin(closed).replace(" or "," and ")};
@@ -4660,6 +4699,9 @@ function applyBgx(){const pg=DB.page;if(!pg||!document.body)return;const b=Objec
   const st=L.style;st.cssText="";if(!on)return;st.backgroundColor=col;st.opacity=String(Math.max(10,Math.min(100,+b.op||100))/100);
   if(u){st.backgroundImage=`url("${String(u).replace(/["\\]/g,"")}")`;st.backgroundSize=b.fit==="tile"?"auto":"cover";st.backgroundRepeat=b.fit==="tile"?"repeat":"no-repeat";st.setProperty("--bgx-veil",String(Math.max(0,Math.min(90,+b.veil||0))/100))}}
 /* logo size in the shop top bar; the admin top bar has its own name, logo and size */
+function admBrandHTML(){const pg=DB.page||{},a=pg.adm||{},lg=safeMedia(a.logo)||safeMedia(pg.logo),z=Math.max(0,Math.min(72,+a.size||0))||28;
+  const mk=lg?`<img src="${esc(lg)}" alt="" style="height:${z}px;width:auto;border-radius:6px;display:block">`:LP_DEFAULT_SVG.replace(/currentColor/g,"#fff").replace("<svg ",`<svg style="height:${z}px;width:auto" `);
+  return `<span style="display:inline-flex;align-items:center;margin-right:${a.show===false?0:8}px">${mk}</span>${a.show===false?"":esc(admName())+" "}<small>Affiliate</small>`}
 const admName=()=>{const a=(DB.page&&DB.page.adm)||{};return a.name||(DB.page&&DB.page.name)||"delidome"};
 function applyBrandSize(){const pg=DB.page,top=document.querySelector(".top");if(!pg||!top)return;const z=Math.max(0,Math.min(72,+pg.logoSize||0));top.classList.toggle("lgsz",z>0);if(z)document.documentElement.style.setProperty("--logo-h",z+"px");else document.documentElement.style.removeProperty("--logo-h")}
 function applyAdminBrand(){const pg=DB.page,box=document.getElementById("adLogo");if(!pg||!box)return;const a=pg.adm||{},mk=document.getElementById("adLogoMark"),nm=document.getElementById("adLogoName"),z=Math.max(0,Math.min(72,+a.size||0));
@@ -5474,7 +5516,7 @@ const PERMS=[["dashboard","Dashboard","sales numbers (visitor numbers are for ow
   ["notify","Notifications","messages to all customers"],["design","Shop look","top banner, landing page, marquee, announcer"],["settings","Shop settings","settings, payment methods, delivery & courier"]];
 const PERM_PRESETS={Cashier:["orders","complaints","customers","labels"],Packer:["orders","labels"],Baker:["orders","products"],Manager:PERMS.map(p=>p[0]).filter(k=>k!=="settings")};
 const TAB_PERM={dashboard:"dashboard",orders:"orders",complaints:"complaints",customers:"customers",labels:"labels",products:"products",badges:"badges",boxes:"boxes",
-  sales:"sales",coupons:"coupons",notify:"notify",announcer:"design",hero:"design",landing:"design",marquee:"design",settings:"settings",delivery:"settings"};
+  sales:"sales",coupons:"coupons",notify:"notify",announcer:"design",hero:"design",landing:"design",marquee:"design",marquee2:"design",settings:"settings",delivery:"settings"};
 const myPerms=()=>SBH.on?(SBH.perms||[]):PERMS.map(p=>p[0]);
 const tabAllowed=t=>ROLE()==="owner"||(TAB_PERM[t]&&myPerms().includes(TAB_PERM[t]));
 const CU={list:null,q:"",form:null,err:"",loading:false,stale:false,bf:null,only:"",bm:null,bmd:null,bmOpen:false,bmBusy:false};
@@ -5995,7 +6037,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc(admName())} <small>Affiliate</small></span><small class="afver">build 2026-10-23 20:33 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-23 20:50 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
