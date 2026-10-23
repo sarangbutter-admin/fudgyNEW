@@ -2071,7 +2071,7 @@ const miniPlate = p => p?`<div class="mini">${plateHTML(p)}</div>`:`<div class="
 const head = (title,sub) => `<div class="ahead"><div><h1>${title}</h1><p>${sub}</p></div></div>`;
 const MOCK = SBH.on ? "" : `<div class="mocknote"><span>●</span><span><b>Mockup.</b> Changes save in this browser and show in the shop straight away. Orders tagged <b>Example</b> are sample data. This becomes the Supabase backend later.</span></div>`;
 
-function renderAdmin(){
+function renderAdmin(){try{applyBgx()}catch(e){}
   if(!tabAllowed(A.tab))A.tab=Object.keys(TAB_PERM).find(tabAllowed)||"orders";
   document.querySelectorAll("#anav [data-tab]").forEach(b=>{b.style.display=tabAllowed(b.dataset.tab)?"":"none"});
   {const r=document.querySelector("#adminView .side .role");if(r)r.textContent=ROLE()==="owner"?"Owner":(SBH.title||"Staff")}
@@ -2305,7 +2305,9 @@ function viewHero(){
         return `<div class="chips" style="margin:10px 0 0">${[["ph","📱 Phone"],["pc","💻 Computer"]].map(([k,l])=>`<button class="fchip" type="button" data-hrdev="${k}" aria-pressed="${dv===k}">${l}</button>`).join("")}</div>
       <p class="note" style="margin:6px 0 0">You are changing the <b>${dv==="ph"?"phone":"computer"}</b> frame.</p>
       <div class="chips" style="margin-top:10px">${[["full","Full banner"],["16:9","Wide 16:9"],["1:1","Square 1:1"],["4:5","Tall 4:5"],["9:16","Story 9:16"]].map(([k,l])=>`<button class="fchip" type="button" data-hrframe="${k}" aria-pressed="${fr===k}">${l}</button>`).join("")}</div>
-      ${h.media.length?`<div class="grid2" style="margin-top:10px"><label class="af">Banner width: ${fw}%<input type="range" min="30" max="100" step="5" value="${fw}" data-hrfw></label>
+      <div class="af" style="margin-top:12px">Screen width<div class="chips" style="margin-top:6px">${[["0","Inside the page"],["1","Edge to edge"]].map(([k,l])=>`<button class="fchip" type="button" data-hredge="${k}" aria-pressed="${(k==="1")===!!F.edge}">${l}</button>`).join("")}</div>
+        ${F.edge?`<div class="chips" style="margin-top:6px">${[["round","Round bottom"],["square","Square bottom"]].map(([k,l])=>`<button class="fchip" type="button" data-hredgecr="${k}" aria-pressed="${(F.edgeCr||"round")===k}">${l}</button>`).join("")}</div><p class="note" style="margin:6px 0 0">The banner fills the whole width of the screen and touches the top bar. Set phone and computer separately.</p>`:""}</div>
+      ${h.media.length&&!F.edge?`<div class="grid2" style="margin-top:10px"><label class="af">Banner width: ${fw}%<input type="range" min="30" max="100" step="5" value="${fw}" data-hrfw></label>
         <div class="af">Corners<div class="chips" style="margin-top:6px">${[["round","Rounded"],["square","Square"]].map(([k,l])=>`<button class="fchip" type="button" data-hrcorner="${k}" aria-pressed="${(F.frameCr||"round")===k}">${l}</button>`).join("")}</div></div></div>
         <p class="note" style="margin:8px 0 0">The frame never gets taller than the screen. A normal (wide) YouTube video in a Tall or Story frame is cropped on the sides; choose "Show whole picture" under Picture fit to see all of it. YouTube Shorts fit a Story frame exactly.</p>`:""}`})()}
     </section>
@@ -4022,6 +4024,8 @@ am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   else if(d.hrfit){hrDraft().fit=d.hrfit;renderAdmin()}
   else if(d.hrframe){const F=hrFrSet({frame:d.hrframe});if(d.hrframe!=="full"&&!F.frameW)F.frameW=60;if(d.hrframe==="full"&&+F.frameW===60)F.frameW=100;renderAdmin()}
   else if(d.hrcorner){hrFrSet({frameCr:d.hrcorner});renderAdmin()}
+  else if(d.hredge!==undefined){hrFrSet({edge:d.hredge==="1"});renderAdmin()}
+  else if(d.hredgecr){hrFrSet({edgeCr:d.hredgecr});renderAdmin()}
   else if(d.hrdev){A.hrDev=d.hrdev;renderAdmin()}
   else if(d.hrbtnreset!==undefined){hrDraft()[hrDev()==="pc"?"btnPc":"btnPh"]=null;renderAdmin()}
   else if(d.hrmrm!==undefined){hrDraft().media.splice(+d.hrmrm,1);renderAdmin()}
@@ -4409,7 +4413,7 @@ am.addEventListener("click",e=>{
 
 /* --- landing page editor --- */
 const LP_DEFAULT_SVG=`<svg viewBox="0 0 30 24" aria-hidden="true"><path d="M3 21a12 12 0 0 1 24 0Z" fill="currentColor"/><circle cx="15" cy="5" r="2.6" fill="currentColor"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="currentColor"/></svg>`;
-function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
+function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,shop:true,aff:true,admin:true},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
   hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,waitVideo:true,swipe:true,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
   build:{title:"Build your box",intro:"Choose a size, fill every spot, then tell us when you want it. Each box is baked the morning it leaves the oven room."},
@@ -4563,7 +4567,8 @@ const HERO_FRAMES={"16:9":16/9,"1:1":1,"4:5":.8,"9:16":.5625};
 const heroFr=(h,dev)=>h[dev==="pc"?"fPc":"fPh"]||{frame:h.frame,frameW:h.frameW,frameCr:h.frameCr};
 function heroFrameApply(dome,h,hasM){
   const dev=dome._dev||(innerWidth>HERO_BP?"pc":"ph"),F=heroFr(h,dev),full=!F.frame||F.frame==="full",fw=Math.max(30,Math.min(100,+F.frameW||(full?100:60)));
-  const frm=!!hasM&&(full?(fw<100||F.frameCr==="square"):HERO_FRAMES[F.frame]!==undefined);
+  const edge=!!F.edge,frm=!!hasM&&(full?(!edge&&(fw<100||F.frameCr==="square")):HERO_FRAMES[F.frame]!==undefined);
+  dome.classList.toggle("edge",edge);if(edge)dome.style.setProperty("--ecr",F.edgeCr==="square"?"0px":"28px");else dome.style.removeProperty("--ecr");
   dome.classList.toggle("framed",frm);dome.classList.toggle("framefull",frm&&full);
   if(frm){dome.style.setProperty("--far",full?"auto":HERO_FRAMES[F.frame]);dome.style.setProperty("--fw",fw+"%");dome.style.setProperty("--fcr",F.frameCr==="square"?"0px":"22px")}
   else["--far","--fw","--fcr"].forEach(v=>dome.style.removeProperty(v));
@@ -4605,7 +4610,7 @@ function renderLanding(){
   const nm=pg.name||"delidome";document.title=`${nm} Cookie Boxes`;
   $("#brandTxt").textContent=nm;$("#ftBrand").textContent=nm;$(".top .logo").setAttribute("aria-label",`${nm} home`);
   const lg=safeMedia(pg.logo);const mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG;$("#logoMark").innerHTML=mark;$("#ftMark").innerHTML=mark;
-  lpFavicon(pg);applyHeader();
+  lpFavicon(pg);applyHeader();applyBgx();
   heroFill($("#dome"),pg.hero);
   // strip
   const set=DB.settings,closed=set.closedWeekdays.slice().sort().map(d=>DOW_LONG[d]),tok={sizes:listJoin(activeSizes().map(x=>x.n)),cutoff:fmtHour(set.cutoffHour),closed:listJoin(closed).replace(" or "," and ")};
@@ -4631,8 +4636,15 @@ function renderLanding(){
   $("#lpBottom").innerHTML=pg.blocks.filter(b=>b.pos!=="top").map(blk).join("");
 }
 
+/* page background: a plain color or a picture behind every page (shop, affiliator page, admin), chosen in the Landing page tab */
+function applyBgx(){const pg=DB.page;if(!pg||!document.body)return;const b=Object.assign({mode:"off",color:"",img:"",fit:"cover",veil:25,shop:true,aff:true,admin:true},pg.bgx||{}),h=document.documentElement;
+  let L=document.getElementById("pgBg");if(!L){L=document.createElement("div");L.id="pgBg";L.setAttribute("aria-hidden","true");document.body.insertBefore(L,document.body.firstChild)}
+  const col=/^#[0-9a-f]{6}$/i.test(b.color||"")?b.color:(/^#[0-9a-f]{6}$/i.test(pg.bg||"")?pg.bg:"#ffffff"),u=b.mode==="image"?safeMedia(b.img):"";
+  const on=b.mode==="color"||(b.mode==="image"&&!!u);h.classList.toggle("bgx-shop",on&&b.shop!==false);h.classList.toggle("bgx-aff",on&&b.aff!==false);h.classList.toggle("bgx-admin",on&&b.admin!==false);
+  const st=L.style;st.cssText="";if(!on)return;st.backgroundColor=col;
+  if(u){st.backgroundImage=`url("${String(u).replace(/["\\]/g,"")}")`;st.backgroundSize=b.fit==="tile"?"auto":"cover";st.backgroundRepeat=b.fit==="tile"?"repeat":"no-repeat";st.setProperty("--bgx-veil",String(Math.max(0,Math.min(90,+b.veil||0))/100))}}
 const lpGet=path=>path.split(".").reduce((o,k)=>o==null?o:o[k],DB.page);
-function lpSet(path,v){const ks=path.split(".");let o=DB.page;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v}
+function lpSet(path,v){const ks=path.split(".");let o=DB.page;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v;if(ks[0]==="bgx")applyBgx()}
 const hexNorm=v=>{v=String(v||"").trim().toLowerCase();if(v==="transparent"||v==="none")return"transparent";return v.startsWith("#")?v:"#"+v};
 const HEX_OK=/^(#[0-9a-f]{6}|transparent)$/i;
 const lpIn=(label,path,o={})=>`<label class="af">${label}${o.rows?`<textarea class="in" rows="${o.rows}" data-lp="${path}" maxlength="${o.max||600}" placeholder="${esc(o.ph||"")}">${esc(lpGet(path)||"")}</textarea>`:`<input class="in" data-lp="${path}" maxlength="${o.max||120}" value="${esc(lpGet(path)||"")}" placeholder="${esc(o.ph||"")}">`}</label>`;
@@ -4675,6 +4687,17 @@ function viewLanding(){
     <div class="grid2">${lpFontSel("Heading font","headFont")}${lpFontSel("Body font","bodyFont")}</div>
     <div class="af">Your own fonts<div class="colin" style="flex-wrap:wrap">${pg.fonts.map(f=>`<span class="fchip">${esc(f.name)} <button class="danger" type="button" data-lpfontrm="${f.id}" style="padding:2px 8px">×</button></span>`).join("")}${pg.fonts.length<3?`<label class="ghost mqbtn">+ Upload font<input type="file" accept=".ttf,.otf,.woff,.woff2,font/*" hidden data-lpfont></label>`:""}</div>
       <p class="note">Up to 3 fonts (.ttf, .otf, .woff, .woff2, 1 MB each). They appear in the font lists above. Only upload fonts you're licensed to use on the web.</p></div>`,true)}
+  ${sec("Page background",`
+    <p class="sub" style="margin:0">Put a plain color or a picture behind your pages. Cards and boxes keep their own colors on top.</p>
+    <label class="af">Background<select class="in" data-lp="bgx.mode" data-rr="1">${[["off","Off (use the page color above)"],["color","Plain color"],["image","Picture"]].map(([k,l])=>`<option value="${k}" ${pg.bgx.mode===k?"selected":""}>${l}</option>`).join("")}</select></label>
+    ${pg.bgx.mode==="color"?`<div class="grid2">${lpCol("Background color","bgx.color",pg.bg||"#ffffff")}</div>`:""}
+    ${pg.bgx.mode==="image"?`${pg.bgx.img?`<img class="lpthumb" src="${esc(safeMedia(pg.bgx.img))}" alt="Background picture" style="max-height:120px">`:""}
+      <div class="colin"><label class="ghost mqbtn">${pg.bgx.img?"Replace picture":"Upload picture"}<input type="file" accept="image/*" hidden data-lpimg="bgx.img"></label>${pg.bgx.img?`<button class="danger" type="button" data-lpclear="bgx.img">Remove</button>`:""}</div>
+      <label class="af">Or paste a picture link (https)<input class="in" data-lp="bgx.img" value="${/^data:/i.test(pg.bgx.img||"")?"":esc(pg.bgx.img||"")}" placeholder="${/^data:/i.test(pg.bgx.img||"")?"Uploaded file":"https://..."}"></label>
+      <div class="grid2"><label class="af">Picture size<select class="in" data-lp="bgx.fit">${[["cover","Fill the screen"],["tile","Repeat as a pattern"]].map(([k,l])=>`<option value="${k}" ${pg.bgx.fit===k?"selected":""}>${l}</option>`).join("")}</select></label>
+      <label class="af">Soften the picture: ${+pg.bgx.veil||0}%<input type="range" min="0" max="90" step="5" value="${+pg.bgx.veil||0}" data-lp="bgx.veil" data-num="1" data-rr="1"></label></div>
+      ${pg.bgx.img?"":`<p class="note">Add a picture to see it.</p>`}`:""}
+    ${pg.bgx.mode!=="off"?`<div class="af">Show it on<div style="display:grid;gap:6px;margin-top:6px">${[["shop","The shop"],["aff","The affiliator page"],["admin","The admin pages"]].map(([k,l])=>`<label class="chk"><input type="checkbox" data-lp="bgx.${k}" ${pg.bgx[k]!==false?"checked":""}> ${l}</label>`).join("")}</div></div>`:""}`,false)}
   ${sec(`Extra sections (${pg.blocks.length})`,`
     <p class="sub" style="margin:0">Add image, video or text sections above or below the box builder. Use the Marquee banner tab for the running text strip.</p>
     ${pg.blocks.map((b,i)=>`<div class="lpblock"><div class="mo-row"><b>Section ${i+1}</b><div class="colin"><button class="ghost" type="button" data-lpbup="${i}" ${i===0?"disabled":""} aria-label="Move up">↑</button><button class="ghost" type="button" data-lpbdown="${i}" ${i===pg.blocks.length-1?"disabled":""} aria-label="Move down">↓</button><button class="danger" type="button" data-lpbdel="${i}">Delete</button></div></div>
@@ -5891,13 +5914,13 @@ function afBellClick(e){const tb=e.target.closest("[data-afntab]");if(tb){AFN.ta
     if(AFN.open&&AFN.d){AFN.was=AFN.d.seen;if(AFN.d.unseen){AFN.d.unseen=0;SBH.rpc("aff_notes_seen",{}).catch(()=>{})}}
     afBellDraw()}
   else if(AFN.open&&!e.target.closest(".afpop")){AFN.open=false;afBellDraw()}}
-function affRender(){let v=document.getElementById("affView");
+function affRender(){try{applyBgx()}catch(e){}let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
     v.addEventListener("click",e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut()});
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-23 10:12 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-23 18:09 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

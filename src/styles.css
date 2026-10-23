@@ -1686,3 +1686,16 @@ body.pre-on{background:transparent!important;padding-bottom:0!important}
 .bsdots{display:flex;gap:5px}.bsdots i{width:8px;height:8px;border-radius:50%;background:#d6d8f5}.bsdots i.on{background:#000096;width:20px;border-radius:6px}
 .bsskip{border:0;background:none;color:#6a6a92;font:700 13px var(--body,inherit);text-decoration:underline;padding:8px 4px}.bsnext{border:0;background:#000096;color:#fff;font:800 14px var(--body,inherit);border-radius:999px;padding:9px 18px}
 @media (prefers-reduced-motion:reduce){#bsHole{animation:none;transition:none}#bsTcard{transition:none}}
+
+/* edge-to-edge banner: fills the whole screen width and touches the top bar */
+body:has(.dome.edge){overflow-x:clip;margin:0}
+.hero:has(.dome.edge){padding-top:0}
+.hero .dome.edge,#preView .dome.edge{width:100vw!important;max-width:none!important;margin-left:calc(50% - 50vw)!important;margin-right:0!important;border-radius:0 0 var(--ecr,28px) var(--ecr,28px)!important}
+.hero .dome.edge.framed,#preView .dome.edge.framed{max-height:92vh}
+#hrPrev.edge{width:100%!important;max-width:none!important;margin:0!important;border-radius:0 0 var(--ecr,28px) var(--ecr,28px)!important}
+/* page background (color or picture) behind every page */
+#pgBg{position:fixed;inset:0;z-index:-1;pointer-events:none;display:none;background-position:center}
+#pgBg::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,var(--bgx-veil,0))}
+html.bgx-shop body.in-store:not(.aff-on):not(.pre-on) #pgBg,html.bgx-aff body.aff-on #pgBg,html.bgx-admin body:not(.in-store):not(.aff-on) #pgBg{display:block}
+html.bgx-admin body:not(.in-store):not(.aff-on) .admin{background:transparent}
+html.bgx-aff body.aff-on #affView{background:transparent}

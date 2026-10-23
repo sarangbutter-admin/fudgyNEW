@@ -2123,7 +2123,7 @@ function mqBuild(el){
 }
 function mqFit(){document.querySelectorAll(".marq").forEach(el=>{if(el._m&&!el.hidden)mqBuild(el);else if(el._ai&&!el.hidden)anMqBuild(el)})}
 const LP_DEFAULT_SVG=`<svg viewBox="0 0 30 24" aria-hidden="true"><path d="M3 21a12 12 0 0 1 24 0Z" fill="currentColor"/><circle cx="15" cy="5" r="2.6" fill="currentColor"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="currentColor"/></svg>`;
-function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
+function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,shop:true,aff:true,admin:true},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
   hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,waitVideo:true,swipe:true,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
   build:{title:"Build your box",intro:"Choose a size, fill every spot, then tell us when you want it. Each box is baked the morning it leaves the oven room."},
@@ -2266,7 +2266,8 @@ const HERO_FRAMES={"16:9":16/9,"1:1":1,"4:5":.8,"9:16":.5625};
 const heroFr=(h,dev)=>h[dev==="pc"?"fPc":"fPh"]||{frame:h.frame,frameW:h.frameW,frameCr:h.frameCr};
 function heroFrameApply(dome,h,hasM){
   const dev=dome._dev||(innerWidth>HERO_BP?"pc":"ph"),F=heroFr(h,dev),full=!F.frame||F.frame==="full",fw=Math.max(30,Math.min(100,+F.frameW||(full?100:60)));
-  const frm=!!hasM&&(full?(fw<100||F.frameCr==="square"):HERO_FRAMES[F.frame]!==undefined);
+  const edge=!!F.edge,frm=!!hasM&&(full?(!edge&&(fw<100||F.frameCr==="square")):HERO_FRAMES[F.frame]!==undefined);
+  dome.classList.toggle("edge",edge);if(edge)dome.style.setProperty("--ecr",F.edgeCr==="square"?"0px":"28px");else dome.style.removeProperty("--ecr");
   dome.classList.toggle("framed",frm);dome.classList.toggle("framefull",frm&&full);
   if(frm){dome.style.setProperty("--far",full?"auto":HERO_FRAMES[F.frame]);dome.style.setProperty("--fw",fw+"%");dome.style.setProperty("--fcr",F.frameCr==="square"?"0px":"22px")}
   else["--far","--fw","--fcr"].forEach(v=>dome.style.removeProperty(v));
@@ -2307,7 +2308,7 @@ function renderLanding(){
   const nm=pg.name||"delidome";document.title=`${nm} Cookie Boxes`;
   $("#brandTxt").textContent=nm;$("#ftBrand").textContent=nm;$(".top .logo").setAttribute("aria-label",`${nm} home`);
   const lg=safeMedia(pg.logo);const mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG;$("#logoMark").innerHTML=mark;$("#ftMark").innerHTML=mark;
-  lpFavicon(pg);applyHeader();
+  lpFavicon(pg);applyHeader();applyBgx();
   heroFill($("#dome"),pg.hero);
   // strip
   const set=DB.settings,closed=set.closedWeekdays.slice().sort().map(d=>DOW_LONG[d]),tok={sizes:listJoin(activeSizes().map(x=>x.n)),cutoff:fmtHour(set.cutoffHour),closed:listJoin(closed).replace(" or "," and ")};
@@ -2332,6 +2333,12 @@ function renderLanding(){
   $("#lpTop").innerHTML=pg.blocks.filter(b=>b.pos==="top").map(blk).join("");
   $("#lpBottom").innerHTML=pg.blocks.filter(b=>b.pos!=="top").map(blk).join("");
 }
+function applyBgx(){const pg=DB.page;if(!pg||!document.body)return;const b=Object.assign({mode:"off",color:"",img:"",fit:"cover",veil:25,shop:true,aff:true,admin:true},pg.bgx||{}),h=document.documentElement;
+  let L=document.getElementById("pgBg");if(!L){L=document.createElement("div");L.id="pgBg";L.setAttribute("aria-hidden","true");document.body.insertBefore(L,document.body.firstChild)}
+  const col=/^#[0-9a-f]{6}$/i.test(b.color||"")?b.color:(/^#[0-9a-f]{6}$/i.test(pg.bg||"")?pg.bg:"#ffffff"),u=b.mode==="image"?safeMedia(b.img):"";
+  const on=b.mode==="color"||(b.mode==="image"&&!!u);h.classList.toggle("bgx-shop",on&&b.shop!==false);h.classList.toggle("bgx-aff",on&&b.aff!==false);h.classList.toggle("bgx-admin",on&&b.admin!==false);
+  const st=L.style;st.cssText="";if(!on)return;st.backgroundColor=col;
+  if(u){st.backgroundImage=`url("${String(u).replace(/["\\]/g,"")}")`;st.backgroundSize=b.fit==="tile"?"auto":"cover";st.backgroundRepeat=b.fit==="tile"?"repeat":"no-repeat";st.setProperty("--bgx-veil",String(Math.max(0,Math.min(90,+b.veil||0))/100))}}
 const HEX_OK=/^(#[0-9a-f]{6}|transparent)$/i;
 const AF={list:null,orders:null,loading:false,err:"",range:"30d",from:"",to:"",group:"day",sel:null,rep:null,repLoading:false,form:null,ferr:"",prods:null,sf:"all",afs:"all",act:null,proof:"",busy:false,cfg:null,pf:null,perr:""};
 const AF_SRC={ig:"Instagram",tt:"TikTok",wa:"WhatsApp",fb:"Facebook",ads:"Ads",x:"X / Twitter",yt:"YouTube",google:"Google",direct:"Direct / unknown",coupon:"Coupon code",web:"Website"};
@@ -2459,13 +2466,13 @@ function afBellClick(e){const tb=e.target.closest("[data-afntab]");if(tb){AFN.ta
     if(AFN.open&&AFN.d){AFN.was=AFN.d.seen;if(AFN.d.unseen){AFN.d.unseen=0;SBH.rpc("aff_notes_seen",{}).catch(()=>{})}}
     afBellDraw()}
   else if(AFN.open&&!e.target.closest(".afpop")){AFN.open=false;afBellDraw()}}
-function affRender(){let v=document.getElementById("affView");
+function affRender(){try{applyBgx()}catch(e){}let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
     v.addEventListener("click",e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut()});
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-23 10:12 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo">${esc((DB.page&&DB.page.name)||"delidome")} <small>Affiliate</small></span><small class="afver">build 2026-10-23 18:09 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
