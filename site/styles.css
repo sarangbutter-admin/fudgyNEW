@@ -1472,3 +1472,9 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 @keyframes snowsway{from{transform:translateX(calc(var(--sw) * -1))}to{transform:translateX(var(--sw))}}
 @keyframes snowspin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){#snowDom i{animation:snowfall var(--dur) linear var(--dl) infinite!important}#snowDom b{animation:snowsway var(--sd) ease-in-out infinite alternate!important}#snowDom.spin b>*{animation:snowspin 6s linear infinite!important}}
+
+/* logo position in the shop top bar */
+.top.lgcorner .wrap{padding-left:3px!important;padding-top:5px!important}
+.top.lgcorner .wrap>.logo{align-self:flex-start;margin-left:-8px;margin-top:-4px}
+.top.lgfree .wrap>.logo{transform:translate(var(--lg-x,0),var(--lg-y,0));position:relative;z-index:2}
+.lgdrag .lgm svg{width:28px;height:22px;display:block}.lgdrag .lgm img{height:26px;width:auto;display:block;border-radius:6px}
