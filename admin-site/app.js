@@ -4789,10 +4789,21 @@ function applyAdminBrand(){const pg=DB.page,box=document.getElementById("adLogo"
 /* falling effect (snow): a canvas that draws your emoji or pictures falling slowly. It runs on the visitor's own phone (no server work) and stops by itself on pages where it is switched off, when the tab is hidden, or when the visitor asked their phone for less motion. */
 const SNOW={cv:null,ctx:null,fl:[],spr:[],key:"",raf:0,last:0,w:0,h:0,dpr:1,run:false,iv:0};
 const snowScope=()=>{const c=document.body.classList;return c.contains("aff-on")?"aff":c.contains("in-store")?"shop":"admin"};
-function snowStop(){SNOW.run=false;cancelAnimationFrame(SNOW.raf);if(SNOW.cv)SNOW.cv.style.display="none"}
+function snowStop(){SNOW.run=false;cancelAnimationFrame(SNOW.raf);if(SNOW.cv)SNOW.cv.style.display="none";const d=document.getElementById("snowDom");if(d)d.style.display="none"}
+// Safari and every iPhone browser use WebKit: there the effect is drawn with plain CSS animations (no canvas), which they always run
+const snowApple=()=>/AppleWebKit/.test(navigator.userAgent)&&!/Chrome\/|Chromium|Edg\/|Android|OPR\//.test(navigator.userAgent)||/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+function snowDom(S,z,op){let d=document.getElementById("snowDom");if(!d){d=document.createElement("div");d.id="snowDom";d.setAttribute("aria-hidden","true");const a=SNOW.cv;document.body.insertBefore(d,a?a.nextSibling:document.body.firstChild)}
+  const cl=(v,a,b,df)=>Math.max(a,Math.min(b,+v||df)),n=cl(S.n,5,200,40),mx=cl(S.size,8,120,30),sp=cl(S.speed,1,10,4),imgs=(S.imgs||[]).map(imgOk).filter(Boolean),icon=String(S.icon||"❄️").trim().slice(0,4)||"❄️";
+  const key=JSON.stringify([n,mx,sp,imgs,icon,S.sway,S.spin,innerHeight]);
+  if(d._k!==key){d._k=key;let h="";const base=22+sp*22,H=innerHeight;
+    for(let i=0;i<n;i++){const sz=mx*(.55+.45*Math.random()),v=base*(.6+.8*sz/mx),dur=(H*1.3+sz*2)/v,am=S.sway===false?0:8+Math.random()*26;
+      h+=`<i style="left:${(Math.random()*100).toFixed(1)}%;--s:${sz.toFixed(0)}px;--dur:${dur.toFixed(1)}s;--dl:-${(Math.random()*dur).toFixed(1)}s"><b style="--sw:${am.toFixed(0)}px;--sd:${(1.6+Math.random()*2.4).toFixed(1)}s">${imgs.length?`<img src="${esc(imgs[i%imgs.length])}" alt="" draggable="false">`:`<span>${esc(icon)}</span>`}</b></i>`}
+    d.innerHTML=h}
+  d.classList.toggle("spin",!!S.spin);const st=d.style;st.display="block";st.zIndex=z;st.opacity=op}
 function snowSprites(S){const key=JSON.stringify([S.icon,S.imgs]);if(key===SNOW.key)return;SNOW.key=key;SNOW.fl=[];SNOW.spr=[];
-  (S.imgs||[]).forEach(u=>{const src=imgOk(u);if(!src)return;const im=new Image();im.onload=()=>{SNOW.spr.push(im)};im.src=src});
-  if(!(S.imgs||[]).some(imgOk)){const c=document.createElement("canvas");c.width=c.height=96;const x=c.getContext("2d");x.font='72px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';x.textAlign="center";x.textBaseline="middle";x.fillText(String(S.icon||"❄️").slice(0,4),48,52);SNOW.spr.push(c)}}
+  const emoji=()=>{const c=document.createElement("canvas");c.width=c.height=96;const x=c.getContext("2d");x.font='72px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';x.textAlign="center";x.textBaseline="middle";x.fillText(String(S.icon||"❄️").slice(0,4),48,52);SNOW.spr.push(c)};
+  const list=(S.imgs||[]).map(imgOk).filter(Boolean);if(!list.length){emoji();return}
+  let left=list.length;list.forEach(src=>{const im=new Image();im.onload=()=>{SNOW.spr.push(im);left--};im.onerror=()=>{left--;if(left<=0&&!SNOW.spr.length)emoji()};im.src=src})} // a picture the phone can't open falls back to the icon
 function snowFlake(S,top){const mx=Math.max(8,Math.min(120,+S.size||30)),sz=mx*(.55+.45*Math.random());
   return {x:Math.random()*SNOW.w,y:top?-sz-Math.random()*SNOW.h*.2:Math.random()*SNOW.h,s:sz,k:Math.random(),ph:Math.random()*6.28,sw:.6+Math.random()*1.2,am:S.sway===false?0:8+Math.random()*26,rot:Math.random()*6.28,rs:S.spin?(Math.random()-.5)*1.6:0,sp:0}}
 function snowFrame(t){if(!SNOW.run)return;SNOW.raf=requestAnimationFrame(snowFrame);const S=DB.page&&DB.page.snow;if(!S||document.hidden){SNOW.last=t;return}
@@ -4818,8 +4829,14 @@ function applySnow(){const pg=DB.page,S=pg&&pg.snow;if(!S||!document.body)return
   if(!SNOW.iv)SNOW.iv=setInterval(applySnow,1500);
   if(!ok){snowStop();return}
   if(!SNOW.cv){const c=document.createElement("canvas");c.id="snowCv";c.setAttribute("aria-hidden","true");const bg=document.getElementById("pgBg");document.body.insertBefore(c,bg?bg.nextSibling:document.body.firstChild);SNOW.cv=c;SNOW.ctx=c.getContext("2d");snowSize();addEventListener("resize",snowSize)}
-  snowSprites(S);const st=SNOW.cv.style;st.display="block";st.zIndex=S.layer==="back"?"-1":"900";st.opacity=String(Math.max(10,Math.min(100,+S.op||80))/100);
-  if(!SNOW.run){SNOW.run=true;SNOW.last=0;SNOW.raf=requestAnimationFrame(snowFrame)}}
+  const z=S.layer==="back"?"-1":"900",op=String(Math.max(10,Math.min(100,+S.op||80))/100);
+  if(snowApple()){SNOW.run=false;cancelAnimationFrame(SNOW.raf);SNOW.cv.style.display="none";snowDom(S,z,op);SNOW.mode="dom";snowDbg(S,want,ok);return}
+  const d=document.getElementById("snowDom");if(d)d.style.display="none";SNOW.mode="canvas";
+  snowSprites(S);const st=SNOW.cv.style;st.display="block";st.zIndex=z;st.opacity=op;
+  if(!SNOW.run){SNOW.run=true;SNOW.last=0;SNOW.raf=requestAnimationFrame(snowFrame)}snowDbg(S,want,ok)}
+// open the shop with ?snowdebug=1 to see what the falling effect is doing on this phone
+function snowDbg(S,want,ok){if(!/[?&]snowdebug\b/.test(location.search))return;let e=document.getElementById("snowDbg");if(!e){e=document.createElement("pre");e.id="snowDbg";e.style.cssText="position:fixed;left:6px;bottom:6px;z-index:99999;margin:0;padding:6px 8px;background:#000c;color:#9f9;font:11px/1.3 monospace;max-width:92vw;white-space:pre-wrap;border-radius:8px;pointer-events:none";document.body.appendChild(e)}
+  const d=document.getElementById("snowDom");e.textContent=JSON.stringify({on:S.on,scope:snowScope(),want,ok,mode:SNOW.mode,run:SNOW.run,spr:SNOW.spr.length,flakes:SNOW.fl.length,dom:d?d.childElementCount:0,dispDom:d?getComputedStyle(d).display:null,cv:SNOW.cv?[SNOW.cv.width,SNOW.cv.height,getComputedStyle(SNOW.cv).display]:null,imgs:(S.imgs||[]).length,ua:navigator.userAgent.slice(-60)})}
 const lpGet=path=>path.split(".").reduce((o,k)=>o==null?o:o[k],DB.page);
 function lpSet(path,v){const ks=path.split(".");let o=DB.page;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v;if(ks[0]==="logoSize")applyBrandSize();if(ks[0]==="adm")applyAdminBrand();if(ks[0]==="bgx")applyBgx();if(ks[0]==="snow")applySnow()}
 const hexNorm=v=>{v=String(v||"").trim().toLowerCase();if(v==="transparent"||v==="none")return"transparent";return v.startsWith("#")?v:"#"+v};
@@ -6126,7 +6143,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-24 18:58 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-24 19:05 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

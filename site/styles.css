@@ -1460,3 +1460,15 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .snowbtn{font-size:18px;line-height:1}.snowbtn.off{opacity:.55;filter:grayscale(1)}.snowbtn[hidden]{display:none}
 #snowTip::before{right:var(--ar,26px)}
 @media (max-width:420px){.snowbtn{font-size:16px}}
+
+/* falling effect drawn with CSS animations (Safari and iPhone browsers) */
+#snowDom{position:fixed;left:0;top:0;width:100%;height:100%;overflow:hidden;pointer-events:none;display:none}
+#snowDom i{position:absolute;top:0;width:var(--s);height:var(--s);will-change:transform;animation:snowfall var(--dur) linear var(--dl) infinite}
+#snowDom b{display:block;width:100%;height:100%;animation:snowsway var(--sd) ease-in-out infinite alternate}
+#snowDom b img{display:block;width:100%;height:auto}
+#snowDom b span{display:block;font-size:var(--s);line-height:1;width:100%;height:100%;text-align:center}
+#snowDom.spin b>*{animation:snowspin 6s linear infinite}
+@keyframes snowfall{from{transform:translate3d(0,-15vh,0)}to{transform:translate3d(0,115vh,0)}}
+@keyframes snowsway{from{transform:translateX(calc(var(--sw) * -1))}to{transform:translateX(var(--sw))}}
+@keyframes snowspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#snowDom i{animation:snowfall var(--dur) linear var(--dl) infinite!important}#snowDom b{animation:snowsway var(--sd) ease-in-out infinite alternate!important}#snowDom.spin b>*{animation:snowspin 6s linear infinite!important}}
