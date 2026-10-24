@@ -519,7 +519,7 @@ function renderMenu(){
       ${out?`<span class="sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:`<div class="stepper"><button type="button" data-act="dec" aria-label="Remove one ${esc(p.name)}">−</button><output aria-live="polite">0</output><button type="button" data-act="inc" aria-label="Add one ${esc(p.name)}">+</button></div>`}
     </div>`}).join("");
   if(!prods.length)$("#menuGrid").innerHTML=`<p class="tierempty">No ${shopTier==="prem"?"premium":"no-extra-cost"} flavors here. <button class="linkbtn" type="button" data-tierall>Show all flavors</button></p>`;
-  $("#xtraHint").hidden=!prods.some(p=>p.surcharge>0&&!isOut(p));
+  $("#xtraHint").hidden=!prods.some(p=>p.surcharge>0&&!isOut(p))||((DB.page&&DB.page.xtra)||{}).on===false;
 }
 function renderOpts(){
   const set=DB.settings;fixWhen();
@@ -2130,6 +2130,7 @@ function renderAdmin(){try{applyBgx();applySnow();applyAdminBrand()}catch(e){}
   tickAdmin();
   if(A.tab==="sales")updatePreview();if(A.tab==="boxes"&&typeof fpInit==="function")fpInit();
   if(A.tab==="marquee"){afterViewMarquee();mq2Preview()}
+  if(A.tab==="landing"){const pv=$("#xPrev");if(pv)xtraDraw(pv,DB.page.xtra)}
   if(A.tab==="announcer")anDrawPrev();
   if(A.tab==="hero")hrDraw();
   if(A.tab==="labels")fitLabel();
@@ -4542,7 +4543,8 @@ am.addEventListener("click",e=>{
 
 /* --- landing page editor --- */
 const LP_DEFAULT_SVG=`<svg viewBox="0 0 30 24" aria-hidden="true"><path d="M3 21a12 12 0 0 1 24 0Z" fill="currentColor"/><circle cx="15" cy="5" r="2.6" fill="currentColor"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="currentColor"/></svg>`;
-function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",logoSize:0,logoPos:{m:"normal",x:0,y:0},adm:{name:"",show:true,size:0,logo:""},
+function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",xtra:{on:true,text:"Flavors marked with a price cost that much extra per cookie.",icon:"✨",bg:"#FFF4D6",ink:"#5A4300",line:"#FFD166",fx:"shine",size:"M",shape:"rounded"},
+  logoSize:0,logoPos:{m:"normal",x:0,y:0},adm:{name:"",show:true,size:0,logo:""},
   mq2:{on:false,noFont:true,texts:["Hello there! Fresh cookies, baked daily"],images:[],links:[],mode:"both",imgH:0,bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium"},bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},
   snow:{on:false,icon:"❄️",imgs:[],n:40,speed:4,size:30,op:80,layer:"front",sway:true,spin:false,shop:true,aff:true,admin:false},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
   hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,waitVideo:true,swipe:true,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
@@ -4744,7 +4746,7 @@ function renderLanding(){
   const nm=pg.name||"delidome";document.title=`${nm} Cookie Boxes`;
   $("#brandTxt").textContent=nm;$("#ftBrand").textContent=nm;$(".top .logo").setAttribute("aria-label",`${nm} home`);
   const lg=safeMedia(pg.logo);const mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG;$("#logoMark").innerHTML=mark;$("#ftMark").innerHTML=mark;
-  lpFavicon(pg);applyHeader();applyBrandSize();applyBgx();applySnow();renderMarquee($("#marq2"),pg.mq2);
+  lpFavicon(pg);applyHeader();applyBrandSize();applyXtra();applyBgx();applySnow();renderMarquee($("#marq2"),pg.mq2);
   heroFill($("#dome"),pg.hero);
   // strip
   const set=DB.settings,closed=set.closedWeekdays.slice().sort().map(d=>DOW_LONG[d]),tok={sizes:listJoin(activeSizes().map(x=>x.n)),cutoff:fmtHour(set.cutoffHour),closed:listJoin(closed).replace(" or "," and ")};
@@ -4777,6 +4779,12 @@ function applyBgx(){const pg=DB.page;if(!pg||!document.body)return;const b=Objec
   const on=b.mode==="color"||(b.mode==="image"&&!!u);h.classList.toggle("bgx-shop",on&&b.shop!==false);h.classList.toggle("bgx-aff",on&&b.aff!==false);h.classList.toggle("bgx-admin",on&&b.admin!==false);
   const st=L.style;st.cssText="";if(!on)return;st.backgroundColor=col;st.opacity=String(Math.max(10,Math.min(100,+b.op||100))/100);
   if(u){st.backgroundImage=`url("${String(u).replace(/["\\]/g,"")}")`;st.backgroundSize=b.fit==="tile"?"auto":"cover";st.backgroundRepeat=b.fit==="tile"?"repeat":"no-repeat";st.setProperty("--bgx-veil",String(Math.max(0,Math.min(90,+b.veil||0))/100))}}
+/* the "flavors marked with a price" message under the flavor list: text, icon, colors, size, shape and effect come from the Landing page tab */
+const XCLS="xsz-S xsz-M xsz-L xsh-rounded xsh-pill xsh-square xfx-none xfx-pulse xfx-shine xfx-glow xfx-bounce xfx-wiggle"; // listed in full so the shop keeps their styles
+function xtraDraw(el,x){x=x||{};const fx=["none","pulse","shine","glow","bounce","wiggle"].includes(x.fx)?x.fx:"none",sz=["S","M","L"].includes(x.size)?x.size:"M",sh=["rounded","pill","square"].includes(x.shape)?x.shape:"rounded";
+  el.className="hint xhint xsz-"+sz+" xsh-"+sh+" xfx-"+fx;el.style.setProperty("--xbg",hexOk(x.bg,"#FFF4D6"));el.style.setProperty("--xink",hexOk(x.ink,"#5A4300"));el.style.setProperty("--xline",hexOk(x.line,"#FFD166"));
+  el.innerHTML=`${String(x.icon||"").trim()?`<span class="xic" aria-hidden="true">${esc(String(x.icon).trim().slice(0,4))}</span>`:""}<span class="xtx">${esc(x.text||"")}</span>`}
+function applyXtra(){const pg=DB.page,el=document.getElementById("xtraHint");if(!el||!pg||!pg.xtra)return;xtraDraw(el,pg.xtra)}
 /* logo size in the shop top bar; the admin top bar has its own name, logo and size */
 function admBrandHTML(){const pg=DB.page||{},a=pg.adm||{},lg=safeMedia(a.logo)||safeMedia(pg.logo),z=Math.max(0,Math.min(72,+a.size||0))||28;
   const mk=lg?`<img src="${esc(lg)}" alt="" style="height:${z}px;width:auto;border-radius:6px;display:block">`:LP_DEFAULT_SVG.replace(/currentColor/g,"#fff").replace("<svg ",`<svg style="height:${z}px;width:auto" `);
@@ -4839,7 +4847,7 @@ function applySnow(){const pg=DB.page,S=pg&&pg.snow;if(!S||!document.body)return
 function snowDbg(S,want,ok){if(!/[?&]snowdebug\b/.test(location.search))return;let e=document.getElementById("snowDbg");if(!e){e=document.createElement("pre");e.id="snowDbg";e.style.cssText="position:fixed;left:6px;bottom:6px;z-index:99999;margin:0;padding:6px 8px;background:#000c;color:#9f9;font:11px/1.3 monospace;max-width:92vw;white-space:pre-wrap;border-radius:8px;pointer-events:none";document.body.appendChild(e)}
   const d=document.getElementById("snowDom");e.textContent=JSON.stringify({on:S.on,scope:snowScope(),want,ok,mode:SNOW.mode,run:SNOW.run,spr:SNOW.spr.length,flakes:SNOW.fl.length,dom:d?d.childElementCount:0,dispDom:d?getComputedStyle(d).display:null,cv:SNOW.cv?[SNOW.cv.width,SNOW.cv.height,getComputedStyle(SNOW.cv).display]:null,imgs:(S.imgs||[]).length,ua:navigator.userAgent.slice(-60)})}
 const lpGet=path=>path.split(".").reduce((o,k)=>o==null?o:o[k],DB.page);
-function lpSet(path,v){const ks=path.split(".");let o=DB.page;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v;if(ks[0]==="logoSize"||ks[0]==="logoPos")applyBrandSize();if(ks[0]==="adm")applyAdminBrand();if(ks[0]==="bgx")applyBgx();if(ks[0]==="snow")applySnow()}
+function lpSet(path,v){const ks=path.split(".");let o=DB.page;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v;if(ks[0]==="xtra"){applyXtra();const pv=document.getElementById("xPrev");if(pv)xtraDraw(pv,DB.page.xtra)}if(ks[0]==="logoSize"||ks[0]==="logoPos")applyBrandSize();if(ks[0]==="adm")applyAdminBrand();if(ks[0]==="bgx")applyBgx();if(ks[0]==="snow")applySnow()}
 const hexNorm=v=>{v=String(v||"").trim().toLowerCase();if(v==="transparent"||v==="none")return"transparent";return v.startsWith("#")?v:"#"+v};
 const HEX_OK=/^(#[0-9a-f]{6}|transparent)$/i;
 const lpIn=(label,path,o={})=>`<label class="af">${label}${o.rows?`<textarea class="in" rows="${o.rows}" data-lp="${path}" maxlength="${o.max||600}" placeholder="${esc(o.ph||"")}">${esc(lpGet(path)||"")}</textarea>`:`<input class="in" data-lp="${path}" maxlength="${o.max||120}" value="${esc(lpGet(path)||"")}" placeholder="${esc(o.ph||"")}">`}</label>`;
@@ -4892,6 +4900,15 @@ function viewLanding(){
     <div class="grid2">${lpFontSel("Heading font","headFont")}${lpFontSel("Body font","bodyFont")}</div>
     <div class="af">Your own fonts<div class="colin" style="flex-wrap:wrap">${pg.fonts.map(f=>`<span class="fchip">${esc(f.name)} <button class="danger" type="button" data-lpfontrm="${f.id}" style="padding:2px 8px">×</button></span>`).join("")}${pg.fonts.length<3?`<label class="ghost mqbtn">+ Upload font<input type="file" accept=".ttf,.otf,.woff,.woff2,font/*" hidden data-lpfont></label>`:""}</div>
       <p class="note">Up to 3 fonts (.ttf, .otf, .woff, .woff2, 1 MB each). They appear in the font lists above. Only upload fonts you're licensed to use on the web.</p></div>`,true)}
+  ${sec("Extra price message",`
+    <p class="sub" style="margin:0">The message under the flavor list that explains flavors marked with a price. It only shows while a flavor with an extra price is in stock.</p>
+    <div style="display:flex;gap:10px;align-items:center"><label class="sw"><input type="checkbox" data-lp="xtra.on" data-rr="1" ${pg.xtra.on!==false?"checked":""} aria-label="Show the message"><span></span></label><span class="stlabel">Show this message</span></div>
+    <div class="hint xhint" id="xPrev" style="margin-top:4px"></div>
+    <div class="grid2">${lpIn("Message","xtra.text",{rows:2,max:160})}${lpIn("Icon (emoji)","xtra.icon",{max:4,ph:"✨"})}</div>
+    <div class="grid3">${lpCol("Background","xtra.bg","#FFF4D6")}${lpCol("Text color","xtra.ink","#5A4300")}${lpCol("Border color","xtra.line","#FFD166")}</div>
+    <div class="grid3"><label class="af">Size<select class="in" data-lp="xtra.size">${[["S","Small"],["M","Medium"],["L","Large"]].map(([k,l])=>`<option value="${k}" ${pg.xtra.size===k?"selected":""}>${l}</option>`).join("")}</select></label>
+      <label class="af">Shape<select class="in" data-lp="xtra.shape">${[["rounded","Rounded box"],["pill","Pill"],["square","Square box"]].map(([k,l])=>`<option value="${k}" ${pg.xtra.shape===k?"selected":""}>${l}</option>`).join("")}</select></label>
+      <label class="af">Effect<select class="in" data-lp="xtra.fx">${[["shine","Shine sweep"],["pulse","Pulse"],["glow","Glow"],["bounce","Bouncing icon"],["wiggle","Wiggling icon"],["none","No effect"]].map(([k,l])=>`<option value="${k}" ${pg.xtra.fx===k?"selected":""}>${l}</option>`).join("")}</select></label></div>`,false)}
   ${sec("Page background",`
     <p class="sub" style="margin:0">Put a plain color or a picture behind your pages. Cards and boxes keep their own colors on top.</p>
     <label class="af">Background<select class="in" data-lp="bgx.mode" data-rr="1">${[["off","Off (use the page color above)"],["color","Plain color"],["image","Picture"]].map(([k,l])=>`<option value="${k}" ${pg.bgx.mode===k?"selected":""}>${l}</option>`).join("")}</select></label>
@@ -6153,7 +6170,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-24 19:06 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-24 22:44 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

@@ -1478,3 +1478,20 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .top.lgcorner .wrap>.logo{align-self:flex-start;margin-left:-8px;margin-top:-4px}
 .top.lgfree .wrap>.logo{transform:translate(var(--lg-x,0),var(--lg-y,0));position:relative;z-index:2}
 .lgdrag .lgm svg{width:28px;height:22px;display:block}.lgdrag .lgm img{height:26px;width:auto;display:block;border-radius:6px}
+
+/* "flavors marked with a price" message */
+.xhint{display:flex;align-items:center;gap:10px;margin-top:12px;color:var(--xink,#5A4300);background:var(--xbg,#FFF4D6);border:2px solid var(--xline,#FFD166);font-weight:700;line-height:1.35;position:relative;overflow:hidden}
+.xhint[hidden]{display:none}
+.xsz-S{font-size:13px;padding:8px 12px}.xsz-M{font-size:15px;padding:11px 14px}.xsz-L{font-size:18px;padding:14px 18px}
+.xsh-rounded{border-radius:16px}.xsh-pill{border-radius:999px;padding-inline:20px}.xsh-square{border-radius:4px}
+.xhint .xic{font-size:1.45em;line-height:1;flex:none}.xhint .xtx{min-width:0}
+.xfx-pulse{animation:xPulse 1.8s ease-in-out infinite}
+.xfx-glow{animation:xGlow 1.8s ease-in-out infinite}
+.xfx-bounce .xic{animation:xBounce 1.6s ease-in-out infinite}
+.xfx-wiggle .xic{animation:xWig 2.2s ease-in-out infinite}
+.xfx-shine::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.75) 50%,transparent 65%);transform:translateX(-120%);animation:xShine 2.8s ease-in-out infinite;pointer-events:none}
+@keyframes xPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+@keyframes xGlow{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--xline) 70%,transparent)}50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--xline) 0%,transparent),0 0 18px 2px color-mix(in srgb,var(--xline) 60%,transparent)}}
+@keyframes xBounce{0%,55%,100%{transform:translateY(0)}65%{transform:translateY(-6px)}75%{transform:translateY(0)}83%{transform:translateY(-3px)}}
+@keyframes xWig{0%,65%,100%{transform:rotate(0)}72%{transform:rotate(-14deg)}80%{transform:rotate(14deg)}88%{transform:rotate(-8deg)}95%{transform:rotate(4deg)}}
+@keyframes xShine{0%,35%{transform:translateX(-120%)}75%,100%{transform:translateX(120%)}}
