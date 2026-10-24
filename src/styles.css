@@ -1735,3 +1735,8 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .gtdots{display:flex;gap:5px}.gtdots i{width:8px;height:8px;border-radius:50%;background:#d6d8f5}.gtdots i.on{background:#000096;width:20px;border-radius:6px}
 .gtskip{border:0;background:none;color:#6a6a92;font:700 13px var(--body,inherit);text-decoration:underline;padding:8px 4px}.gtnext{border:0;background:#000096;color:#fff;font:800 14px var(--body,inherit);border-radius:999px;padding:9px 18px}
 @media (prefers-reduced-motion:reduce){#gtHole{animation:none;transition:none}#gtCard{transition:none}}
+
+/* visitor snow button */
+.snowbtn{font-size:18px;line-height:1}.snowbtn.off{opacity:.55;filter:grayscale(1)}.snowbtn[hidden]{display:none}
+#snowTip::before{right:var(--ar,26px)}
+@media (max-width:420px){.snowbtn{font-size:16px}}

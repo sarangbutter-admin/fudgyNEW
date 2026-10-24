@@ -4596,11 +4596,11 @@ const isVideoSrc=s=>/^data:video\//i.test(s)||/\.(mp4|webm|ogg|mov)(\?.*)?$/i.te
 function videoHTML(src,{bg=false,loop=true}={}){
   src=safeMedia(src);if(!src)return "";
   if(/^data:video\//i.test(src)||/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src))
-    return bg?`<video src="${esc(src)}" ${RM?"":"autoplay"} muted${loop?" loop":""} playsinline preload="metadata"></video>`:`<video src="${esc(src)}" controls playsinline preload="metadata"></video>`;
+    return bg?`<video src="${esc(src)}" autoplay muted${loop?" loop":""} playsinline preload="metadata"></video>`:`<video src="${esc(src)}" controls playsinline preload="metadata"></video>`;
   // YouTube / Vimeo links play muted and looping behind the words (no controls)
   if(bg){const ifr=(u,tall)=>`<div class="vbg${tall?" v916":""}"><iframe src="${u}" title="" tabindex="-1" aria-hidden="true" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`;
-    const y=ytId(src);if(y)return ifr(`https://www.youtube-nocookie.com/embed/${y}?autoplay=${RM?0:1}&mute=1${loop?`&loop=1&playlist=${y}`:""}&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`,/shorts\//i.test(src));
-    const v=vimeoId(src);if(v)return ifr(`https://player.vimeo.com/video/${v}?background=1&autoplay=${RM?0:1}&muted=1&loop=${loop?1:0}&dnt=1`);
+    const y=ytId(src);if(y)return ifr(`https://www.youtube-nocookie.com/embed/${y}?autoplay=1&mute=1${loop?`&loop=1&playlist=${y}`:""}&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`,/shorts\//i.test(src));
+    const v=vimeoId(src);if(v)return ifr(`https://player.vimeo.com/video/${v}?background=1&autoplay=1&muted=1&loop=${loop?1:0}&dnt=1`);
     return ""}
   let m=src.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
   if(m)return `<div class="vf"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}" title="Video" loading="lazy" allow="fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
@@ -4660,11 +4660,12 @@ const HERO_BP=640,HR_RATIO=new Map();
    (uploaded/.mp4 by its "ended" event, YouTube/Vimeo through their player messages; 5 minutes at most).
    Swipe left/right (and the dots) move to the next or previous slide. */
 function heroCar(dome,h,sls){
+  if(!window._hk){window._hk=1;["touchstart","pointerdown","click","scroll","keydown"].forEach(ev=>addEventListener(ev,heroKick,{passive:true,capture:true}))}
   const n=sls.length,old=dome.querySelector(".hdots");if(old)old.remove();dome._go=null;dome._cur=null;dome.classList.remove("swipe");
   if(!n)return;
   const wait=h.waitVideo!==false,sec=Math.max(2,Math.min(30,+h.carouselSec||5))*1000;let k=0,dots=null;
   const vEl=sl=>sl.querySelector("video"),fEl=sl=>sl.querySelector("iframe");
-  const wake=sl=>{const v=vEl(sl),f=fEl(sl);if(v){try{v.currentTime=0}catch(e){}if(!RM)v.play().catch(()=>{})}if(f&&f.dataset.src)f.src=f.dataset.src};
+  const wake=sl=>{const v=vEl(sl),f=fEl(sl);if(v){try{v.currentTime=0}catch(e){}v.muted=true;v.playsInline=true;const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})}if(f&&f.dataset.src)f.src=f.dataset.src};
   const sleep=sl=>{const v=vEl(sl),f=fEl(sl);if(v)v.pause();if(f&&f.dataset.src)f.removeAttribute("src")};
   if(n<2)return;
   const arm=()=>{clearTimeout(dome._car);if(!dome.isConnected)return;dome._car=setTimeout(()=>go(1),wait&&sls[k].dataset.vid?300000:sec)};
@@ -4681,6 +4682,8 @@ function heroCar(dome,h,sls){
       dome.addEventListener("pointerdown",e=>{if(!dome._go||e.target.closest("a,button,.hero-ctas"))return;x0=e.clientX;y0=e.clientY});
       dome.addEventListener("pointerup",e=>{if(x0===null||!dome._go)return;const dx=e.clientX-x0,dy=e.clientY-y0;x0=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.3)dome._go(dx<0?1:-1)});
       dome.addEventListener("pointercancel",()=>{x0=null})}}}
+// Safari (and Low Power Mode) can refuse to autoplay: on the visitor's first touch, start the banner video that is showing
+function heroKick(){document.querySelectorAll(".dome .hm video").forEach(v=>{const sl=v.closest(".hs");if(sl&&sl.parentNode.children.length>1&&!sl.classList.contains("on"))return;if(v.paused){v.muted=true;const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})}})}
 // YouTube / Vimeo tell us when a banner video ends
 const heroMsg=e=>{if(!/^https:\/\/(www\.youtube-nocookie\.com|player\.vimeo\.com)$/.test(e.origin))return;let d=e.data;try{if(typeof d==="string")d=JSON.parse(d)}catch(x){return}if(!d)return;
   const ended=d.event==="ended"||(d.event==="onStateChange"&&d.info===0)||(d.event==="infoDelivery"&&d.info&&d.info.playerState===0);if(!ended)return;
@@ -4800,8 +4803,18 @@ function snowFrame(t){if(!SNOW.run)return;SNOW.raf=requestAnimationFrame(snowFra
     if(f.y>SNOW.h+f.s){SNOW.fl[i]=snowFlake(S,true);continue}
     const im=SNOW.spr[i%SNOW.spr.length];ctx.save();ctx.translate((x)*SNOW.dpr,f.y*SNOW.dpr);if(f.rs)ctx.rotate(f.rot);const w=f.s*SNOW.dpr,r=(im.naturalWidth||im.width)&&(im.naturalHeight||im.height)?(im.naturalHeight||im.height)/(im.naturalWidth||im.width):1;ctx.drawImage(im,-w/2,-w*r/2,w,w*r);ctx.restore()}}
 function snowSize(){if(!SNOW.cv)return;SNOW.dpr=Math.min(2,devicePixelRatio||1);SNOW.w=innerWidth;SNOW.h=innerHeight;SNOW.cv.width=Math.round(SNOW.w*SNOW.dpr);SNOW.cv.height=Math.round(SNOW.h*SNOW.dpr)}
+const snowOff=()=>{try{return localStorage.getItem("delidome-snow")==="off"}catch(e){return false}};
+// the visitor's own on/off button (shop only) and a one-time tip under the top bar. The effect plays even when the phone asks for less motion; this button is the visitor's way to stop it.
+function snowToggle(){try{localStorage.setItem("delidome-snow",snowOff()?"on":"off")}catch(x){}const t=document.getElementById("snowTip");if(t)t.hidden=true;applySnow()}
+function snowBtnSync(S,on){const b=document.getElementById("snowBtn");if(!b)return;if(!b._sn){b._sn=1;b.addEventListener("click",snowToggle)}const show=on&&snowScope()==="shop";b.hidden=!show;if(!show)return;
+  const ic=String(S.icon||"").trim()||"❄️";b.textContent=ic.slice(0,2);b.classList.toggle("off",snowOff());b.setAttribute("aria-pressed",snowOff()?"false":"true");
+  let seen=false;try{seen=!!localStorage.getItem("delidome-snow-tip")}catch(e){}
+  if(!seen&&!SNOW.tipT){SNOW.tipT=setTimeout(()=>{const t=document.getElementById("snowTip"),lt=document.getElementById("langTip");if(!t||b.hidden)return;if(lt&&!lt.hidden){SNOW.tipT=0;return snowBtnSync(S,on)}
+    t.innerHTML="<b>"+b.textContent+" Falling effect</b><span>Tap this button to turn the falling effect on or off.</span>";t.hidden=false;
+    const br=b.getBoundingClientRect(),tr=t.getBoundingClientRect();t.style.setProperty("--ar",Math.max(10,Math.round(tr.right-(br.left+br.width/2)-6))+"px");
+    try{localStorage.setItem("delidome-snow-tip","1")}catch(e){}setTimeout(()=>{t.hidden=true},9000)},9800)}}
 function applySnow(){const pg=DB.page,S=pg&&pg.snow;if(!S||!document.body)return;
-  const ok=!!S.on&&S[snowScope()]!==false&&!matchMedia("(prefers-reduced-motion:reduce)").matches&&!document.body.classList.contains("pre-on");
+  const want=!!S.on&&S[snowScope()]!==false&&!document.body.classList.contains("pre-on");snowBtnSync(S,want);const ok=want&&!snowOff();
   if(!SNOW.iv)SNOW.iv=setInterval(applySnow,1500);
   if(!ok){snowStop();return}
   if(!SNOW.cv){const c=document.createElement("canvas");c.id="snowCv";c.setAttribute("aria-hidden","true");const bg=document.getElementById("pgBg");document.body.insertBefore(c,bg?bg.nextSibling:document.body.firstChild);SNOW.cv=c;SNOW.ctx=c.getContext("2d");snowSize();addEventListener("resize",snowSize)}

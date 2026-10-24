@@ -284,3 +284,4 @@ Object.assign(window.DD_ID, {
  "Type your name, WhatsApp number and email, then place your order. We show you how to pay on the next screen.": "Ketik nama, nomor WhatsApp dan emailmu, lalu buat pesanan. Cara bayar kami tunjukkan di layar berikutnya.",
  "How does it work?": "Bagaimana cara kerjanya?", "Enjoy your cookies! 🍪": "Selamat menikmati cookiesmu! 🍪"
 });
+Object.assign(window.DD_ID, { "Falling effect": "Efek jatuh", "Tap this button to turn the falling effect on or off.": "Ketuk tombol ini untuk menyalakan atau mematikan efek jatuh.", "Turn the falling effect on or off": "Nyalakan atau matikan efek jatuh" });
