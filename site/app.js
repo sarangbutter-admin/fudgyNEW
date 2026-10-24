@@ -56,7 +56,7 @@ function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15
 function seedDB(){
   const now=Date.now(), H=3600e3;
   const db={v:1,
-    settings:{currency:"$",tz:"Asia/Jakarta",deliveryFee:5,deliveryKm:10,samedayOn:false,samedayLeadH:3,samedayCutoff:15,samedayFee:8,samedayPayMin:60,minPayMin:30,rejPayMin:120,payCdColor:"#C8102E",payCdSize:"L",payCdFx:true,pickupOn:true,pickupLeadH:24,schedOn:true,schedLeadH:24,cutoffHour:20,closedWeekdays:[1],lowStockAt:10,customOn:true,customMin:14,customStep:2,customMax:48,customPer:3.25,payWindowH:24,complaintWindowH:24,waCountry:"62",payBank:"Example Bank\nAccount 123 456 7890\nName: Delidome Cookies",
+    settings:{currency:"$",tz:"Asia/Jakarta",deliveryFee:5,scOn:true,scName:"Store Courier",scMode:"flat",scPerKg:0,scPerPcs:0,scGrams:100,scBoxG:200,scShow:"always",scNote:"Delivered by our own team",schedMsg:"Scheduled delivery: pick a day and time. We deliver within {km} km of the shop. {courier}",deliveryKm:10,samedayOn:false,samedayLeadH:3,samedayCutoff:15,samedayFee:8,samedayPayMin:60,minPayMin:30,rejPayMin:120,payCdColor:"#C8102E",payCdSize:"L",payCdFx:true,pickupOn:true,pickupLeadH:24,schedOn:true,schedLeadH:24,cutoffHour:20,closedWeekdays:[1],lowStockAt:10,customOn:true,customMin:14,customStep:2,customMax:48,customPer:3.25,payWindowH:24,complaintWindowH:24,waCountry:"62",payBank:"Example Bank\nAccount 123 456 7890\nName: Delidome Cookies",
       times:["10 to 11am","12 to 1pm","3 to 4pm","5 to 6pm"],
       address:"12 Example Street, Your City. Look for the blue dome sign.",
       hours:[["Tue to Fri","10am to 6pm"],["Saturday","9am to 5pm"],["Sunday","10am to 3pm"],["Monday","Closed"]]},
@@ -162,6 +162,7 @@ function migrate(db){
   db.marquee=Object.assign({mode:"both",imgH:0,links:[],rich:true},db.marquee);if(!Array.isArray(db.marquee.links))db.marquee.links=[];
   db.announcer=deepFill(defaultAnnouncer(),db.announcer);
   if(db.settings.complaintWindowH===undefined)db.settings.complaintWindowH=24;
+  {const t=db.settings,d={scOn:true,scName:"Store Courier",scMode:"flat",scPerKg:0,scPerPcs:0,scGrams:100,scBoxG:200,scShow:"always",scNote:"Delivered by our own team",schedMsg:"Scheduled delivery: pick a day and time. We deliver within {km} km of the shop. {courier}"};for(const k in d)if(t[k]===undefined)t[k]=d[k]}
   if(db.settings.waCountry===undefined)db.settings.waCountry="62";
   if(db.settings.payWindowH===undefined)Object.assign(db.settings,{payWindowH:24,payBank:"Example Bank\nAccount 123 456 7890\nName: Delidome Cookies"});
   if(db.settings.lowStockAt===undefined)db.settings.lowStockAt=10;
@@ -222,7 +223,7 @@ const GIFT_NOTE="Gifts are subject to availability. Alternative gifts or a delay
 const giftsHTML=(o,cust)=>preGiftHTML(o,cust)+(o.gifts&&o.gifts.length?`<div class="dsec"><h4>🎁 ${cust?"Your gifts":"Free gifts to pack"}</h4><div class="gl">${o.gifts.map(g=>giftChip(g,g.random?" rnd":"")).join("")}</div>${["new","baking","ready","completed"].includes(o.status)?"":`<p class="note" style="margin:8px 0 0">${cust?"Confirmed once we verify your payment.":"Pack it once the payment is confirmed."}</p>`}</div>`:cust&&o.status==="awaiting"&&giftPlan(o.size).length?`<div class="dsec"><h4>🎁 Your free gift</h4><p class="hint" style="margin:0">It's revealed as soon as you send your payment proof.</p></div>`:"");
 /* --- optional courier prices from Biteship (does nothing unless the owner switches it on in Shop settings) --- */
 const bsOn=(db=DB)=>!!(SBH.on&&db.settings&&db.settings.biteship&&db.settings.biteship.on);
-const bsFallback=(db=DB)=>!(db.settings&&db.settings.biteship&&db.settings.biteship.fallback===false);
+const bsFallback=(db=DB)=>scOn(db)&&!(db.settings&&db.settings.biteship&&db.settings.biteship.fallback===false);
 const bsShip=(c,at=Date.now(),db=DB)=>bsOn(db)&&c.mode==="delivery"&&c.ship&&c.ship.size===c.size&&+c.ship.exp>at?c.ship:null;
 const bsPending=(c,db=DB)=>bsOn(db)&&c.mode==="delivery"&&!c.bsSkip&&!bsShip(c,Date.now(),db);
 const BS_ST={confirmed:"Courier booked",scheduled:"Pickup scheduled",allocated:"Courier assigned",picking_up:"Courier is on the way to pick up",picked:"Picked up",dropping_off:"On the way to you",return_in_transit:"Returning",on_hold:"On hold",delivered:"Delivered",rejected:"Rejected by courier",disposed:"Disposed",courier_not_found:"No courier found",returned:"Returned",cancelled:"Booking cancelled",night_stop:"Stopped for the night (no driver before closing time)"};
@@ -260,7 +261,19 @@ const bsHTML=(o,adm)=>{const b=o.bship;if(!b||!b.courier||o.mode!=="delivery")re
       ${adm&&ROLE()==="owner"?`<div class="colin" style="flex-wrap:wrap;gap:6px;margin-top:4px"><label class="ghost mqbtn">${b.proofOverride&&b.proofOverride[k]?"Replace":"Add / override"}<input type="file" accept="image/*" hidden data-bsproof="${k}" data-oid="${o.id}"></label>${b.proofOverride&&b.proofOverride[k]?`<button class="danger" type="button" data-bsproofrm="${k}" data-oid="${o.id}">Use courier's</button>`:""}</div>`:""}</div>`};
   const acts=adm?`<div class="colin" style="margin-top:10px;flex-wrap:wrap;gap:8px">${!booked?`<button class="btn btn-blue btn-sm" type="button" data-bsact="book" data-oid="${o.id}" ${bsReqOk(o)?"":'disabled title="Move the order to Baking first"'}>${b.failed||b.cancelledAt?"Book again":"Request pickup"}</button>`:`<button class="ghost" type="button" data-bsact="refresh" data-oid="${o.id}">Refresh status</button><button class="danger" type="button" data-bsact="cancel" data-oid="${o.id}">Cancel booking</button>`}</div><p class="note" id="bsMsg" hidden></p>`:"";
   return `<div class="dsec"><h4>🛵 Courier</h4>${fail}<dl class="dl">${lines}</dl>${acts}<div class="bspfs">${pf("pickup")}${pf("delivery")}</div>${hist?`<details class="bshd"${adm?"":" open"}><summary>Courier updates</summary>${hist}</details>`:""}</div>`};
-const freeDelSale=(n,at=Date.now(),db=DB)=>db.sales.find(s=>isFD(s)&&saleStatus(s,at)==="live"&&(s.appliesTo==="all"||+s.appliesTo===n))||null;
+// the Store Courier price: flat, per started kg (cookies x grams + box grams) or per cookie. Mirrors store_fee() in the database.
+function storeFee(n,db=DB){const t=db.settings,m=t.scMode||"flat";
+  if(m==="pcs")return r2(n*(+t.scPerPcs||0));
+  if(m==="kg"){const g=n*(+(t.scGrams??100))+(+(t.scBoxG??200));return r2(Math.ceil(g/1000)*(+t.scPerKg||0))}
+  return +t.deliveryFee||0}
+// the customer-facing line under "Scheduled delivery": {km} = delivery radius, {fee} = Store Courier price for this box, {courier} = who delivers
+function schedText(c,db=DB){const t=db.settings,fee=storeFee(c.size,db),by=bsOn(db)?"The delivery price depends on the courier you choose.":(scOn(db)?`Delivered by ${scName(db)}: ${freeDelSale(c.size)?"free":money(fee)}.`:"");
+  return String(t.schedMsg||"Scheduled delivery: pick a day and time. We deliver within {km} km of the shop. {courier}").replace(/\{km\}/g,t.deliveryKm).replace(/\{fee\}/g,money(fee)).replace(/\{courier\}/g,by).replace(/\s+/g," ").trim()}
+const scName=(db=DB)=>String((db.settings&&db.settings.scName)||"").trim()||"Store Courier";
+const scOn=(db=DB)=>!(db.settings&&db.settings.scOn===false);
+// a free-delivery promo covers every box, one box size (old promos), or a list of sizes plus (optionally) custom boxes
+const fdApplies=(s,n,db=DB)=>s.appliesTo==="all"||(s.appliesTo==="list"?((s.sizes||[]).some(x=>+x===n)||(!!s.custom&&!db.sizes.some(z=>z.n===n))):+s.appliesTo===n);
+const freeDelSale=(n,at=Date.now(),db=DB)=>db.sales.find(s=>isFD(s)&&saleStatus(s,at)==="live"&&fdApplies(s,n,db))||null;
 const cpNorm=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9_-]/g,"").slice(0,20);
 const cpOff=c=>c.type==="percent"?`${c.value}% off`:c.type==="amount"?`${money(c.value)} off`:"Free delivery";
 const cpUses=(code,db,excl)=>db.orders.filter(o=>o.coupon===code&&o.status!=="cancelled"&&o.id!==excl);
@@ -294,13 +307,14 @@ function quote(c,db=DB,{at=Date.now(),withDelivery=true}={}){
   const fdSale=at&&c.mode==="delivery"?freeDelSale(c.size,at,db):null;
   const shipQ=withDelivery?bsShip(c,at||Date.now(),db):null,noFee=!!fdSale||!!(cp&&cp.ok&&cp.freeDel);
   const feePending=withDelivery&&c.mode==="delivery"&&!noFee&&!shipQ&&bsPending(c,db);
-  const fee=withDelivery&&c.mode==="delivery"&&!noFee?(shipQ?+shipQ.price:feePending?0:(c.speed==="sameday"?(db.settings.samedayFee??db.settings.deliveryFee):db.settings.deliveryFee)):0;
+  const fee=withDelivery&&c.mode==="delivery"&&!noFee?(shipQ?+shipQ.price:feePending?0:(c.speed==="sameday"?(db.settings.samedayFee??db.settings.deliveryFee):storeFee(c.size,db))):0;
   return {ship:shipQ,feePending,base,sale,fdSale,discount,surcharge,addons,fee,coupon:cp&&cp.ok?cp.coupon:null,couponDisc,couponErr:cp&&!cp.ok?cp.err:"",total:r2(base-discount-couponDisc+surcharge+addons+fee)};
 }
 const saleOffText = s => isFD(s)?"Free delivery":isGift(s)?"Free gifts":s.type==="percent"?`${s.value}% off`:`${money(s.value)} off`;
 function giftAppliesText(s){const ps=[...new Set(s.rules.map(r=>+r.from===+r.to&&DB.sizes.some(z=>z.n===+r.from)?`box of ${r.from}`:`custom boxes of ${r.from} to ${r.to}`))];
   return ps.length>1?ps.slice(0,-1).join(", ")+" and "+ps[ps.length-1]:ps[0]}
-const saleAppliesText = s => isGift(s)&&giftHasRules(s)?giftAppliesText(s):s.appliesTo==="all"?"every box":`the box of ${s.appliesTo}`;
+function fdListText(s){const a=(s.sizes||[]).slice().sort((x,y)=>x-y).map(n=>`box of ${n}`);if(s.custom)a.push("custom boxes");return a.length>1?a.slice(0,-1).join(", ")+" and "+a[a.length-1]:(a[0]||"no box")}
+const saleAppliesText = s => isGift(s)&&giftHasRules(s)?giftAppliesText(s):s.appliesTo==="all"?"every box":s.appliesTo==="list"?fdListText(s):`the box of ${s.appliesTo}`;
 /* --- cookie drawing --- */
 let gid=0;
 function cookieSVG(f, seed){
@@ -577,7 +591,7 @@ function renderStore(){
   $("#tab2").disabled=!(full()&&S.closed);
   renderLid();
   document.querySelectorAll("[data-opt]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.opt===optOf(S)));
-  {const k=optOf(S),st=DB.settings;const fdp=k!=="pickup"?freeDelSale(S.size):null;$("#modeHint").textContent=(fdp?`🚚 Free delivery promo is on: ${fdp.name}. `:"")+(k==="sameday"?`Sameday shipment adds ${money(st.samedayFee??st.deliveryFee)}. Order before ${fmtHour(st.samedayCutoff)} and we ship about ${fmtLead(optLead("sameday"))} after your payment is confirmed. We deliver within ${st.deliveryKm} km of the shop.`:k==="scheduled"?`Scheduled delivery adds ${money(st.deliveryFee)}. Pick a day and time. We deliver within ${st.deliveryKm} km of the shop.`:"Free pickup at the front counter. Pick a day and time.");}
+  {const k=optOf(S),st=DB.settings;const fdp=k!=="pickup"?freeDelSale(S.size):null;$("#modeHint").textContent=(fdp?`🚚 Free delivery promo is on: ${fdp.name}. `:"")+(k==="sameday"?`Sameday shipment adds ${money(st.samedayFee??st.deliveryFee)}. Order before ${fmtHour(st.samedayCutoff)} and we ship about ${fmtLead(optLead("sameday"))} after your payment is confirmed. We deliver within ${st.deliveryKm} km of the shop.`:k==="scheduled"?schedText(S):"Free pickup at the front counter. Pick a day and time.");}
   document.querySelectorAll(".day").forEach(b=>b.setAttribute("aria-pressed",b.dataset.day===S.day));
   document.querySelectorAll("[data-time]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.time===S.time));
   document.querySelectorAll("[data-addon]").forEach(b=>b.setAttribute("aria-pressed",S.addons.includes(b.dataset.addon)));
@@ -600,7 +614,7 @@ function renderStore(){
     L+=`<div><dt>${OPT_NAME[optOf(S)]}</dt><dd>${q.feePending?"Choose a courier":q.fee?money(q.fee):fbHTML("Del")}</dd></div>`;
     if(S.day)L+=`<div><dt>When</dt><dd>${S.mode!=="pickup"&&S.speed==="sameday"?(samedayOpen()?"Today (sameday)":"Sameday (after the cut-off)"):fmtDay(S.day)+(S.time?", "+esc(S.time):"")}</dd></div>`;
     if(bsOn()&&S.mode==="delivery"){const sh=bsShip(S);
-      L+=`<div class="bscour${q.feePending?" need":""}" id="bsRow"><dt>Courier</dt><dd><button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?"Standard delivery · Change":"🛵 Choose courier"}</button></dd></div>`}
+      L+=`<div class="bscour${q.feePending?" need":""}" id="bsRow"><dt>Courier</dt><dd><button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?esc(scName())+" · Change":"🛵 Choose courier"}</button></dd></div>`}
   }
   $("#lines").innerHTML=L;
   renderCoupon(q);renderGiftBox();
@@ -1095,7 +1109,7 @@ function bsPopOpen(){
 // checkout form: one line with the chosen courier and a Change button (the full courier box lives in the pop-up)
 function bsSumDraw(){
   const el=$("#bsSum");if(!el)return;const on=bsOn()&&S.mode==="delivery";el.hidden=!on;if(!on)return;const sh=bsShip(S);
-  el.innerHTML=`<span class="flbl" style="font-weight:600;font-size:14px">Courier</span><div class="bssumrow${sh||S.bsSkip?"":" need"}"><span>${sh?`<b>${esc(sh.courierName||sh.courier)}</b> ${esc(sh.serviceName||sh.service)}${sh.eta?` <small>${esc(sh.eta)}</small>`:""}`:S.bsSkip?"Standard delivery":"No courier chosen yet"}</span>${sh?`<span class="num">${money(sh.price)}</span>`:""}<button type="button" class="ghost" data-bscourier>${sh||S.bsSkip?"Change":"🛵 Choose courier"}</button></div>`;
+  el.innerHTML=`<span class="flbl" style="font-weight:600;font-size:14px">Courier</span><div class="bssumrow${sh||S.bsSkip?"":" need"}"><span>${sh?`<b>${esc(sh.courierName||sh.courier)}</b> ${esc(sh.serviceName||sh.service)}${sh.eta?` <small>${esc(sh.eta)}</small>`:""}`:S.bsSkip?esc(scName()):"No courier chosen yet"}</span>${sh?`<span class="num">${money(sh.price)}</span>`:""}<button type="button" class="ghost" data-bscourier>${sh||S.bsSkip?"Change":"🛵 Choose courier"}</button></div>`;
 }
 /* guided tour for the courier pop-up: shows once, can be skipped, replay with the "?" button */
 /* guided tour of the shop for a new visitor: starts when they tap the main button, follows them through the box, the day and time, and checkout. It can be skipped and replayed with "How does it work?". */
@@ -1245,10 +1259,14 @@ function bsDraw(){
   pl.hidden=!BSD.label;pl.innerHTML=BSD.label?`📍 ${esc(BSD.label)} · <a href="https://www.openstreetmap.org/?mlat=${esc(BSD.lat)}&mlon=${esc(BSD.lng)}#map=17/${esc(BSD.lat)}/${esc(BSD.lng)}" target="_blank" rel="noopener">Check on the map</a>`:"";
   if(BSD.busy){o.innerHTML=`<p class="note">Looking for couriers…</p>`}
   else{o.innerHTML=BSD.opts.map((x,i)=>`<button type="button" class="bsopt" data-bsopt="${i}" aria-pressed="${S.ship&&S.ship.sig===x.sig}"><span><b>${esc(x.courierName||x.courier)}</b> ${esc(x.serviceName||x.service)}${x.eta?`<small>${esc(x.eta)}</small>`:""}</span><span class="num">${money(x.price)}</span></button>`).join("")
-    +(S.bsSkip?`<p class="note">Standard delivery fee selected (${money(DB.settings.deliveryFee)}).</p>`:"")}
+    +bsStoreOpt()}
   const msg=BSD.err&&!BSD.busy?BSD.err:"";er.hidden=!msg;er.textContent=msg;
-  if(msg&&bsFallback()&&!S.bsSkip)o.insertAdjacentHTML("beforeend",`<button type="button" class="ghost" data-bsskip>Use standard delivery (${money(DB.settings.deliveryFee)})</button>`);
 }
+// "Store Courier" in the courier list: always, or only when courier prices can't load (the owner chooses). Free while a free-delivery promo covers this box.
+function bsStoreOpt(){if(!bsFallback()||BSD.busy)return "";const fb=(DB.settings.scShow||"always")==="fallback";if(fb&&BSD.opts.length&&!BSD.err)return S.bsSkip?bsStoreBtn():"";
+  return bsStoreBtn()}
+function bsStoreBtn(){const t=DB.settings,fee=storeFee(S.size),free=!!freeDelSale(S.size);
+  return `<button type="button" class="bsopt bsstore" data-bsskip aria-pressed="${!!S.bsSkip}"><span><b>${esc(scName())}</b>${t.scNote?`<small>${esc(t.scNote)}</small>`:""}</span><span class="num">${free?"Free":money(fee)}</span></button>`}
 async function bsRates(){
   if(!(BSD.area||BSD.lat)||BSD.busy)return;
   const who=bsWho();if(!who){BSD.err="Type your WhatsApp number first, then we can show courier prices.";bsDraw();return}
@@ -2592,7 +2610,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-24 22:44 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-24 23:16 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

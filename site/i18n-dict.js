@@ -285,3 +285,6 @@ Object.assign(window.DD_ID, {
  "How does it work?": "Bagaimana cara kerjanya?", "Enjoy your cookies! 🍪": "Selamat menikmati cookiesmu! 🍪"
 });
 Object.assign(window.DD_ID, { "Falling effect": "Efek jatuh", "Tap this button to turn the falling effect on or off.": "Ketuk tombol ini untuk menyalakan atau mematikan efek jatuh.", "Turn the falling effect on or off": "Nyalakan atau matikan efek jatuh" });
+Object.assign(window.DD_ID, { "Store Courier": "Kurir Toko", "Delivered by our own team": "Diantar oleh tim kami", "The delivery price depends on the courier you choose.": "Harga pengiriman tergantung kurir yang kamu pilih." });
+window.DD_ID_PATTERNS.push([/^Scheduled delivery: pick a day and time\. We deliver within (\d+) km of the shop\.(?: (.+))?$/, (m, k, r) => "Pengantaran terjadwal: pilih hari dan jam. Kami mengantar dalam radius " + k + " km dari toko." + (r ? " " + _T(r) : "")]);
+window.DD_ID_PATTERNS.push([/^Delivered by (.+): (free|.+)\.$/, (m, n, f) => "Diantar oleh " + n + ": " + (f === "free" ? "gratis" : f) + "."]);
