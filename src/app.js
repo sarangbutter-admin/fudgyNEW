@@ -139,7 +139,7 @@ function defaultProofPop(){return {on:true,emoji:"🙏",img:"",cookies:[],fx:tru
   text:"We have received your payment proof for order {code}. We will check it and confirm it shortly. You can follow the progress in My orders.",
   btn:"Track my order",bg:"#ffffff",accent:"#000096",ink:"#0B0B45"}}
 function defaultAlerts(){return {on:true,sound:true,vol:70,repeat:false,stay:true,custom:"",customName:"",
-  ev:{order:{on:true,snd:"register"},proof:{on:true,snd:"chime"},complaint:{on:true,snd:"alarm"},courier:{on:true,snd:"alarm"}}}}
+  ev:{order:{on:true,snd:"register"},proof:{on:true,snd:"chime"},paid:{on:false,snd:"bell"},complaint:{on:true,snd:"alarm"},courier:{on:true,snd:"alarm"}}}}
 function defaultLabel(){return {logo:"",qr:"",qrCaption:"",notes:"",warnOn:true,warn1:"UNBOXING WITH UNCUT VIDEO!",warn2:"CONTACT US IF SEAL BROKEN"}}
 const SLOT_PRESETS=Array.from({length:23},(_,h)=>String(h).padStart(2,"0")+" to "+String(h+1).padStart(2,"0"));
 function migrate(db){
@@ -3005,7 +3005,7 @@ function applyStatus(id,st){
   const o=DB.orders.find(x=>x.id===id);if(!o)return;const prev=o.status;o.status=st;let note="";
   if(st==='awaiting'&&prev==='cancelled'){o.expiresAt=payDeadlineMs(o);delete o.cancelReason}
   if(st!=='cancelled')delete o.cancelReason;
-  if(st==='new'&&!o.paidAt)o.paidAt=Date.now();
+  if(st==='new'&&!o.paidAt){o.paidAt=Date.now();try{AACK.add('paid|'+o.id);alSaveAck()}catch(e){}}
   if(st==='awaiting'||st==='review')delete o.paidAt;   // back to the payment steps: no longer paid
   if(st==='completed'&&prev!=='completed')o.completedAt=Date.now();
   if(st!=='completed')delete o.completedAt;
@@ -3942,14 +3942,14 @@ function viewSettings(){
       <button class="ghost" type="button" data-cwprev style="margin-top:8px">Preview pop-up</button>
     </section>
     <section class="panel">
-      <div class="phead"><div><h2>Owner alerts</h2><p class="sub">A popup and a sound while the Admin page is open: when a new order is placed, when a customer sends a payment proof, and when a customer files a complaint. Browsers only play sound after you have clicked on the page once.</p></div><button class="btn btn-blue btn-sm" type="button" data-altest>Test alert</button></div>
+      <div class="phead"><div><h2>Owner alerts</h2><p class="sub">A popup and a sound while the Admin page is open. Switch on only the events you want: a new order that is not paid yet, a payment proof sent by the customer, an order that is paid (you or a teammate confirmed the payment), a customer complaint, or a courier problem. Browsers only play sound after you have clicked on the page once.</p></div><button class="btn btn-blue btn-sm" type="button" data-altest>Test alert</button></div>
       <div class="stack" style="gap:6px">
         <label class="chk"><input type="checkbox" data-alc="on" ${al.on?"checked":""}> Alerts on</label>
         <label class="chk"><input type="checkbox" data-alc="sound" ${al.sound?"checked":""}> Play a sound</label>
         <label class="chk"><input type="checkbox" data-alc="stay" ${al.stay?"checked":""}> Keep popups until I dismiss them (otherwise they close after 10 seconds)</label>
         <label class="chk"><input type="checkbox" data-alc="repeat" ${al.repeat?"checked":""}> Repeat the sound every 20 seconds until I dismiss</label>
         <label class="af" style="margin-top:6px">Volume<input class="in" type="range" min="10" max="100" step="5" data-alr value="${al.vol}"></label>
-        <div style="margin-top:8px">${[["order","New order placed"],["proof","Payment proof submitted"],["complaint","Customer complaint"],["courier","Courier problem (no driver, cancelled)"]].map(([k,l])=>`<div class="alrow"><span class="sw"><input type="checkbox" data-alc="ev.${k}.on" ${al.ev[k].on?"checked":""} aria-label="Alert for ${l}"><span></span></span><b style="font-size:14px">${l}</b><select class="in" data-alsel="ev.${k}.snd" aria-label="Sound for ${l}" style="min-width:140px">${SND_OPTS.map(([v,n])=>`<option value="${v}" ${al.ev[k].snd===v?"selected":""}>${n}</option>`).join("")}${al.custom?`<option value="custom" ${al.ev[k].snd==="custom"?"selected":""}>Your sound</option>`:""}</select><button class="ghost" type="button" data-alplay="${k}">▶ Play</button></div>`).join("")}</div>
+        <div style="margin-top:8px">${[["order","New order, not paid yet"],["proof","Customer sent a payment proof"],["paid","Order paid (payment confirmed)"],["complaint","Customer complaint"],["courier","Courier problem (no driver, cancelled)"]].map(([k,l])=>`<div class="alrow"><span class="sw"><input type="checkbox" data-alc="ev.${k}.on" ${al.ev[k].on?"checked":""} aria-label="Alert for ${l}"><span></span></span><b style="font-size:14px">${l}</b><select class="in" data-alsel="ev.${k}.snd" aria-label="Sound for ${l}" style="min-width:140px">${SND_OPTS.map(([v,n])=>`<option value="${v}" ${al.ev[k].snd===v?"selected":""}>${n}</option>`).join("")}${al.custom?`<option value="custom" ${al.ev[k].snd==="custom"?"selected":""}>Your sound</option>`:""}</select><button class="ghost" type="button" data-alplay="${k}">▶ Play</button></div>`).join("")}</div>
         <div class="af" style="margin-top:10px">Your own sound (MP3, WAV or OGG, under 400 KB)<div class="colin" style="flex-wrap:wrap"><label class="ghost mqbtn">${al.custom?"Replace sound":"Upload sound"}<input type="file" accept="audio/*" hidden data-alsnd></label>${al.custom?`<span class="note" style="margin:0">${esc(al.customName||"Your sound")}</span><button class="danger" type="button" data-alsndrm>Remove</button>`:""}</div></div>
       </div>
     </section>
@@ -6558,19 +6558,20 @@ function alEvents(){
   DB.orders.forEach(o=>{if(o.example)return;
     if(o.createdAt>=ABOOT)ev.push({type:"order",id:o.id,at:o.createdAt});
     if(o.proof&&o.proof.at>=ABOOT)ev.push({type:"proof",id:o.id,at:o.proof.at});
+    if(o.paidAt&&o.paidAt>=ABOOT&&o.status!=="cancelled")ev.push({type:"paid",id:o.id,at:o.paidAt,key:"paid|"+o.id});
     if(o.complaint&&o.complaint.at>=ABOOT)ev.push({type:"complaint",id:o.id,at:o.complaint.at});
     if(o.bship&&o.bship.failAt>=ABOOT)ev.push({type:"courier",id:o.id,at:o.bship.failAt})});
-  return ev.map(x=>({...x,key:x.type+"|"+x.id+"|"+x.at}));
+  return ev.map(x=>({...x,key:x.key||x.type+"|"+x.id+"|"+x.at}));
 }
 function alAckAll(){alEvents().forEach(x=>AACK.add(x.key));alSaveAck();ALQ=ALQ.filter(x=>x.test);renderAlerts()}
-const AL_META={order:["🍪","New order placed"],proof:["🧾","Payment proof submitted"],complaint:["⚠️","New customer complaint"],courier:["🛵","Courier problem: book again"]};
+const AL_META={order:["🍪","New order (not paid yet)"],proof:["🧾","Payment proof submitted"],paid:["✅","Order paid"],complaint:["⚠️","New customer complaint"],courier:["🛵","Courier problem: book again"]};
 function alPush(x){
   if(ALQ.some(q=>q.key===x.key))return;ALQ.push(x);renderAlerts();alSound([x]);
   if(!DB.alerts.stay)setTimeout(()=>alDismiss(x.key),10000);
 }
 function alSound(list){
   const a=DB.alerts;if(!a.sound||!list.length)return;
-  const pr={courier:4,complaint:3,proof:2,order:1},top=list.reduce((m,x)=>(pr[x.type]||0)>(pr[m.type]||0)?x:m,list[0]);
+  const pr={courier:4,complaint:3,paid:2,proof:2,order:1},top=list.reduce((m,x)=>(pr[x.type]||0)>(pr[m.type]||0)?x:m,list[0]);
   alPlay(top.test?a.ev.order.snd:a.ev[top.type].snd);
 }
 function alScan(){
