@@ -2127,7 +2127,7 @@ const miniPlate = p => p?`<div class="mini">${plateHTML(p)}</div>`:`<div class="
 const head = (title,sub) => `<div class="ahead"><div><h1>${title}</h1><p>${sub}</p></div></div>`;
 const MOCK = SBH.on ? "" : `<div class="mocknote"><span>●</span><span><b>Mockup.</b> Changes save in this browser and show in the shop straight away. Orders tagged <b>Example</b> are sample data. This becomes the Supabase backend later.</span></div>`;
 
-function renderAdmin(){try{applyBgx();applySnow();applyAdminBrand()}catch(e){}
+function renderAdmin(){try{applyBgx();applySnow();applyAdminBrand();lpFavicon(DB.page)}catch(e){}
   if(!tabAllowed(A.tab))A.tab=Object.keys(TAB_PERM).find(tabAllowed)||"orders";
   document.querySelectorAll("#anav [data-tab]").forEach(b=>{b.style.display=tabAllowed(b.dataset.tab)?"":"none"});
   {const r=document.querySelector("#adminView .side .role");if(r)r.textContent=ROLE()==="owner"?"Owner":(SBH.title||"Staff")}
@@ -4586,6 +4586,7 @@ am.addEventListener("click",e=>{
 /* --- landing page editor --- */
 const LP_DEFAULT_SVG=`<svg viewBox="0 0 30 24" aria-hidden="true"><path d="M3 21a12 12 0 0 1 24 0Z" fill="currentColor"/><circle cx="15" cy="5" r="2.6" fill="currentColor"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="currentColor"/></svg>`;
 function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",xtra:{on:true,text:"Flavors marked with a price cost that much extra per cookie.",icon:"✨",bg:"#FFF4D6",ink:"#5A4300",line:"#FFD166",fx:"shine",size:"M",shape:"rounded"},
+  favicon:{mode:"auto",img:"",emoji:"🍪",bg:""},
   logoSize:0,logoPos:{m:"normal",x:0,y:0},adm:{name:"",show:true,size:0,logo:""},
   mq2:{on:false,noFont:true,texts:["Hello there! Fresh cookies, baked daily"],images:[],links:[],mode:"both",imgH:0,bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium"},bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},
   snow:{on:false,icon:"❄️",imgs:[],n:40,speed:4,size:30,op:80,layer:"front",sway:true,spin:false,shop:true,aff:true,admin:false},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
@@ -4766,11 +4767,15 @@ function heroList(h){const L=(h.media||[]).filter(m=>m&&safeMedia(m.src));if(L.l
 function heroNorm(h){const c=anClone(h);if(!Array.isArray(c.media))c.media=[];if(!c.media.length&&c.mediaType&&c.mediaType!=="none"&&c.src)c.media=[{type:c.mediaType,src:c.src}];c.mediaType="none";c.src="";return c}
 let favKey="";
 function lpFavicon(pg){
-  let l=document.querySelector('link[rel="icon"]');if(!l){l=document.createElement("link");l.rel="icon";document.head.appendChild(l)}
-  const lg=safeMedia(pg.logo),key=lg?"i"+lg.length+lg.slice(-30):"d"+pg.brand;if(key===favKey)return;favKey=key;
-  const dflt=()=>{l.type="image/svg+xml";l.href="data:image/svg+xml,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 24"><path d="M3 21a12 12 0 0 1 24 0Z" fill="${pg.brand}"/><circle cx="15" cy="5" r="2.6" fill="${pg.brand}"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="${pg.brand}"/></svg>`)};
+  const F=pg.favicon||{},mode=["auto","own","emoji"].includes(F.mode)?F.mode:"auto",own=mode==="own"?safeMedia(F.img):"",emo=mode==="emoji"?(String(F.emoji||"").trim().slice(0,4)||"🍪"):"";
+  const find=(rel,sizes)=>{let l=document.querySelector(`link[rel="${rel}"]`);if(!l){l=document.createElement("link");l.rel=rel;if(sizes)l.sizes=sizes;document.head.appendChild(l)}return l};
+  const l=find("icon"),ap=find("apple-touch-icon","180x180");
+  const lg=own||safeMedia(pg.logo),bgc=/^#[0-9a-f]{6}$/i.test(F.bg||"")?F.bg:"",key=emo?"e"+emo+bgc:lg?"i"+lg.length+lg.slice(-30)+bgc:"d"+pg.brand;if(key===favKey)return;favKey=key;
+  const dflt=()=>{l.type="image/svg+xml";l.href="data:image/svg+xml,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 24"><path d="M3 21a12 12 0 0 1 24 0Z" fill="${pg.brand}"/><circle cx="15" cy="5" r="2.6" fill="${pg.brand}"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="${pg.brand}"/></svg>`);ap.removeAttribute("href")};
+  const png=(n,draw,solid)=>{const c=document.createElement("canvas");c.width=c.height=n;const x=c.getContext("2d");if(bgc||solid){x.fillStyle=bgc||"#ffffff";x.fillRect(0,0,n,n)}draw(x,n);return c.toDataURL("image/png")};
+  if(emo){try{const dr=(x,n)=>{x.font=`${Math.round(n*.78)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;x.textAlign="center";x.textBaseline="middle";x.fillText(emo,n/2,n*.54)};l.type="image/png";l.href=png(64,dr);ap.href=png(180,dr,true)}catch(e){dflt()}return}
   if(!lg){dflt();return}
-  const im=new Image();im.onload=()=>{try{const c=document.createElement("canvas");c.width=c.height=64;const x=c.getContext("2d"),k=Math.min(64/im.naturalWidth,64/im.naturalHeight),w=im.naturalWidth*k,h=im.naturalHeight*k;x.drawImage(im,(64-w)/2,(64-h)/2,w,h);l.type="image/png";l.href=c.toDataURL("image/png")}catch(e){dflt()}};im.onerror=dflt;im.src=lg;
+  const im=new Image();im.onload=()=>{try{const dr=(x,n)=>{const k=Math.min(n/im.naturalWidth,n/im.naturalHeight),w=im.naturalWidth*k,h=im.naturalHeight*k;x.drawImage(im,(n-w)/2,(n-h)/2,w,h)};l.type="image/png";l.href=png(64,dr);ap.href=png(180,dr,true)}catch(e){dflt()}};im.onerror=dflt;im.src=lg;
 }
 // shop top bar: background, logo box and the round icon buttons (Shop settings > Top bar)
 const HDR_SHAPES=["none","pill","rounded","square"],HDR_ISHAPES=["circle","rounded","square"],HDR_BAR=["flat","rounded","float","pill"];
@@ -4889,7 +4894,7 @@ function applySnow(){const pg=DB.page,S=pg&&pg.snow;if(!S||!document.body)return
 function snowDbg(S,want,ok){if(!/[?&]snowdebug\b/.test(location.search))return;let e=document.getElementById("snowDbg");if(!e){e=document.createElement("pre");e.id="snowDbg";e.style.cssText="position:fixed;left:6px;bottom:6px;z-index:99999;margin:0;padding:6px 8px;background:#000c;color:#9f9;font:11px/1.3 monospace;max-width:92vw;white-space:pre-wrap;border-radius:8px;pointer-events:none";document.body.appendChild(e)}
   const d=document.getElementById("snowDom");e.textContent=JSON.stringify({on:S.on,scope:snowScope(),want,ok,mode:SNOW.mode,run:SNOW.run,spr:SNOW.spr.length,flakes:SNOW.fl.length,dom:d?d.childElementCount:0,dispDom:d?getComputedStyle(d).display:null,cv:SNOW.cv?[SNOW.cv.width,SNOW.cv.height,getComputedStyle(SNOW.cv).display]:null,imgs:(S.imgs||[]).length,ua:navigator.userAgent.slice(-60)})}
 const lpGet=path=>path.split(".").reduce((o,k)=>o==null?o:o[k],DB.page);
-function lpSet(path,v){const ks=path.split(".");let o=DB.page;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v;if(ks[0]==="xtra"){applyXtra();const pv=document.getElementById("xPrev");if(pv)xtraDraw(pv,DB.page.xtra)}if(ks[0]==="logoSize"||ks[0]==="logoPos")applyBrandSize();if(ks[0]==="adm")applyAdminBrand();if(ks[0]==="bgx")applyBgx();if(ks[0]==="snow")applySnow()}
+function lpSet(path,v){const ks=path.split(".");let o=DB.page;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v;if(ks[0]==="favicon"){favKey="";lpFavicon(DB.page)}if(ks[0]==="xtra"){applyXtra();const pv=document.getElementById("xPrev");if(pv)xtraDraw(pv,DB.page.xtra)}if(ks[0]==="logoSize"||ks[0]==="logoPos")applyBrandSize();if(ks[0]==="adm")applyAdminBrand();if(ks[0]==="bgx")applyBgx();if(ks[0]==="snow")applySnow()}
 const hexNorm=v=>{v=String(v||"").trim().toLowerCase();if(v==="transparent"||v==="none")return"transparent";return v.startsWith("#")?v:"#"+v};
 const HEX_OK=/^(#[0-9a-f]{6}|transparent)$/i;
 const lpIn=(label,path,o={})=>`<label class="af">${label}${o.rows?`<textarea class="in" rows="${o.rows}" data-lp="${path}" maxlength="${o.max||600}" placeholder="${esc(o.ph||"")}">${esc(lpGet(path)||"")}</textarea>`:`<input class="in" data-lp="${path}" maxlength="${o.max||120}" value="${esc(lpGet(path)||"")}" placeholder="${esc(o.ph||"")}">`}</label>`;
@@ -4928,6 +4933,11 @@ function viewLanding(){
   ${sec("Brand, colors and fonts",`
     <div class="grid2">${lpIn("Brand name","name",{max:30})}
       <div class="af">Logo image (optional)<div class="colin"><label class="ghost mqbtn">${pg.logo?"Replace logo":"Upload logo"}<input type="file" accept="image/*" hidden data-lpimg="logo"></label>${pg.logo?`<img class="lpthumb" style="max-height:36px;max-width:90px" src="${esc(safeMedia(pg.logo))}" alt="Logo"><button class="danger" type="button" data-lpclear="logo">Remove</button>`:""}</div></div></div>
+    <div class="af">Browser tab icon (favicon)<div class="chips" style="margin-top:6px">${[["auto","Same as the logo"],["own","My own picture"],["emoji","An emoji"]].map(([k,l])=>`<button class="fchip" type="button" data-favmode="${k}" aria-pressed="${(pg.favicon.mode||"auto")===k}">${l}</button>`).join("")}</div>
+      ${pg.favicon.mode==="own"?`<div class="colin" style="margin-top:8px"><label class="ghost mqbtn">${pg.favicon.img?"Replace picture":"Upload picture"}<input type="file" accept="image/*" hidden data-lpimg="favicon.img"></label>${pg.favicon.img?`<img class="lpthumb" style="max-height:36px;max-width:36px" src="${esc(safeMedia(pg.favicon.img))}" alt="Favicon"><button class="danger" type="button" data-lpclear="favicon.img">Remove</button>`:""}</div>`:""}
+      ${pg.favicon.mode==="emoji"?`<div class="grid2" style="margin-top:8px">${lpIn("Emoji","favicon.emoji",{max:4,ph:"🍪"})}${lpCol("Background (optional)","favicon.bg","#ffffff",true)}</div>`:""}
+      ${pg.favicon.mode==="own"?`<div class="grid2" style="margin-top:8px">${lpCol("Background behind the picture (optional)","favicon.bg","#ffffff",true)}</div>`:""}
+      <p class="note" style="margin:6px 0 0">The small icon in the browser tab and on a phone's home screen. A square picture with a simple shape works best. It changes the next time the page loads.</p></div>
     <div style="display:flex;gap:10px;align-items:center"><label class="sw"><input type="checkbox" data-k="settings::hdrLogoText" ${DB.settings.hdrLogoText!==false?"checked":""} aria-label="Show the brand name next to the logo"><span></span></label><span class="stlabel">Show the brand name next to the logo in the shop top bar (turn off for logo only)</span></div>
     <label class="af">Logo size in the shop top bar: ${+pg.logoSize?pg.logoSize+"px":"Auto"}<div class="colin"><input type="range" min="20" max="72" step="2" value="${+pg.logoSize||28}" data-lp="logoSize" data-num="1" data-rr="1" style="flex:1">${+pg.logoSize?`<button class="ghost" type="button" data-lpclear="logoSize">Auto</button>`:""}</div></label>
     <div class="af">Logo position in the shop top bar<div class="chips" style="margin-top:6px">${[["normal","Normal"],["corner","Top-left corner (auto)"],["custom","Drag it myself"]].map(([k,l])=>`<button class="fchip" type="button" data-lgpos="${k}" aria-pressed="${(pg.logoPos.m||"normal")===k}">${l}</button>`).join("")}</div>
@@ -5040,6 +5050,7 @@ async function imgHasAlpha(file){
 }
 const readData=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(new Error("Couldn't read that file."));r.readAsDataURL(f)});
 function lpTry(path,val,okMsg){const prev=lpGet(path);lpSet(path,val);if(!saveDB()){lpSet(path,prev);toast("Not enough storage space. Remove another photo, video or font first.");return false}if(okMsg)toast(okMsg);return true}
+am.addEventListener("click",e=>{const fb=e.target.closest("[data-favmode]");if(!fb)return;DB.page.favicon.mode=fb.dataset.favmode;saveDB();favKey="";lpFavicon(DB.page);lpRender()});
 am.addEventListener("click",e=>{const b=e.target.closest("[data-lgpos],[data-lgreset]");if(!b)return;const pg=DB.page;
   if(b.dataset.lgpos){pg.logoPos.m=b.dataset.lgpos;saveDB();applyBrandSize();lpRender()}else{pg.logoPos.x=0;pg.logoPos.y=0;saveDB();applyBrandSize();lpRender()}});
 am.addEventListener("pointerdown",e=>{const d=e.target.closest("#lgDrag");if(!d)return;e.preventDefault();const pg=DB.page,x0=e.clientX,y0=e.clientY,sx=+pg.logoPos.x||0,sy=+pg.logoPos.y||0;try{d.setPointerCapture(e.pointerId)}catch(x){}
@@ -5065,7 +5076,7 @@ am.addEventListener("change",async e=>{
   if(el.dataset.lp&&(el.tagName==="SELECT"||el.type==="range"||el.type==="checkbox")){
     const v=el.type==="checkbox"?el.checked:el.dataset.num?+el.value:el.value;lpSet(el.dataset.lp,v);saveDB();toast("Saved");if(el.dataset.rr||el.dataset.lp.endsWith("mediaType"))lpRender();return}
   if(el.dataset.lp&&el.dataset.lp.endsWith(".src")){lpRender();return}
-  if(el.dataset.lpimg){const f=el.files[0];if(!f)return;try{const d=await lpResize(f,el.dataset.lpimg==="logo"?240:1600);lpTry(el.dataset.lpimg,d,"Image added")}catch(err){toast(err.message)}lpRender();return}
+  if(el.dataset.lpimg){const f=el.files[0];if(!f)return;try{const d=await lpResize(f,el.dataset.lpimg==="logo"||el.dataset.lpimg==="favicon.img"?240:1600);lpTry(el.dataset.lpimg,d,"Image added")}catch(err){toast(err.message)}lpRender();return}
   if(el.dataset.lpvid){const f=el.files[0];if(!f)return;
     if(f.size>3*1024*1024){toast("That video is over 3 MB. Paste a link to it instead (YouTube, Vimeo or an .mp4 file).");el.value="";return}
     try{lpTry(el.dataset.lpvid,await readData(f),"Video added")}catch(err){toast(err.message)}lpRender();return}
