@@ -4778,7 +4778,7 @@ function lpFavicon(pg){
   // a picture on the shop's storage is loaded "with CORS" so it can be drawn on a canvas; if that is refused, the picture itself is used as the icon
   const direct=()=>{swap("icon",lg);swap("apple-touch-icon",lg,"","180x180")};
   const im=new Image();if(!/^data:/i.test(lg))im.crossOrigin="anonymous";
-  im.onload=()=>{if(favKey!==key)return;try{const dr=(x,n)=>{const k=Math.min(n/im.naturalWidth,n/im.naturalHeight),w=im.naturalWidth*k,h=im.naturalHeight*k;x.drawImage(im,(n-w)/2,(n-h)/2,w,h)};swap("icon",png(64,dr),"image/png");swap("apple-touch-icon",png(180,dr,true),"image/png","180x180")}catch(e){direct()}};
+  im.onload=()=>{if(favKey!==key)return;try{const iw=im.naturalWidth||256,ih=im.naturalHeight||256,dr=(x,n)=>{const k=Math.min(n/iw,n/ih),w=iw*k,h=ih*k;x.drawImage(im,(n-w)/2,(n-h)/2,w,h)};swap("icon",png(64,dr),"image/png");swap("apple-touch-icon",png(180,dr,true),"image/png","180x180")}catch(e){direct()}};
   im.onerror=()=>{if(favKey!==key)return;if(/^data:/i.test(lg))dflt();else direct()};im.src=lg;
 }
 // shop top bar: background, logo box and the round icon buttons (Shop settings > Top bar)
@@ -5030,7 +5030,19 @@ am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||A.tab!
   else if(d.socdel!==undefined){armed(b,()=>{so.splice(+d.socdel,1);saveDB();toast("Button deleted");lpRender()})}
   else if(d.socimgrm!==undefined){const x=so[+d.socimgrm];if(x){x.img="";delete x.imgCut;saveDB();toast("Using the built-in icon");lpRender()}}});
 let lpT;function lpSave(){clearTimeout(lpT);lpT=setTimeout(()=>{if(saveDB())toast("Saved");else toast("Not enough storage space. Remove a photo, video or font.")},400)}
+// an SVG is drawn to a transparent PNG (some SVGs have no size of their own, which made them come out blank or 1 pixel wide)
+async function svgToPng(file,MAX){
+  if(file.size>1.5e6)throw new Error("That SVG is over 1.5 MB. Use a smaller file or a PNG.");
+  let t=await file.text();if(!/<svg[\s>]/i.test(t))throw new Error("That file isn't a usable SVG.");
+  let w=0,h=0;const vb=t.match(/<svg[^>]*\sviewBox\s*=\s*["']\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)/i);if(vb){w=+vb[1];h=+vb[2]}
+  if(!(w>0&&h>0)){const mw=t.match(/<svg[^>]*\swidth\s*=\s*["']([\d.]+)/i),mh=t.match(/<svg[^>]*\sheight\s*=\s*["']([\d.]+)/i);w=+(mw&&mw[1])||0;h=+(mh&&mh[1])||0}
+  if(!(w>0&&h>0))w=h=100;
+  const k=Math.min(512,Math.max(64,MAX*2))/Math.max(w,h),cw=Math.max(1,Math.round(w*k)),ch=Math.max(1,Math.round(h*k));
+  t=t.replace(/<svg\b([^>]*)>/i,(m,a)=>`<svg${a.replace(/\s(width|height)\s*=\s*("[^"]*"|'[^']*')/gi,"")}${/\sxmlns\s*=/.test(a)?"":' xmlns="http://www.w3.org/2000/svg"'} width="${cw}" height="${ch}">`);
+  const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("Couldn't read that SVG. Try a PNG."));i.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(t)});
+  const c=document.createElement("canvas");c.width=cw;c.height=ch;c.getContext("2d").drawImage(img,0,0,cw,ch);return c.toDataURL("image/png")}
 async function lpResize(file,MAX,webp){
+  if(file.type==="image/svg+xml"||/\.svg$/i.test(file.name||""))return svgToPng(file,MAX);
   if(!/^image\//.test(file.type))throw new Error("That file isn't an image. Use JPG, PNG or WebP.");
   if(file.size>25e6)throw new Error("That image is over 25 MB. Try a smaller one.");
   const url=URL.createObjectURL(file);
@@ -6227,7 +6239,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-25 13:17 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-25 18:07 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
