@@ -583,13 +583,15 @@ function renderStore(){
    if(t.customOn){const on=validCustom(S.size),n=on?S.size:snapCustom(S.cv||t.customMin);S.cv=n;
     const base=basePrice(n),sale=bestSale(n),now=sale?r2(base-saleDiscount(sale,base)):base;
     cb.dataset.on=on;
-    cb.innerHTML=`<h4>Need a bigger box?</h4><p>Build your own from ${t.customMin} cookies, in steps of ${t.customStep}. ${money(t.customPer)} per cookie.</p>
+    cb.innerHTML=`<h4>Need a bigger box?</h4><p>Build your own from ${t.customMin} cookies, in steps of ${t.customStep}. ${money(t.customPer)} per cookie.</p>${freeDelSale(n)?`<span class="fdnote">🚚 Free delivery on this box</span>`:""}
     <div class="crow"><div class="stepper" role="group" aria-label="Custom box size"><button type="button" data-cstep="-1" aria-label="Fewer cookies" ${n<=t.customMin?"disabled":""}>−</button><input id="cvIn" type="number" inputmode="numeric" min="${t.customMin}" max="${t.customMax}" step="${t.customStep}" value="${n}" aria-label="Number of cookies"><button type="button" data-cstep="1" aria-label="More cookies" ${n+t.customStep>t.customMax?"disabled":""}>+</button></div>
     <span class="cprice num">${sale?`<s style="opacity:.6;font-weight:400">${money(base)}</s> `:""}${money(now)}</span>
     <button class="btn btn-blue btn-sm cuse" type="button" data-cuse ${on?"disabled":""}>${on?"Selected":`Use box of ${n}`}</button></div>${giftPlan(n).length?`<div class="gifthint inl"><span class="ic" aria-hidden="true">🎁</span><span class="t">Free gift with ${n} cookies!</span><button class="gifthint-b" type="button" data-giftsee="${n}">See gifts ›</button></div>`:""}`}}
   // sizes (with live sale prices)
-  $("#sizes").innerHTML = activeSizes().map(s=>{const sale=bestSale(s.n),now=sale?r2(s.price-saleDiscount(sale,s.price)):s.price;
-    return `<button class="size" type="button" data-size="${s.n}" aria-pressed="${s.n===S.size}">${sale?`<span class="saletag">${sale.type==="percent"?"−"+sale.value+"%":"Sale"}</span>`:""}${giftPlan(s.n).length?`<span class="saletag gifttag${sale?" l":""}">🎁<b class="gt"> Gift</b></span>`:""}<strong>${s.n}</strong><small>COOKIES</small><span class="num">${sale?`<s>${money(s.price)}</s>`:""}${money(now)}</span></button>`}).join("");
+  const fdOn=activeSizes().some(z=>freeDelSale(z.n));$("#sizes").classList.toggle("fdon",fdOn);
+  {const h=$("#fdHint");if(h){const live=DB.sales.filter(x=>isFD(x)&&saleStatus(x,Date.now())==="live");h.hidden=!live.length;h.innerHTML=live.map(x=>`<span>🚚 <b>${esc(x.name)}</b>: free delivery on ${esc(saleAppliesText(x))}</span>`).join("")}}
+  $("#sizes").innerHTML = activeSizes().map(s=>{const sale=bestSale(s.n),now=sale?r2(s.price-saleDiscount(sale,s.price)):s.price,fd=freeDelSale(s.n);
+    return `<button class="size" type="button" data-size="${s.n}" aria-pressed="${s.n===S.size}">${fd?`<span class="fdtag">🚚 <b>Free delivery</b></span>`:""}${sale?`<span class="saletag">${sale.type==="percent"?"−"+sale.value+"%":"Sale"}</span>`:""}${giftPlan(s.n).length?`<span class="saletag gifttag${sale?" l":""}">🎁<b class="gt"> Gift</b></span>`:""}<strong>${s.n}</strong><small>COOKIES</small><span class="num">${sale?`<s>${money(s.price)}</s>`:""}${money(now)}</span></button>`}).join("");
   renderGiftHint();renderBarExtras();renderFab();
   document.querySelectorAll(".card").forEach(c=>{const st=c.querySelector(".stepper");if(!st)return;const n=countOf(c.dataset.id);st.querySelector("output").textContent=n;c.classList.toggle("has",n>0);
     st.querySelector('[data-act="dec"]').disabled=n===0;const inc=st.querySelector('[data-act="inc"]'),lim=n>=stockLeft(prod(c.dataset.id));inc.disabled=lim;inc.classList.toggle("off",!lim&&full());inc.setAttribute("aria-disabled",String(lim||full()))});
