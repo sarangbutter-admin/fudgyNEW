@@ -2617,13 +2617,14 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-25 02:49 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-25 02:59 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
 const sig = (now=Date.now()) => DB.sales.map(s=>saleStatus(s,now)).join();
 let view=null;
 function route(){
+  if(!SBH.on||SBH.loaded)document.body.classList.remove("dd-load");
   if(view===null&&SBH.on&&!SBH.loaded){view="store";SBH.loadShop();return}
   view="store";document.body.classList.add("in-store");
   trackVisit();closeReviews();expireOrders();sanitizeCart();renderBag();renderEditBar();renderStoreStatic();renderStore();
@@ -2638,6 +2639,6 @@ document.addEventListener("click",e=>{const a=e.target.closest('a[href^="data:im
 addEventListener("storage",e=>{if(SBH.on)return;if(e.key===DB_KEY){loadDB();view=null;route()}});
 if(!hadCart&&!SBH.on)S.box=["bb","bb","dc","rv"];
 expireOrders();
-route();
+route();setTimeout(()=>document.body.classList.remove("dd-load"),8000); // never leave the page hidden if the shop is slow to answer
 let lastSig=sig();
 setInterval(()=>{const now=Date.now(),s=sig(now);if(s!==lastSig)renderStore();else updateFlash(now);lastSig=s},1000);

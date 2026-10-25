@@ -6588,6 +6588,7 @@ $("#alStack").addEventListener("click",e=>{
 let view=null;
 function route(){
   const admin=location.hash==="#admin",next=admin?"admin":"store";
+  if(!SBH.on||admin||SBH.loaded)document.body.classList.remove("dd-load");
   if(next===view)return;
   const prev=view;view=next;
   $("#storeView").hidden=admin;$("#adminView").hidden=!admin;document.body.classList.toggle("in-store",!admin);
@@ -6608,4 +6609,4 @@ addEventListener("storage",e=>{if(SBH.on)return;if(e.key===DB_KEY){loadDB();view
 
 if(!hadCart&&!SBH.on)S.box=["bb","bb","dc","rv"];
 expireOrders();
-route();
+route();setTimeout(()=>document.body.classList.remove("dd-load"),8000); // never leave the page hidden if the shop is slow to answer

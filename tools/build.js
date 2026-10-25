@@ -21,6 +21,7 @@ const decl=t=>{let m;if((m=t.match(/^(?:async\s+)?function\s*\*?\s*(\w+)/)))retu
   if((m=t.match(/^(?:const|let|var)\s+([^=;]+?)\s*=/m)))return m[1].match(/[\w$]+/g)||[];return[]};
 const shopClock=`let lastSig=sig();\nsetInterval(()=>{const now=Date.now(),s=sig(now);if(s!==lastSig)renderStore();else updateFlash(now);lastSig=s},1000);`;
 const customerRoute=`function route(){
+  if(!SBH.on||SBH.loaded)document.body.classList.remove("dd-load");
   if(view===null&&SBH.on&&!SBH.loaded){view="store";SBH.loadShop();return}
   view="store";document.body.classList.add("in-store");
   trackVisit();closeReviews();expireOrders();sanitizeCart();renderBag();renderEditBar();renderStoreStatic();renderStore();

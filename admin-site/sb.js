@@ -61,10 +61,11 @@
       var ch = shopChanged(res) || !H.loaded;
       if (ch) applyPublic(res);
       var first = !H.loaded;
-      H.loaded = true; banner(!(DB.sizes.length && DB.products.length) ? "The shop is being set up. Please check back soon." : "");
+      H.loaded = true; document.body.classList.remove("dd-load"); banner(!(DB.sizes.length && DB.products.length) ? "The shop is being set up. Please check back soon." : "");
       if (first) { view = null; route(); H.refreshOrders(); }
       else if (ch && view === "store" && $q("#sheet").hidden) { sanitizeCart(); renderStoreStatic(); renderStore(); renderEditBar(); }
     } catch (e) {
+      document.body.classList.remove("dd-load");
       if (!H.loaded) banner("We couldn't load the shop. " + e.message, function () { banner("Loading the shop…"); H.loadShop(); });
     } finally { shopBusy = false; }
   };
