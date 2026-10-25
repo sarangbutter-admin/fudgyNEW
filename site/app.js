@@ -2368,14 +2368,18 @@ function heroNorm(h){const c=anClone(h);if(!Array.isArray(c.media))c.media=[];if
 let favKey="";
 function lpFavicon(pg){
   const F=pg.favicon||{},mode=["auto","own","emoji"].includes(F.mode)?F.mode:"auto",own=mode==="own"?safeMedia(F.img):"",emo=mode==="emoji"?(String(F.emoji||"").trim().slice(0,4)||"🍪"):"";
-  const find=(rel,sizes)=>{let l=document.querySelector(`link[rel="${rel}"]`);if(!l){l=document.createElement("link");l.rel=rel;if(sizes)l.sizes=sizes;document.head.appendChild(l)}return l};
-  const l=find("icon"),ap=find("apple-touch-icon","180x180");
+  // replace the <link> itself (Safari and Firefox ignore a changed href on the old one)
+  const swap=(rel,href,type,sizes)=>{document.querySelectorAll(`link[rel="${rel}"]`).forEach(x=>x.remove());if(!href)return;const n=document.createElement("link");n.rel=rel;if(type)n.type=type;if(sizes)n.sizes=sizes;n.href=href;document.head.appendChild(n)};
   const lg=own||safeMedia(pg.logo),bgc=/^#[0-9a-f]{6}$/i.test(F.bg||"")?F.bg:"",key=emo?"e"+emo+bgc:lg?"i"+lg.length+lg.slice(-30)+bgc:"d"+pg.brand;if(key===favKey)return;favKey=key;
-  const dflt=()=>{l.type="image/svg+xml";l.href="data:image/svg+xml,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 24"><path d="M3 21a12 12 0 0 1 24 0Z" fill="${pg.brand}"/><circle cx="15" cy="5" r="2.6" fill="${pg.brand}"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="${pg.brand}"/></svg>`);ap.removeAttribute("href")};
+  const dflt=()=>{swap("icon","data:image/svg+xml,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 24"><path d="M3 21a12 12 0 0 1 24 0Z" fill="${pg.brand}"/><circle cx="15" cy="5" r="2.6" fill="${pg.brand}"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="${pg.brand}"/></svg>`),"image/svg+xml");swap("apple-touch-icon","")};
   const png=(n,draw,solid)=>{const c=document.createElement("canvas");c.width=c.height=n;const x=c.getContext("2d");if(bgc||solid){x.fillStyle=bgc||"#ffffff";x.fillRect(0,0,n,n)}draw(x,n);return c.toDataURL("image/png")};
-  if(emo){try{const dr=(x,n)=>{x.font=`${Math.round(n*.78)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;x.textAlign="center";x.textBaseline="middle";x.fillText(emo,n/2,n*.54)};l.type="image/png";l.href=png(64,dr);ap.href=png(180,dr,true)}catch(e){dflt()}return}
+  if(emo){try{const dr=(x,n)=>{x.font=`${Math.round(n*.78)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;x.textAlign="center";x.textBaseline="middle";x.fillText(emo,n/2,n*.54)};swap("icon",png(64,dr),"image/png");swap("apple-touch-icon",png(180,dr,true),"image/png","180x180")}catch(e){dflt()}return}
   if(!lg){dflt();return}
-  const im=new Image();im.onload=()=>{try{const dr=(x,n)=>{const k=Math.min(n/im.naturalWidth,n/im.naturalHeight),w=im.naturalWidth*k,h=im.naturalHeight*k;x.drawImage(im,(n-w)/2,(n-h)/2,w,h)};l.type="image/png";l.href=png(64,dr);ap.href=png(180,dr,true)}catch(e){dflt()}};im.onerror=dflt;im.src=lg;
+  // a picture on the shop's storage is loaded "with CORS" so it can be drawn on a canvas; if that is refused, the picture itself is used as the icon
+  const direct=()=>{swap("icon",lg);swap("apple-touch-icon",lg,"","180x180")};
+  const im=new Image();if(!/^data:/i.test(lg))im.crossOrigin="anonymous";
+  im.onload=()=>{if(favKey!==key)return;try{const dr=(x,n)=>{const k=Math.min(n/im.naturalWidth,n/im.naturalHeight),w=im.naturalWidth*k,h=im.naturalHeight*k;x.drawImage(im,(n-w)/2,(n-h)/2,w,h)};swap("icon",png(64,dr),"image/png");swap("apple-touch-icon",png(180,dr,true),"image/png","180x180")}catch(e){direct()}};
+  im.onerror=()=>{if(favKey!==key)return;if(/^data:/i.test(lg))dflt();else direct()};im.src=lg;
 }
 const HDR_SHAPES=["none","pill","rounded","square"],HDR_ISHAPES=["circle","rounded","square"],HDR_BAR=["flat","rounded","float","pill"];
 function applyHeader(){const t=DB.settings,top=$(".top"),lg=$(".top .logo"),on=!!t.hdrOn;if(!top)return;top.classList.toggle("lgnotxt",t.hdrLogoText===false);
@@ -2617,7 +2621,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-25 02:59 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-25 13:17 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
