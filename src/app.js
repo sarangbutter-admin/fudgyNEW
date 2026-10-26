@@ -228,7 +228,7 @@ function giftDrawLocal(o,db=DB,at=Date.now()){
 }
 const giftImg=id=>{for(const s of DB.sales||[])for(const g of s.gifts||[])if(g&&g.id===id&&g.img)return g.img;return ""};
 const giftChip=(g,extra="")=>{const im=g.img||giftImg(g.id);return `<span class="gc${extra}">${im?`<img src="${esc(imgOk(im))}" alt="" loading="lazy">`:`<i aria-hidden="true">🎁</i>`}<span>${esc(g.name)}${giftQty(g)>1?` ×${giftQty(g)}`:""}</span></span>`};
-const giftCard=(g,extra="")=>{const im=g.img||giftImg(g.id);return `<span class="gcard${extra}">${im?`<img src="${esc(imgOk(im))}" alt="" loading="lazy">`:`<i aria-hidden="true">🎁</i>`}<b>${esc(g.name)}${giftQty(g)>1?` ×${giftQty(g)}`:""}</b><em>FREE</em></span>`};
+const giftCard=(g,extra="")=>{const im=g.img||giftImg(g.id);return `<span class="gcard${extra}">${im?`<img src="${esc(imgOk(im))}" alt="" loading="lazy">`:`<i aria-hidden="true">${esc(String(g.icon||"🎁").slice(0,4))}</i>`}<b>${esc(g.name)}${giftQty(g)>1?` ×${giftQty(g)}`:""}</b><em>FREE</em></span>`};
 const giftSurprise=n=>n>1?n+" surprise gifts":"1 surprise gift";
 const giftLines=n=>giftPlan(n).flatMap(x=>x.mode==="random"?[`🎲 ${giftSurprise(x.limit)}`]:x.gifts.map(g=>`🎁 ${g.name}`));
 const GIFT_NOTE="Gifts are subject to availability. Alternative gifts or a delayed shipment may happen.";
@@ -535,7 +535,7 @@ function renderMenu(){
     const out=isOut(p),img=true,badge=p.surcharge>0?`<span class="xtra">+${money(p.surcharge)}</span>`:"",
       low=!out&&p.track&&p.stock<=DB.settings.lowStockAt?`<span class="stk">Only ${p.stock} left</span>`:"";
     return `<div class="card${out?" out":""}${img?"":" noimg"}" data-id="${p.id}" style="--i:${i}">
-      ${img?`<div class="pwrap">${plateHTML(p)}${badge}${low}${bd.length?`<div class="bdgs">${bd.map(badgeHTML).join("")}</div>`:""}</div>`:""}
+      ${img?`<div class="pwrap">${plateHTML(p)}${badge}${low}${rvFree(p)}${bd.length?`<div class="bdgs">${bd.map(badgeHTML).join("")}</div>`:""}</div>`:""}
       <h4>${esc(p.name)}${img?"":badge}</h4>${(()=>{const r=ratingOf(p);return `<button class="rate${r.n?"":" none"}" type="button" data-reviews="${p.id}" aria-label="${r.n?`${r.avg.toFixed(1)} out of 5 stars, ${r.n} reviews. Read or write a review for ${esc(p.name)}`:`No reviews yet for ${esc(p.name)}`}">${r.n?`<span class="stars">★</span> ${r.avg.toFixed(1)} <span class="cnt">(${r.n})</span>`:"No reviews yet"}</button>`})()}<p>${esc(p.desc)}</p>
       ${out?`<span class="sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:`<div class="stepper"><button type="button" data-act="dec" aria-label="Remove one ${esc(p.name)}">−</button><output aria-live="polite">0</output><button type="button" data-act="inc" aria-label="Add one ${esc(p.name)}">+</button></div>`}
     </div>`}).join("");
@@ -1651,10 +1651,12 @@ function rvRender(){const card=$("#rvCard"),star=$("#rvStar");if(!card||!star)re
 const RVT={t:0};
 document.addEventListener("click",e=>{const b=e.target.closest("[data-rvgo]");if(!b)return;e.preventDefault();const t=$("#rvTip");if(t)t.hidden=true;try{closeBell()}catch(x){}openMO(b.dataset.rvgo);setTimeout(()=>{const r=$("#moCard .rstars");r&&r.scrollIntoView({block:"center"})},120)});
 const rvFill=(t,d)=>String(t||"").replace(/\{reward\}/g,(d&&d.item&&d.item.name)||"").replace(/\{code\}/g,(d&&d.code)||"");
+const rvFree=p=>PG.info&&PG.code&&(PG.info.items||[]).some(g=>g&&g.pid===p.id)?`<span class="rvfree">🎁 FREE reward</span>`:"";
 function rvPop(html){const p=$("#rvPop");if(p.parentNode!==document.body)document.body.appendChild(p);p.innerHTML=html;p.hidden=false;document.body.style.overflow="hidden"}
 function rvClose(){const p=$("#rvPop");p.hidden=true;p.innerHTML="";if($("#moSheet").hidden&&$("#sheet").hidden)document.body.style.overflow=""}
 function rvOutcome(rv,o){const R=DB.revrew,k=rv.st==="win"?"win":rv.st==="sad"?"sad":"none",m=R[k]||{},img=safeMedia(m.img),fx=RV_FX[m.fx]||[];
-  const art=img?`<img class="rvimg" src="${esc(img)}" alt="">`:`<div class="rvic" aria-hidden="true">${esc(String(m.icon||"🎁").slice(0,4))}</div>`;
+  const it=rv.item||{},iimg=k==="win"?safeMedia(it.img):"",coup=k==="win"&&rv.kind==="coupon";
+  const art=coup?`<div class="rvtk"><span>🎟️</span><b>${esc(it.name||"Coupon")}</b></div>`:iimg?`<img class="rvimg rvdrew" src="${esc(iimg)}" alt="">`:img?`<img class="rvimg" src="${esc(img)}" alt="">`:`<div class="rvic" aria-hidden="true">${esc(String((k==="win"&&it.icon)||m.icon||"🎁").slice(0,4))}</div>`;
   let body=`<h2>${esc(rvFill(m.title,rv))}</h2><p>${esc(rvFill(m.text,rv)).replace(/\n/g,"<br>")}</p>`;
   if(k==="win"){body+=`<div class="rvcode" data-notr>${esc(rv.code||"")}</div><p class="rvnote">${rv.kind==="gift"?"We saved this code on this phone. It is added to your next order by itself, one reward gift per order. Valid until "+esc(fmtDT(rv.exp))+".":"Type this coupon code at checkout on your next order."}</p>
     <div class="rvbtns"><button class="rvb rvb1" type="button" data-rvcopy="${esc(rv.code||"")}">📋 Copy code</button><button class="rvb rvb2" type="button" data-rvclose>${esc(m.btn||"Great!")}</button></div>`}
@@ -2156,8 +2158,8 @@ async function pgCheck(code,phone,quiet){code=String(code||"").trim().toUpperCas
       :{ok:true,gift:true,code,exp:x.exp,info:{title:G.title||"Free Gift Set",mode:G.mode,items:G.mode==="surprise"?[]:G.items.map(g=>({name:g.name,img:g.img}))}}}
   if(r.ok){PG.code=r.code;PG.info=r.info;PG.exp=r.exp||null;try{localStorage.setItem(PG_KEY,r.code)}catch(e){}}
   else if(r.gift&&quiet)pgForget();
-  if(quiet)renderStore();return r}
-function pgForget(){PG.code=null;PG.info=null;PG.exp=null;try{localStorage.removeItem(PG_KEY)}catch(e){}}
+  if(quiet)renderStore();if(r.ok&&r.info&&(r.info.items||[]).some(g=>g&&g.pid))renderMenu();return r}
+function pgForget(){const had=PG.info&&(PG.info.items||[]).some(g=>g&&g.pid);PG.code=null;PG.info=null;PG.exp=null;if(had)setTimeout(renderMenu,0);try{localStorage.removeItem(PG_KEY)}catch(e){}}
 function pgPanelHTML(){if(!PG.info)return "";const I=PG.info,its=(I.items||[]).filter(g=>g&&(g.name||g.img));
   return `<div class="gb pgb fx-shine" style="--gb:#FFE9A8;--gi:#000096"><div class="gh"><span class="gtag">${esc(I.tag||"PRE-LAUNCH GIFT")}</span><b class="gt">${esc(I.title||"Free Gift Set")}</b>${PG.exp?`<span class="gend">Claim before ${esc(fmtDT(PG.exp))}</span>`:""}</div>
     <p class="gs">🎁 Reserved for you with code <b>${esc(PG.code)}</b>${I.mode==="surprise"?". Your surprise gift is picked when you send your payment proof. 🤫":". Comes free with this order:"}</p>
@@ -6391,10 +6393,12 @@ function viewRevrew(){const R=DB.revrew,P=DB.revpool.items;if(SBH.on&&RVA.st===n
     <div class="grid3" style="margin-top:10px">${col("Background",k+".bg","#FFFFFF")}${col("Text colour",k+".ink","#0B0B45")}${col("Buttons / code",k+".acc","#000096")}</div>
     <button class="btn btn-ghost-blue btn-sm" type="button" data-rvprev="${k}" style="margin-top:10px">👁 Preview</button></section>`;
   const rows=P.map((it,i)=>{const s=st[it.id]||{},bad=s.ok===false;return `<div class="panel" style="padding:12px;margin-top:8px">
-    <div class="grid2"><label class="af">Type<select class="in" data-rvp="${i}.type"><option value="gift" ${it.type!=="coupon"?"selected":""}>Cookie / gift</option><option value="coupon" ${it.type==="coupon"?"selected":""}>Coupon code</option></select></label>
-    ${it.type==="coupon"?`<label class="af">Coupon<select class="in" data-rvp="${i}.code"><option value="">Choose a coupon</option>${DB.coupons.map(c=>`<option value="${esc(c.code)}" ${c.code===it.code?"selected":""}>${esc(c.code)}</option>`).join("")}</select></label>`
+    <div class="grid2"><label class="af">Type<select class="in" data-rvp="${i}.type"><option value="cookie" ${it.type==="cookie"?"selected":""}>1. Cookie / flavor (from the menu)</option><option value="gift" ${it.type==="gift"?"selected":""}>2. Gift</option><option value="coupon" ${it.type==="coupon"?"selected":""}>3. Coupon (existing)</option></select></label>
+    ${it.type==="cookie"?`<label class="af">Flavor<select class="in" data-rvp="${i}.pid"><option value="">Choose a flavor</option>${DB.products.map(c=>`<option value="${esc(c.id)}" ${c.id===it.pid?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>`:it.type==="coupon"?`<label class="af">Coupon<select class="in" data-rvp="${i}.code"><option value="">Choose a coupon</option>${DB.coupons.map(c=>`<option value="${esc(c.code)}" ${c.code===it.code?"selected":""}>${esc(c.code)}</option>`).join("")}</select></label>`
       :`<label class="af">Name<input class="in" data-rvp="${i}.name" maxlength="80" value="${esc(it.name||"")}" placeholder="e.g. Free cookie"></label>`}</div>
-    ${it.type!=="coupon"?`<div class="grid2" style="margin-top:8px"><label class="af">Stock (blank = unlimited)<input class="in" type="number" min="0" data-rvp="${i}.stock" value="${it.stock??""}"></label><label class="af">Gift expires<input class="in" type="datetime-local" data-rvpd="${i}.until" value="${it.until?preDT(it.until):""}"></label></div>
+    ${it.type==="cookie"?`<p class="note" style="margin:8px 0 0">Name and picture come from the menu. Only drawn while the flavor is on sale and in stock.</p>`:""}
+    ${it.type==="gift"?`<div class="grid2" style="margin-top:8px"><label class="af">Stock (blank = unlimited)<input class="in" type="number" min="0" data-rvp="${i}.stock" value="${it.stock??""}"></label><label class="af">Gift expires<input class="in" type="datetime-local" data-rvpd="${i}.until" value="${it.until?preDT(it.until):""}"></label></div>
+    <label class="af" style="margin-top:8px">Icon (emoji, used when there is no picture)<input class="in" data-rvp="${i}.icon" maxlength="4" value="${esc(it.icon||"🎁")}"></label>
     <div class="colin" style="gap:6px;margin-top:8px;flex-wrap:wrap"><input class="in" data-rvp="${i}.img" placeholder="Picture link (optional)" value="${esc(it.img||"")}" style="flex:1;min-width:140px"><label class="ghost mqbtn">Upload<input type="file" accept="image/*" data-rvpup="${i}" hidden></label></div>`:""}
     <div class="grid2" style="margin-top:8px"><label class="af">Chance weight (higher = more often)<input class="in" type="number" min="1" max="100" data-rvp="${i}.weight" value="${+it.weight||1}"></label>
       <div class="af">Status<div style="font-weight:700;color:${bad?"#C8102E":"#0A6B34"}">${!SBH.on?"–":bad?"Not drawn (out of stock, missing or expiring soon)":"In the draw"}${s.used!=null?` · given ${s.used}`:""}</div></div></div>
@@ -6419,7 +6423,7 @@ am.addEventListener("input",e=>{if(A.tab!=="revrew")return;const el=e.target;
 am.addEventListener("change",async e=>{if(A.tab!=="revrew")return;const el=e.target;
   if(el.dataset.rv&&el.type==="checkbox"){rvSet(el.dataset.rv,el.checked);if(el.dataset.rv==="on")renderAdmin();return}
   if(el.dataset.rv&&el.tagName==="SELECT"){rvSet(el.dataset.rv,el.value);return}
-  if(el.dataset.rvp&&el.tagName==="SELECT"){const[i,f]=el.dataset.rvp.split("."),it=DB.revpool.items[+i];if(it){it[f]=el.value;if(f==="type")it.stock=null;if(f==="code")it.name=el.value;saveSoon();renderAdmin()}return}
+  if(el.dataset.rvp&&el.tagName==="SELECT"){const[i,f]=el.dataset.rvp.split("."),it=DB.revpool.items[+i];if(it){it[f]=el.value;if(f==="type"){it.stock=null;it.until=null;it.code="";it.pid="";it.name="";it.img="";it.icon=it.type==="gift"?"🎁":""}if(f==="code")it.name=el.value;if(f==="pid"){const pr=DB.products.find(x=>x.id===el.value);it.name=pr?pr.name:"";it.img=pr&&/^https?:/.test(pr.img||"")?pr.img:""}saveSoon();renderAdmin()}return}
   if(el.dataset.rvpd){const[i,f]=el.dataset.rvpd.split("."),it=DB.revpool.items[+i];if(it){it[f]=el.value?new Date(el.value).getTime():null;saveSoon()}return}
   if(el.dataset.rvup||el.dataset.rvpup){const f=(el.files||[])[0],tg=el.dataset.rvup,i=el.dataset.rvpup;el.value="";if(!f)return;
     try{const u=SBH.on?await SBK.upload(await lpResize(f,600,true)):await lpResize(f,600,true);if(tg)rvSet(tg,u);else{DB.revpool.items[+i].img=u;saveSoon()}renderAdmin()}catch(er){toast(er.message||"Couldn't add that picture.")}}});
