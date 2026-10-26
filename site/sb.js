@@ -32,7 +32,7 @@
       categories: res.categories || [], broadcasts: res.broadcasts || [],
       coupons: (res.coupons || []).map(function (c) { return Object.assign({}, c, { startsAt: "", endsAt: "", maxUses: 0 }); }),
       payMethods: Array.isArray(d.payMethods) ? d.payMethods : [],
-      proofpop: d.proofpop, prelaunch: d.prelaunch, page: d.page, marquee: d.marquee, announcer: d.announcer, thanks: d.thanks, badges: d.badges, sold: res.sold || {}, slotUse: res.slotUse || {}, orders: []
+      proofpop: d.proofpop, prelaunch: d.prelaunch, revrew: d.revrew, page: d.page, marquee: d.marquee, announcer: d.announcer, thanks: d.thanks, badges: d.badges, sold: res.sold || {}, slotUse: res.slotUse || {}, orders: []
     };
     // coupons the visitor typed in earlier stay usable until the page is reloaded
     (DB.coupons || []).forEach(function (c) { if (c._srv && !raw.coupons.some(function (x) { return x.code === c.code; })) raw.coupons.push(c); });
@@ -121,6 +121,8 @@
       var po = DB.orders.find(function (x) { return x.id === r.order.id; }); if (po && pg) { if (pg.ok) po.preGift = pg.gift; else po._preErr = pg.err; } } catch (e) {} }
     return DB.orders.find(function (x) { return x.id === r.order.id; });
   };
+  H.rvClaim = async function (id, choice) { var d = await K.rpc("rv_claim", { p_id: id, p_token: tk(id), p_choice: choice || "" }); return d; };
+  H.rvStatus = function () { return K.rpc("admin_rv_status", {}, true); };
   H.preGift = function (code, phone) { return K.rpc("pre_gift_check", { p_code: code, p_phone: phone || "" }); };
   H.affHit = function (code, vid, src) { K.rpc("aff_hit", { p_code: code, p_vid: vid, p_src: src }).catch(function () {}); };
   function tk(id) { return TOK[id] || ""; }

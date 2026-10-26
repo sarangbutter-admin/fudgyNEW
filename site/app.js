@@ -137,6 +137,12 @@ function defaultProofPop(){return {on:true,emoji:"🙏",img:"",cookies:[],fx:tru
   btn:"Track my order",bg:"#ffffff",accent:"#000096",ink:"#0B0B45"}}
 function defaultAlerts(){return {on:true,sound:true,vol:70,repeat:false,stay:true,custom:"",customName:"",
   ev:{order:{on:true,snd:"register"},proof:{on:true,snd:"chime"},paid:{on:false,snd:"bell"},complaint:{on:true,snd:"alarm"},courier:{on:true,snd:"alarm"}}}}
+function defaultRev(){return {on:false,days:7,minBox:6,mode:"random",daily:20,validDays:7,redeemDays:30,
+  bn:{card:true,star:true,icon:"⭐",title:"How was your order {code}?",sub:"Rate your cookies and win a surprise gift 🎁",bg:"#FFF4D6",ink:"#0B0B45",line:"#FFD166",fx:"shine",tipOn:true,tip:"Rate your order and win a surprise gift!"},
+  win:{icon:"🎉",img:"",fx:"confetti",title:"You won a surprise!",text:"{reward}",btn:"Great!",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
+  sad:{icon:"🥺",img:"",fx:"rain",title:"Thank you for rating",text:"We're sorry it wasn't perfect this time. We'd love to make it right, so please order again soon.",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
+  none:{icon:"🎁",img:"",fx:"sparkle",title:"Thanks for rating!",text:"No surprise this time, but we loved hearing from you. See you at your next order!",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
+  choose:{title:"Pick your gift",text:"Choose the surprise you want:"}}}
 function defaultLabel(){return {logo:"",qr:"",qrCaption:"",notes:"",warnOn:true,warn1:"UNBOXING WITH UNCUT VIDEO!",warn2:"CONTACT US IF SEAL BROKEN"}}
 const SLOT_PRESETS=Array.from({length:23},(_,h)=>String(h).padStart(2,"0")+" to "+String(h+1).padStart(2,"0"));
 function migrate(db){
@@ -161,6 +167,7 @@ function migrate(db){
   if(!db.marquee)db.marquee=defaultMarquee();
   db.marquee=Object.assign({mode:"both",imgH:0,links:[],rich:true},db.marquee);if(!Array.isArray(db.marquee.links))db.marquee.links=[];
   db.announcer=deepFill(defaultAnnouncer(),db.announcer);
+  db.revrew=deepFill(defaultRev(),db.revrew);if(!db.revpool||!Array.isArray(db.revpool.items))db.revpool={items:[]};
   if(db.settings.complaintWindowH===undefined)db.settings.complaintWindowH=24;
   {const t=db.settings,d={scOn:true,scName:"Store Courier",scMode:"flat",scPerKg:0,scPerPcs:0,scGrams:100,scBoxG:200,scShow:"always",scNote:"Delivered by our own team",schedMsg:"Scheduled delivery: pick a day and time. We deliver within {km} km of the shop. {courier}"};for(const k in d)if(t[k]===undefined)t[k]=d[k]}
   if(db.settings.waCountry===undefined)db.settings.waCountry="62";
@@ -1607,6 +1614,51 @@ function rnDone(id,forGood){RN_SEEN[id]=forGood?-1:Date.now();RN_SEEN._last=Date
 {const rp=$("#rnPop");if(rp)rp.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   if(b.dataset.rnrate){rnDone(b.dataset.rnrate,true);openMO(b.dataset.rnrate);setTimeout(()=>{const r=$("#moCard .rstars");r&&r.scrollIntoView({block:"center"})},80)}
   else if(b.dataset.rnlater)rnDone(b.dataset.rnlater)})}
+/* review rewards: a reminder (card in the page, blinking star in the top bar, bell line) for delivered orders that still wait for a review, and the pop-up with the result */
+const RV_FX={confetti:["🎉","✨","🎊","⭐"],hearts:["💖","💛","✨"],cookies:["🍪","✨","🍪"],rain:["💧","🌧️","💧"],sparkle:["✨","⭐","✨"],none:[]},RVX="rvfx-shine rvfx-pulse rvfx-glow rvfx-bounce rvfx-none";
+const rvOn=()=>!!(SBH.on&&DB.revrew&&DB.revrew.on);
+function rvOrders(){if(!rvOn())return [];const R=DB.revrew,now=Date.now(),win=(+R.days||7)*864e5;
+  return mineOrders().filter(o=>o.status==="completed"&&!o.rv&&(+o.size||0)>=(+R.minBox||6)&&(+o.completedAt||+o.updatedAt||0)+win>now&&Object.keys(o.items||{}).some(pid=>prod(pid)))}
+function rvRender(){const card=$("#rvCard"),star=$("#rvStar");if(!card||!star)return;const R=DB.revrew,b=R.bn||{},list=rvOrders(),o=list[0];
+  card.hidden=!(o&&b.card!==false);star.hidden=!(o&&b.star!==false);
+  if(!o){const t=$("#rvTip");if(t)t.hidden=true;return}
+  const fx=["shine","pulse","glow","bounce","none"].includes(b.fx)?b.fx:"shine";
+  if(!card.hidden){card.className="rvc rvfx-"+fx;card.style.setProperty("--rbg",hexOk(b.bg,"#FFF4D6"));card.style.setProperty("--rink",hexOk(b.ink,"#0B0B45"));card.style.setProperty("--rline",hexOk(b.line,"#FFD166"));card.dataset.rvgo=o.id;
+    card.innerHTML=`<span class="rvst" aria-hidden="true">★★★★★</span><b>${esc(String(b.title||"").replace(/\{code\}/g,"#"+o.code))}</b><small>${esc(b.sub||"")}${list.length>1?` · ${list.length} orders`:""}</small>`}
+  if(!star.hidden){star.textContent=String(b.icon||"⭐").trim().slice(0,2)||"⭐";star.dataset.rvgo=o.id;star.setAttribute("aria-label",String(b.tip||"Rate your order"))}
+  let seen={};try{seen=JSON.parse(localStorage.getItem("delidome-rvtip")||"{}")}catch(e){}
+  if(b.tipOn!==false&&!star.hidden&&!seen[o.id]&&!RVT.t){RVT.t=setTimeout(()=>{RVT.t=0;const t=$("#rvTip"),s2=$("#rvStar");if(!t||!s2||s2.hidden||!$("#moSheet").hidden)return;
+    t.innerHTML="<b>"+esc(s2.textContent)+" "+esc(String(DB.revrew.bn.tipTitle||"Review time"))+"</b><span>"+esc(String(DB.revrew.bn.tip||""))+"</span>";t.hidden=false;
+    const br=s2.getBoundingClientRect(),tr=t.getBoundingClientRect();t.style.setProperty("--ar",Math.max(10,Math.round(tr.right-(br.left+br.width/2)-6))+"px");
+    seen[o.id]=1;try{localStorage.setItem("delidome-rvtip",JSON.stringify(seen))}catch(e){}setTimeout(()=>{t.hidden=true},9000)},4200)}}
+const RVT={t:0};
+document.addEventListener("click",e=>{const b=e.target.closest("[data-rvgo]");if(!b)return;e.preventDefault();const t=$("#rvTip");if(t)t.hidden=true;try{closeBell()}catch(x){}openMO(b.dataset.rvgo);setTimeout(()=>{const r=$("#moCard .rstars");r&&r.scrollIntoView({block:"center"})},120)});
+const rvFill=(t,d)=>String(t||"").replace(/\{reward\}/g,(d&&d.item&&d.item.name)||"").replace(/\{code\}/g,(d&&d.code)||"");
+function rvPop(html){const p=$("#rvPop");if(p.parentNode!==document.body)document.body.appendChild(p);p.innerHTML=html;p.hidden=false;document.body.style.overflow="hidden"}
+function rvClose(){const p=$("#rvPop");p.hidden=true;p.innerHTML="";if($("#moSheet").hidden&&$("#sheet").hidden)document.body.style.overflow=""}
+function rvOutcome(rv,o){const R=DB.revrew,k=rv.st==="win"?"win":rv.st==="sad"?"sad":"none",m=R[k]||{},img=safeMedia(m.img),fx=RV_FX[m.fx]||[];
+  const art=img?`<img class="rvimg" src="${esc(img)}" alt="">`:`<div class="rvic" aria-hidden="true">${esc(String(m.icon||"🎁").slice(0,4))}</div>`;
+  let body=`<h2>${esc(rvFill(m.title,rv))}</h2><p>${esc(rvFill(m.text,rv)).replace(/\n/g,"<br>")}</p>`;
+  if(k==="win"){body+=`<div class="rvcode" data-notr>${esc(rv.code||"")}</div><p class="rvnote">${rv.kind==="gift"?"We saved this code on this phone. It is added to your next order by itself, one reward gift per order. Valid until "+esc(fmtDT(rv.exp))+".":"Type this coupon code at checkout on your next order."}</p>
+    <div class="rvbtns"><button class="rvb rvb1" type="button" data-rvcopy="${esc(rv.code||"")}">📋 Copy code</button><button class="rvb rvb2" type="button" data-rvclose>${esc(m.btn||"Great!")}</button></div>`}
+  else body+=`<div class="rvbtns"><button class="rvb rvb1" type="button" data-rvbuy>${esc(m.btn1||"Buy again")}</button><button class="rvb rvb2" type="button" data-rvclose>${esc(m.btn2||"Close")}</button></div>`;
+  rvPop(`<div class="rvbox rvt-${k}" style="--rpbg:${hexOk(m.bg,"#FFFFFF")};--rpink:${hexOk(m.ink,"#0B0B45")};--rpacc:${hexOk(m.acc,"#000096")}">${fx.length?preRain(fx):""}<div class="rvin">${art}${body}</div></div>`);
+  if(k==="win"&&rv.kind==="gift"&&rv.code){try{localStorage.setItem(PG_KEY,rv.code)}catch(e){}PG.checked=false;PG.code=null;pgInit()}}
+function rvChoose(id,opts){const c=DB.revrew.choose||{};
+  rvPop(`<div class="rvbox rvt-win" style="--rpbg:#fff;--rpink:#0B0B45;--rpacc:#000096"><div class="rvin"><div class="rvic" aria-hidden="true">🎁</div><h2>${esc(c.title||"Pick your gift")}</h2><p>${esc(c.text||"")}</p>
+    <div class="rvopts">${(opts||[]).map(x=>`<button class="rvopt" type="button" data-rvpick="${esc(x.id)}" data-rvfor="${esc(id)}">${safeMedia(x.img)?`<img src="${esc(safeMedia(x.img))}" alt="">`:`<i aria-hidden="true">${x.type==="coupon"?"🎟️":"🎁"}</i>`}<b>${esc(x.name)}</b></button>`).join("")}</div></div></div>`)}
+async function rvDraw(id,choice){let d;try{d=await SBH.rvClaim(id,choice||"")}catch(e){toast(e.message);return}
+  const o=DB.orders.find(x=>x.id===id);
+  if(d.state==="choose"){rvChoose(id,d.options);return}
+  if(d.state==="done"&&d.rv){if(o)o.rv=d.rv;rvOutcome(d.rv,o);rvRender();renderBell();if(!$("#moSheet").hidden)renderMO()}}
+function rvAfter(id){if(!rvOn())return;const o=DB.orders.find(x=>x.id===id);if(!o||o.rv||o.status!=="completed"||(+o.size||0)<(+DB.revrew.minBox||6))return;
+  const all=Object.keys(o.items||{}).filter(pid=>prod(pid)).every(pid=>(o.rated||{})[pid]);if(!all){toast("Thanks! Rate the other flavors too to see your surprise 🎁");return}
+  rvDraw(id,"")}
+document.addEventListener("click",e=>{const p=e.target.closest("#rvPop");if(!p)return;
+  if(e.target===p||e.target.closest("[data-rvclose]")){rvClose();return}
+  const cp=e.target.closest("[data-rvcopy]");if(cp){const c=cp.dataset.rvcopy;(navigator.clipboard?navigator.clipboard.writeText(c):Promise.reject()).then(()=>toast("Code copied"),()=>toast(c));return}
+  if(e.target.closest("[data-rvbuy]")){rvClose();try{closeMO()}catch(x){}scrollToEl($("#build"));return}
+  const pk=e.target.closest("[data-rvpick]");if(pk){rvClose();rvDraw(pk.dataset.rvfor,pk.dataset.rvpick)}});
 // orders still waiting for payment: the bell tells the customer to pay before the time runs out
 const refundsNew=()=>mineOrders().filter(o=>o.refund&&o.refund.at>SEEN);
 const refundList=()=>mineOrders().filter(o=>o.refund);
@@ -1614,7 +1666,8 @@ const payDue=()=>mineOrders().filter(o=>o.status==="awaiting"&&o.expiresAt&&o.ex
 function renderBell(){
   applyCdLook();
   try{rateNudge()}catch(e){}
-  const list=notifs(),n=list.filter(x=>x.m.at>SEEN).length+activeBroadcasts().filter(x=>x.at>SEEN).length+payDue().length+refundsNew().length,b=$("#bellCount"),btn=$("#bellBtn");
+  try{rvRender()}catch(e){}
+  const list=notifs(),n=list.filter(x=>x.m.at>SEEN).length+activeBroadcasts().filter(x=>x.at>SEEN).length+payDue().length+refundsNew().length+rvOrders().length,b=$("#bellCount"),btn=$("#bellBtn");
   if(!b)return;b.hidden=!n;b.textContent=n>9?"9+":n;btn.classList.toggle("ring",n>0);
   btn.setAttribute("aria-label",n?`Notifications, ${n} new`:"Notifications");
   if(!$("#bellPop").hidden)drawBell(list);
@@ -1626,6 +1679,8 @@ function drawBell(list){
   const items=[];
   if(BELLF!=="deals")payDue().forEach(o=>{
     items.push({at:Infinity,h:`<button class="bell-it bell-pay" type="button" data-bellgo="${o.id}"><span class="bell-ic" aria-hidden="true">⏰</span><span class="bell-tx"><small>Order #${esc(o.code)} · ${isRej(o)?"payment rejected":"waiting for payment"}</small><b>${isRej(o)?"Payment rejected – please send a new proof":"Pay now or you'll miss your cookies!"}</b>${isRej(o)&&o.rejected.reason?`<span class="bell-rej">Reason: ${esc(o.rejected.reason)}</span>`:""}<span class="bell-cdrow">Time left: <span class="cd" data-exp="${o.expiresAt}">${fmtLeft(o.expiresAt-Date.now())}</span></span></span><span class="bell-ch" aria-hidden="true">›</span></button>`})});
+  if(BELLF!=="deals")rvOrders().forEach(o=>{
+    items.push({at:Infinity,h:`<button class="bell-it bell-pay" type="button" data-rvgo="${o.id}"><span class="bell-ic" aria-hidden="true">${esc(String((DB.revrew.bn||{}).icon||"⭐").slice(0,2))}</span><span class="bell-tx"><small>Order #${esc(o.code)} · review</small><b>${esc(String((DB.revrew.bn||{}).tip||"Rate your order and win a surprise gift!"))}</b></span><span class="bell-ch" aria-hidden="true">›</span></button>`})});
   if(BELLF!=="deals")refundList().forEach(o=>{
     items.push({at:o.refund.at,h:`<button class="bell-it${o.refund.at>SEENV?" new":""}" type="button" data-bellgo="${o.id}"><span class="bell-ic" aria-hidden="true">💸</span><span class="bell-tx"><small>Order #${esc(o.code)} · ${fmtAgo(o.refund.at)}</small><b>${o.refund.full?"Your order was refunded":"Part of your order was refunded"}: ${money(o.refund.amount)}</b><span>${o.refund.note?esc(o.refund.note)+" · ":""}It can take a few days to show in your account.</span></span><span class="bell-ch" aria-hidden="true">›</span></button>`})});
   if(BELLF!=="deals")list.forEach(x=>{const st=x.m.status,o=x.o,lab=x.m.courier?"Courier update":st==="complaint"?"Complaint update":st?stLabel(st,o.mode):"Update";
@@ -1831,7 +1886,7 @@ $("#moSheet").addEventListener("click",e=>{
   else if(d.rsubmit!==undefined){const o=DB.orders.find(x=>x.id===MO.id);if(!o)return;const picks=Object.entries(MO.rate);
     if(!picks.length){const er=$('#rtErr');er.textContent='Tap the stars to rate at least one flavor.';er.hidden=false;return}
     const rt={};picks.forEach(([pid,n])=>{const c=($('#moCard').querySelector(`[data-rcomment="${pid}"]`)||{}).value||'';rt[pid]={n,comment:c.trim()}});
-    rateOrder(o,rt).then(()=>{MO.rate={};toast('Thanks for your rating!');renderMO();renderMenu()}).catch(ex=>{const er=$('#rtErr');er.textContent=ex.message;er.hidden=false})}
+    rateOrder(o,rt).then(()=>{MO.rate={};toast('Thanks for your rating!');renderMO();renderMenu();rvAfter(o.id)}).catch(ex=>{const er=$('#rtErr');er.textContent=ex.message;er.hidden=false})}
   else if(d.moedit)startEdit(d.moedit);
   else if(d.monew!==undefined){closeMO();scrollToEl($("#build"))}
   else if(d.mocancel){armed(b,()=>{const o=DB.orders.find(x=>x.id===d.mocancel);if(!o||o.status!=="awaiting")return;
@@ -2083,10 +2138,10 @@ async function pgCheck(code,phone,quiet){code=String(code||"").trim().toUpperCas
   if(quiet)renderStore();return r}
 function pgForget(){PG.code=null;PG.info=null;PG.exp=null;try{localStorage.removeItem(PG_KEY)}catch(e){}}
 function pgPanelHTML(){if(!PG.info)return "";const I=PG.info,its=(I.items||[]).filter(g=>g&&(g.name||g.img));
-  return `<div class="gb pgb fx-shine" style="--gb:#FFE9A8;--gi:#000096"><div class="gh"><span class="gtag">PRE-LAUNCH GIFT</span><b class="gt">${esc(I.title||"Free Gift Set")}</b>${PG.exp?`<span class="gend">Claim before ${esc(fmtDT(PG.exp))}</span>`:""}</div>
+  return `<div class="gb pgb fx-shine" style="--gb:#FFE9A8;--gi:#000096"><div class="gh"><span class="gtag">${esc(I.tag||"PRE-LAUNCH GIFT")}</span><b class="gt">${esc(I.title||"Free Gift Set")}</b>${PG.exp?`<span class="gend">Claim before ${esc(fmtDT(PG.exp))}</span>`:""}</div>
     <p class="gs">🎁 Reserved for you with code <b>${esc(PG.code)}</b>${I.mode==="surprise"?". Your surprise gift is picked when you send your payment proof. 🤫":". Comes free with this order:"}</p>
     <div class="gl big">${I.mode==="surprise"?`<span class="gcard"><i aria-hidden="true">🎁</i><b>Surprise gift</b><em>FREE</em></span>`:its.length?its.map(g=>giftCard(g)).join(""):`<span class="gcard"><i aria-hidden="true">🎁</i><b>${esc(I.title||"Free Gift Set")}</b><em>FREE</em></span>`}</div></div>`}
-const preGiftHTML=(o,cust)=>o.preGift?`<div class="dsec"><h4>🎁 ${cust?"Your pre-launch gift":"Pre-launch gift to pack"} · ${esc(o.preGift.code||"")}</h4><div class="gl">${(o.preGift.items||[]).map(g=>giftChip(g)).join("")||giftChip({name:o.preGift.mode==="surprise"&&o.preGift.drawn===false?"Surprise gift":o.preGift.soldOut?"Out of stock":o.preGift.title||"Free Gift Set"})}</div>${o.preGift.mode==="surprise"&&o.preGift.drawn===false?`<p class="note" style="margin:8px 0 0">${cust?"Your surprise gift is picked when you send your payment proof.":"Not drawn yet. It is picked when the payment proof is sent."}</p>`:o.preGift.soldOut?`<p class="note" style="margin:8px 0 0">${cust?"Sorry, the free gifts ran out.":"No gift left in stock for this order."}</p>`:o.preGift.mode==="surprise"&&o.preGift.pool>1?`<p class="note" style="margin:8px 0 0">Picked at random from ${o.preGift.pool} gifts.</p>`:""}</div>`:"";
+const preGiftHTML=(o,cust)=>o.preGift?`<div class="dsec"><h4>🎁 ${o.preGift.src==="review"?(cust?"Your review reward":"Review reward to pack"):(cust?"Your pre-launch gift":"Pre-launch gift to pack")} · ${esc(o.preGift.code||"")}</h4><div class="gl">${(o.preGift.items||[]).map(g=>giftChip(g)).join("")||giftChip({name:o.preGift.mode==="surprise"&&o.preGift.drawn===false?"Surprise gift":o.preGift.soldOut?"Out of stock":o.preGift.title||"Free Gift Set"})}</div>${o.preGift.mode==="surprise"&&o.preGift.drawn===false?`<p class="note" style="margin:8px 0 0">${cust?"Your surprise gift is picked when you send your payment proof.":"Not drawn yet. It is picked when the payment proof is sent."}</p>`:o.preGift.soldOut?`<p class="note" style="margin:8px 0 0">${cust?"Sorry, the free gifts ran out.":"No gift left in stock for this order."}</p>`:o.preGift.mode==="surprise"&&o.preGift.pool>1?`<p class="note" style="margin:8px 0 0">Picked at random from ${o.preGift.pool} gifts.</p>`:""}</div>`:"";
 function toast(msg){if(typeof toastHook==="function")msg=toastHook(msg);const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,Math.max(1600,msg.length*45))}
 function armed(btn,fn){if(btn.dataset.armed){fn();return}btn.dataset.armed="1";const t=btn.textContent;btn.textContent="Tap again to confirm";btn.classList.add("armed");
   setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent=t;btn.classList.remove("armed")}},3000)}
@@ -2621,7 +2676,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-25 20:49 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-26 01:06 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

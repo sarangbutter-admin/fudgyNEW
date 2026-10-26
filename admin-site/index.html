@@ -24,6 +24,8 @@
     <div class="top-actions">
       <button class="bagbtn snowbtn" id="snowBtn" type="button" aria-label="Turn the falling effect on or off" aria-pressed="true" hidden></button>
       <div class="langtip" id="snowTip" role="status" hidden></div>
+      <button class="bagbtn rvstar" id="rvStar" type="button" aria-label="Rate your order" hidden></button>
+      <div class="langtip" id="rvTip" role="status" hidden></div>
       <button class="bagbtn bellbtn" id="bellBtn" type="button" aria-label="Notifications" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15L6 17Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 21a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="bagn" id="bellCount" hidden></span></button>
       <button class="bagbtn" id="moBtn" type="button" aria-label="My orders" title="My orders"><svg class="bagsvg" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 8V6a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9.5 13.5c.7 1 1.6 1.5 2.5 1.5s1.8-.5 2.5-1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span class="bagn" id="moCount" hidden></span></button>
       <a class="adminlink" href="#admin" aria-label="Admin">Admin</a>
@@ -50,6 +52,7 @@
   <div id="lpTop"></div>
   <div class="marq" id="marq" hidden></div>
 
+  <div class="wrap"><button class="rvc" id="rvCard" type="button" hidden></button></div>
   <section class="build wrap" id="build">
     <div class="editbar" id="editBar" hidden></div>
     <div class="build-head">
@@ -198,6 +201,7 @@
   </div>
 </div>
 <div id="bsTour" hidden><div id="bsHole"></div><div id="bsTcard" role="dialog" aria-live="polite"><h4 id="bsTt"></h4><p id="bsTm"></p><p class="bstex" id="bsTe" hidden></p><div class="bstrow"><button type="button" class="bsskip" id="bsTskip">Skip tour</button><span class="bsdots" id="bsTdots"></span><button type="button" class="bsnext" id="bsTnext">Next</button></div></div></div>
+<div class="rvpop" id="rvPop" hidden role="dialog" aria-modal="true"></div>
 <div id="gt" hidden><div id="gtHole"></div><div id="gtCard" role="dialog" aria-live="polite"><h4 id="gtT"></h4><p id="gtM"></p><div class="gtrow"><button type="button" class="gtskip" id="gtSkip">Skip tour</button><span class="gtdots" id="gtD"></span><button type="button" class="gtnext" id="gtN">Next</button></div></div></div>
 <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
   <div class="sheet-card">
@@ -276,6 +280,7 @@
         <button type="button" data-tab="hero"><span class="nl"><span class="ni" aria-hidden="true">🖼️</span>Top banner</span></button>
         <button type="button" data-tab="landing"><span class="nl"><span class="ni" aria-hidden="true">🏠</span>Landing page</span></button>
         <button type="button" data-tab="marquee"><span class="nl"><span class="ni" aria-hidden="true">🎞️</span>Marquee banner</span></button>
+        <button type="button" data-tab="revrew"><span class="nl"><span class="ni" aria-hidden="true">⭐</span>Review rewards</span></button>
         <button type="button" data-tab="delivery"><span class="nl"><span class="ni" aria-hidden="true">🛵</span>Delivery &amp; courier</span></button>
         <button type="button" data-tab="labels"><span class="nl"><span class="ni" aria-hidden="true">🏷️</span>Shipping labels</span></button>
         <button type="button" data-tab="settings"><span class="nl"><span class="ni" aria-hidden="true">⚙️</span>Shop settings</span></button>
