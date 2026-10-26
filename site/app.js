@@ -137,7 +137,8 @@ function defaultProofPop(){return {on:true,emoji:"🙏",img:"",cookies:[],fx:tru
   btn:"Track my order",bg:"#ffffff",accent:"#000096",ink:"#0B0B45"}}
 function defaultAlerts(){return {on:true,sound:true,vol:70,repeat:false,stay:true,custom:"",customName:"",
   ev:{order:{on:true,snd:"register"},proof:{on:true,snd:"chime"},paid:{on:false,snd:"bell"},complaint:{on:true,snd:"alarm"},courier:{on:true,snd:"alarm"}}}}
-function defaultRev(){return {on:false,days:7,minBox:6,mode:"random",daily:20,validDays:7,redeemDays:30,
+function defaultRev(){return {on:false,days:7,minBox:6,mode:"random",daily:20,validDays:7,redeemDays:30,claimMin:6,claimMode:"auto",
+  upg:{icon:"🎁",one:"You have 1 reward waiting! Upgrade to a box of {min} or more to claim it.",many:"You have {n} rewards waiting! Upgrade to a box of {min} or more to claim one.",man:"You have {n} reward code(s) saved. Type one in the coupon box to claim it.",chg:"You have {n} rewards. Only one can be used per order.",pickTitle:"Choose the reward for this order",useBtn:"Use my reward",changeBtn:"Change",bg:"#FFF4D6",ink:"#0B0B45"},
   bn:{card:true,star:true,icon:"⭐",title:"How was your order {code}?",sub:"Rate your cookies and win a surprise gift 🎁",bg:"#FFF4D6",ink:"#0B0B45",line:"#FFD166",fx:"shine",tipOn:true,tip:"Rate your order and win a surprise gift!",cd:true,cdText:"Review ends in {time}",cdHot:24,cdTip:"Last chance! Review ends in {time}"},
   win:{icon:"🎉",img:"",fx:"confetti",title:"You won a surprise!",text:"{reward}",btn:"Great!",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
   sad:{icon:"🥺",img:"",fx:"rain",title:"Thank you for rating",text:"We're sorry it wasn't perfect this time. We'd love to make it right, so please order again soon.",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
@@ -223,7 +224,7 @@ function giftDrawLocal(o,db=DB,at=Date.now()){
 }
 const giftImg=id=>{for(const s of DB.sales||[])for(const g of s.gifts||[])if(g&&g.id===id&&g.img)return g.img;return ""};
 const giftChip=(g,extra="")=>{const im=g.img||giftImg(g.id);return `<span class="gc${extra}">${im?`<img src="${esc(imgOk(im))}" alt="" loading="lazy">`:`<i aria-hidden="true">🎁</i>`}<span>${esc(g.name)}${giftQty(g)>1?` ×${giftQty(g)}`:""}</span></span>`};
-const giftCard=(g,extra="")=>{const im=g.img||giftImg(g.id);return `<span class="gcard${extra}">${im?`<img src="${esc(imgOk(im))}" alt="" loading="lazy">`:`<i aria-hidden="true">${esc(String(g.icon||"🎁").slice(0,4))}</i>`}<b>${esc(g.name)}${giftQty(g)>1?` ×${giftQty(g)}`:""}</b><em>FREE</em></span>`};
+const giftCard=(g,extra="")=>{const im=g.img||giftImg(g.id),pt=rvwArt(g);return `<span class="gcard${extra}">${pt||im?pt||`<img src="${esc(imgOk(im))}" alt="" loading="lazy">`:`<i aria-hidden="true">${esc(String(g.icon||"🎁").slice(0,4))}</i>`}<b>${esc(g.name)}${giftQty(g)>1?` ×${giftQty(g)}`:""}</b><em>FREE</em></span>`};
 const giftSurprise=n=>n>1?n+" surprise gifts":"1 surprise gift";
 const giftLines=n=>giftPlan(n).flatMap(x=>x.mode==="random"?[`🎲 ${giftSurprise(x.limit)}`]:x.gifts.map(g=>`🎁 ${g.name}`));
 const GIFT_NOTE="Gifts are subject to availability. Alternative gifts or a delayed shipment may happen.";
@@ -766,11 +767,11 @@ const GV_OPTS=[["teaser","Teaser only","A few small pictures and \"+more\". Cust
 function giftTeaser(gs,kind){const n=gs.length,sh=gs.slice(0,3),more=n-sh.length;
   return `<div class="gteaser"><span class="gtst" aria-hidden="true">${sh.map(g=>{const im=g.img||giftImg(g.id);return im?`<img src="${esc(imgOk(im))}" alt="" loading="lazy">`:`<i>🎁</i>`}).join("")}${more>0?`<i class="more">+${more}</i>`:""}</span><span>${n} ${kind==="possible"?(n===1?"possible gift":"possible gifts"):(n===1?"free gift included":"free gifts included")}</span></div>`}
 function renderGiftBox(){
-  const el=$("#giftBox");if(!el)return;const pl=giftPlan(S.size);
-  if(!pl.length&&!PG.info){el.hidden=true;el.innerHTML="";return}
+  const el=$("#giftBox");if(!el)return;const pl=giftPlan(S.size);rvwSync();const nt=rvwNoticeHTML();
+  if(!pl.length&&!PG.info&&!nt){el.hidden=true;el.innerHTML="";return}
   const cl=(v,d)=>/^(#[0-9a-f]{6}|transparent)$/i.test(v||"")?v:d;
   el.hidden=false;
-  el.innerHTML=pgPanelHTML()+pl.map(x=>{const t=x.sale,rnd=x.mode==="random",gv=GV_KEYS.includes(t.view)?t.view:"teaser";
+  el.innerHTML=nt+pgPanelHTML()+pl.map(x=>{const t=x.sale,rnd=x.mode==="random",gv=GV_KEYS.includes(t.view)?t.view:"teaser";
     return `<div class="gb fx-${["shine","pulse","none"].includes(t.fx)?t.fx:"shine"}" style="--gb:${cl(t.bg,"#FFE066")};--gi:${cl(t.ink,"#000096")}"><div class="gh"><span class="gtag">${esc(t.tag||"Gifts")}</span><b class="gt">${esc(t.name)}</b><span class="gend">Ends in <span class="cd" data-exp="${t.end}">${fmtLeft(t.end-Date.now())}</span></span></div>
       <p class="gs">🎁 FREE with your box of ${S.size}. No extra cost:</p><div class="gl big">${rnd?`<span class="gcard rnd"><i aria-hidden="true">🎲</i><b>${giftSurprise(x.limit)}</b><em>FREE</em></span>${gv==="full"?`<div class="gpool">${x.gifts.map(g=>giftChip(g," sm")).join("")}</div>`:gv==="teaser"?giftTeaser(x.gifts,"possible"):""}`:gv==="full"||x.gifts.length<2?(gv==="hidden"?"":x.gifts.map(g=>giftCard(g)).join("")):gv==="teaser"?giftTeaser(x.gifts,"included"):""}</div>
       <button class="gbsee" type="button" data-giftsee="${S.size}">👀 See what you ${rnd?"may get":"get"}</button><p class="gnote">${GIFT_NOTE}</p></div>`}).join("");
@@ -797,7 +798,7 @@ function renderCoupon(q){
   if(on){ap.hidden=false;ap.innerHTML=`<span>🎟 <b>${esc(q.coupon.code)}</b> applied${q.couponDisc>0?` · −${money(q.couponDisc)}`:q.coupon.type==="freedelivery"?(S.mode==="delivery"?" · free delivery":" · free delivery when you pick delivery"):""}</span><button type="button" data-cpnrm aria-label="Remove coupon">✕</button>`}else ap.hidden=true;
   f.hidden=on;
   {let pa=$("#pgAp");if(!pa){pa=document.createElement("div");pa.id="pgAp";pa.className="pg-ap";ap.parentNode.insertBefore(pa,ap)}
-    pa.hidden=!PG.code;pa.innerHTML=PG.code?`<span>🎁 <b>${esc(PG.code)}</b> ✓ ${esc((PG.info&&PG.info.title)||"Free Gift Set")}</span><button type="button" data-pgrm aria-label="Remove gift code">✕</button>`:""}
+    pa.hidden=!PG.code;pa.innerHTML=PG.code?`<span>🎁 <b>${esc(PG.code)}</b> ✓ ${esc((PG.info&&PG.info.mode!=="surprise"&&(PG.info.items||[]).map(g=>g&&g.name).filter(Boolean).join(", "))||(PG.info&&PG.info.title)||"Free Gift Set")}</span><button type="button" data-pgrm aria-label="Remove gift code">✕</button>`:""}
   const list=DB.coupons.filter(c=>c.show&&cpState(c)==="live"&&!(on&&q.coupon.code===c.code));
   ch.innerHTML=on?"":list.map(c=>`<button type="button" data-cpnuse="${esc(c.code)}"><b>${esc(c.code)}</b><small>${esc(c.desc||cpOff(c))}${c.minSpend>0?` · min ${money(c.minSpend)}`:""}</small></button>`).join("");
 }
@@ -1325,7 +1326,7 @@ function renderCoSummary(){
     Object.entries(counts).map(([id,n])=>{const p=prod(id);return `<div class="m"><span>${n} × ${esc(p.name)}</span><span>${p.surcharge>0?"+"+money(p.surcharge*n):""}</span></div>`}).join("")+
     (q.sale?`<div class="sl"><span>${esc(q.sale.name)} (${saleOffText(q.sale)})</span><span class="num">−${money(q.discount)}</span></div>`:"")+
     giftLines(S.size).map(t=>`<div class="sl"><span>${esc(t)}</span><span class="num">${fbHTML("Gift")}</span></div>`).join("")+
-    (PG.info?`<div class="sl"><span>🎁 ${esc(PG.info.title||"Free Gift Set")} · ${esc(PG.code)}</span><span class="num">${fbHTML("Gift")}</span></div>`:"")+
+    (PG.info?`<div class="sl"><span>🎁 ${(()=>{const nm=(PG.info.items||[]).map(g=>g&&g.name).filter(Boolean).join(", ");return nm&&PG.info.mode!=="surprise"?"Free reward: <b>"+esc(nm)+"</b>":esc(PG.info.title||"Free Gift Set")})()} · ${esc(PG.code)}</span><span class="num">${fbHTML("Gift")}</span></div>`:"")+
     (q.coupon&&q.couponDisc>0?`<div class="sl"><span>Coupon ${esc(q.coupon.code)}</span><span class="num">−${money(q.couponDisc)}</span></div>`:"")+
     S.addons.map(id=>{const a=DB.addons.find(x=>x.id===id);return a?`<div><span class="withlv">${lvAddon(a,22,true)}${esc(a.name)}</span><span class="num">${addonPr(a)}</span></div>`:""}).join("")+
     `<div><span>${OPT_NAME[optOf(S)]}</span><span class="num">${q.feePending?"Choose a courier below":q.fee?money(q.fee):fbHTML("Del")}</span></div>`+
@@ -1478,7 +1479,7 @@ $("#coForm").addEventListener("submit",e=>{
     const btn=f.querySelector("button[type=submit]");if(btn)btn.disabled=true;
     const pNote=S.mode==="delivery"&&placeOn("dnoteOn")?String(S.dnote||"").trim():"",pImg=S.mode==="delivery"&&placeOn("dphotoOn")?S.dphoto:"";
     SBH.place({notify,sdLate:S.mode!=="pickup"&&S.speed==="sameday"&&!samedayOpen()?true:undefined,shuffled:!!S.shuf,size:S.size,items:fields.items,mode:S.mode,speed:S.speed,day:S.day,time:S.time,note:S.note,addons:[...S.addons],coupon:fields.coupon,preCode:!ed&&PG.code?PG.code:undefined,expectTotal:q.total,customer:cust,ship:q.ship||undefined},ed).then(o=>{
-      if(o&&o.preGift)pgForget();else if(o&&o._preErr)setTimeout(()=>toast("Your gift code was not added: "+o._preErr),900);
+      if(o&&o.preGift)pgForget(true);else if(o&&o._preErr)setTimeout(()=>toast("Your gift code was not added: "+o._preErr),900);
       if(pNote||pImg)SBH.placeInfo(o.id,pNote,pImg).catch(err=>toast("Order placed, but the driver note or photo didn't save: "+err.message));
       addMine(o.id);S.editId=null;saveCart();renderDone(o,!!ed);
       S=fresh();$("#coForm").reset();saveCart();sanitizeCart();renderStoreStatic();renderStore();renderEditBar();renderBag();
@@ -1650,15 +1651,16 @@ const rvFill=(t,d)=>String(t||"").replace(/\{reward\}/g,(d&&d.item&&d.item.name)
 const rvFree=p=>PG.info&&PG.code&&(PG.info.items||[]).some(g=>g&&g.pid===p.id)?`<span class="rvfree">🎁 FREE reward</span>`:"";
 function rvPop(html){const p=$("#rvPop");if(p.parentNode!==document.body)document.body.appendChild(p);p.innerHTML=html;p.hidden=false;document.body.style.overflow="hidden"}
 function rvClose(){const p=$("#rvPop");p.hidden=true;p.innerHTML="";if($("#moSheet").hidden&&$("#sheet").hidden)document.body.style.overflow=""}
-function rvOutcome(rv,o){const R=DB.revrew,k=rv.st==="win"?"win":rv.st==="sad"?"sad":"none",m=R[k]||{},img=safeMedia(m.img),fx=RV_FX[m.fx]||[];
+function rvOutcome(rv,o,pv){const R=DB.revrew,k=rv.st==="win"?"win":rv.st==="sad"?"sad":"none",m=R[k]||{},img=safeMedia(m.img),fx=RV_FX[m.fx]||[];
   const it=rv.item||{},iimg=k==="win"?safeMedia(it.img):"",coup=k==="win"&&rv.kind==="coupon";
-  const art=coup?`<div class="rvtk"><span>🎟️</span><b>${esc(it.name||"Coupon")}</b></div>`:iimg?`<img class="rvimg rvdrew" src="${esc(iimg)}" alt="">`:img?`<img class="rvimg" src="${esc(img)}" alt="">`:`<div class="rvic" aria-hidden="true">${esc(String((k==="win"&&it.icon)||m.icon||"🎁").slice(0,4))}</div>`;
+  const rp=k==="win"&&!coup&&it.pid&&prod(it.pid);
+  const art=rp?`<div class="rvplate">${plateHTML(rp)}</div>`:coup?`<div class="rvtk"><span>🎟️</span><b>${esc(it.name||"Coupon")}</b></div>`:iimg?`<img class="rvimg rvdrew" src="${esc(iimg)}" alt="">`:img?`<img class="rvimg" src="${esc(img)}" alt="">`:`<div class="rvic" aria-hidden="true">${esc(String((k==="win"&&it.icon)||m.icon||"🎁").slice(0,4))}</div>`;
   let body=`<h2>${esc(rvFill(m.title,rv))}</h2><p>${esc(rvFill(m.text,rv)).replace(/\n/g,"<br>")}</p>`;
   if(k==="win"){body+=`<div class="rvcode" data-notr>${esc(rv.code||"")}</div><p class="rvnote">${rv.kind==="gift"?"We saved this code on this phone. It is added to your next order by itself, one reward gift per order. Valid until "+esc(fmtDT(rv.exp))+".":"Type this coupon code at checkout on your next order."}</p>
     <div class="rvbtns"><button class="rvb rvb1" type="button" data-rvcopy="${esc(rv.code||"")}">📋 Copy code</button><button class="rvb rvb2" type="button" data-rvclose>${esc(m.btn||"Great!")}</button></div>`}
   else body+=`<div class="rvbtns"><button class="rvb rvb1" type="button" data-rvbuy>${esc(m.btn1||"Buy again")}</button><button class="rvb rvb2" type="button" data-rvclose>${esc(m.btn2||"Close")}</button></div>`;
   rvPop(`<div class="rvbox rvt-${k}" style="--rpbg:${hexOk(m.bg,"#FFFFFF")};--rpink:${hexOk(m.ink,"#0B0B45")};--rpacc:${hexOk(m.acc,"#000096")}">${fx.length?preRain(fx):""}<div class="rvin">${art}${body}</div></div>`);
-  if(k==="win"&&rv.kind==="gift"&&rv.code){try{localStorage.setItem(PG_KEY,rv.code)}catch(e){}PG.checked=false;PG.code=null;pgInit()}}
+  if(k==="win"&&rv.kind==="gift"&&rv.code&&!pv)rvwAdd(rv.code)}
 function rvChoose(id,opts){const c=DB.revrew.choose||{};
   rvPop(`<div class="rvbox rvt-win" style="--rpbg:#fff;--rpink:#0B0B45;--rpacc:#000096"><div class="rvin"><div class="rvic" aria-hidden="true">🎁</div><h2>${esc(c.title||"Pick your gift")}</h2><p>${esc(c.text||"")}</p>
     <div class="rvopts">${(opts||[]).map(x=>`<button class="rvopt" type="button" data-rvpick="${esc(x.id)}" data-rvfor="${esc(id)}">${safeMedia(x.img)?`<img src="${esc(safeMedia(x.img))}" alt="">`:`<i aria-hidden="true">${x.type==="coupon"?"🎟️":"🎁"}</i>`}<b>${esc(x.name)}</b></button>`).join("")}</div></div></div>`)}
@@ -2140,18 +2142,48 @@ addEventListener("keydown",e=>{if(e.key==="Escape"){const ov=document.getElement
 /* pre-launch gift code in the shop (after opening): remembered on the phone that registered, or typed in the coupon box.
    It shows as a gift panel in the box and a line in checkout; the server attaches it to the order right after it is placed. */
 const PG_KEY="delidome-pregift-v1",PG={code:null,info:null,exp:null,checked:false};
+/* review rewards the customer holds (saved on this phone): one can be used per order, and only on a box of the minimum size or more */
+const RVW_KEY="delidome-rvcodes",RVW={list:[],checked:false,pick:"",off:false},isRvCode=c=>/^RV-/i.test(c||"");
+const rvwSaved=()=>{try{return JSON.parse(localStorage.getItem(RVW_KEY)||"[]").filter(x=>typeof x==="string").slice(0,20)}catch(e){return []}};
+const rvwSave=()=>{try{localStorage.setItem(RVW_KEY,JSON.stringify(RVW.list.map(x=>x.code)))}catch(e){}};
+const rvwMin=()=>Math.max(1,Math.round(+(DB.revrew||{}).claimMin)||6);
+async function rvwInit(){if(RVW.checked||!SBH.on)return;RVW.checked=true;const out=[];
+  for(const c of rvwSaved()){try{const r=await SBH.preGift(c,"");if(r&&r.ok)out.push({code:r.code,info:r.info,exp:r.exp||null})}catch(e){}}
+  RVW.list=out;rvwSave();renderStore()}
+async function rvwAdd(code){if(!SBH.on||!code||RVW.list.some(x=>x.code===code))return;try{const r=await SBH.preGift(code,"");if(r&&r.ok){RVW.list.push({code:r.code,info:r.info,exp:r.exp||null});rvwSave();RVW.off=false;renderStore()}}catch(e){}}
+const rvwUsed=c=>{RVW.list=RVW.list.filter(x=>x.code!==c);if(RVW.pick===c)RVW.pick="";rvwSave()};
+const rvwApplied=()=>!!(PG.code&&RVW.list.some(x=>x.code===PG.code));
+function rvwApply(x){PG.code=x.code;PG.info=x.info;PG.exp=x.exp;setTimeout(renderMenu,0)}
+function rvwSync(){const ok=(S.size||0)>=rvwMin();
+  if(isRvCode(PG.code)&&!ok){PG.code=null;PG.info=null;PG.exp=null;setTimeout(renderMenu,0)}
+  if(!PG.code&&ok&&(DB.revrew||{}).claimMode!=="manual"&&!RVW.off){
+    const pk=RVW.list.find(x=>x.code===RVW.pick);if(pk)rvwApply(pk);else if(RVW.list.length===1)rvwApply(RVW.list[0])}}
+const rvwArt=g=>{const p=g&&g.pid&&prod(g.pid);return p?`<span class="gplate">${plateHTML(p)}</span>`:""};
+function rvwNoticeHTML(){const R=DB.revrew;if(!R||!RVW.list.length)return "";const U=R.upg||{},n=RVW.list.length,min=rvwMin(),ok=(S.size||0)>=min,man=R.claimMode==="manual",
+    fill=t=>esc(String(t||"").replace(/\{n\}/g,n).replace(/\{min\}/g,min)),st=`style="--ub:${hexOk(U.bg,"#FFF4D6")};--ui:${hexOk(U.ink,"#0B0B45")}"`,ic=`<span aria-hidden="true">${esc(String(U.icon||"🎁").slice(0,4))}</span>`;
+  if(!ok)return `<div class="rvu" ${st}>${ic}<p>${fill(n===1?U.one:U.many)}</p></div>`;
+  if(man)return PG.code?"":`<div class="rvu" ${st}>${ic}<p>${fill(U.man)}</p></div>`;
+  if(rvwApplied())return n>1?`<div class="rvu" ${st}>${ic}<p>${fill(U.chg)}</p><button type="button" data-rvwchange>${esc(U.changeBtn||"Change")}</button></div>`:"";
+  if(PG.code)return "";
+  if(n===1)return `<div class="rvu" ${st}>${ic}<p>${fill(U.one.replace(/Upgrade.*$/,"").trim()||U.one)}</p><button type="button" data-rvwpick="${esc(RVW.list[0].code)}">${esc(U.useBtn||"Use my reward")}</button></div>`;
+  return `<div class="rvu rvpick" ${st}>${ic}<p><b>${fill(U.pickTitle)}</b></p><div class="rvpk">${RVW.list.map(x=>{const g=((x.info||{}).items||[])[0]||{};return `<button type="button" data-rvwpick="${esc(x.code)}">${rvwArt(g)||(g.img?`<img src="${esc(imgOk(g.img))}" alt="">`:`<i aria-hidden="true">${esc(String(g.icon||"🎁").slice(0,4))}</i>`)}<b>${esc(g.name||"Reward")}</b></button>`}).join("")}</div></div>`}
+document.addEventListener("click",e=>{const pk=e.target.closest("[data-rvwpick]");if(pk){RVW.pick=pk.dataset.rvwpick;RVW.off=false;PG.code=null;PG.info=null;PG.exp=null;renderStore();return}
+  if(e.target.closest("[data-rvwchange]")){RVW.pick="";RVW.off=false;PG.code=null;PG.info=null;PG.exp=null;renderStore();setTimeout(renderMenu,0)}});
 const pgSaved=()=>{try{return localStorage.getItem(PG_KEY)||""}catch(e){return ""}};
-function pgInit(){if(PG.checked)return;PG.checked=true;const c=pgSaved()||(PRE.me&&PRE.me.code)||"";if(c)pgCheck(c,"",true)}
+function pgInit(){rvwInit();if(PG.checked)return;PG.checked=true;const c=pgSaved()||(PRE.me&&PRE.me.code)||"";if(c)pgCheck(c,"",true)}
 async function pgCheck(code,phone,quiet){code=String(code||"").trim().toUpperCase();if(!code)return {ok:false,gift:false};let r;
   if(SBH.on){try{r=await SBH.preGift(code,phone)}catch(e){r={ok:false,gift:false}}}
   else{const x=(DB.preRegs||[]).find(z=>z.code===code),G=DB.prelaunch.gifts;
     r=!x?{ok:false,gift:false}:x.used?{ok:false,gift:true,err:"This gift code was already used."}:x.exp&&x.exp<Date.now()?{ok:false,gift:true,err:"This gift code has expired."}
       :phone&&normPhone(phone).length>=7&&normPhone(phone)!==normPhone(x.phone)?{ok:false,gift:true,err:"This gift code belongs to another WhatsApp number."}
       :{ok:true,gift:true,code,exp:x.exp,info:{title:G.title||"Free Gift Set",mode:G.mode,items:G.mode==="surprise"?[]:G.items.map(g=>({name:g.name,img:g.img}))}}}
-  if(r.ok){PG.code=r.code;PG.info=r.info;PG.exp=r.exp||null;try{localStorage.setItem(PG_KEY,r.code)}catch(e){}}
-  else if(r.gift&&quiet)pgForget();
+  if(r.ok&&isRvCode(r.code)&&(S.size||0)<rvwMin())r={ok:false,gift:true,err:`This reward needs a box of ${rvwMin()} or more.`};
+  if(r.ok){PG.code=r.code;PG.info=r.info;PG.exp=r.exp||null;
+    if(isRvCode(r.code)){if(!RVW.list.some(x=>x.code===r.code)){RVW.list.push({code:r.code,info:r.info,exp:r.exp||null});rvwSave()}RVW.off=false}else{try{localStorage.setItem(PG_KEY,r.code)}catch(e){}}}
+  else if(r.gift&&quiet)pgForget(true);
   if(quiet)renderStore();if(r.ok&&r.info&&(r.info.items||[]).some(g=>g&&g.pid))renderMenu();return r}
-function pgForget(){const had=PG.info&&(PG.info.items||[]).some(g=>g&&g.pid);PG.code=null;PG.info=null;PG.exp=null;if(had)setTimeout(renderMenu,0);try{localStorage.removeItem(PG_KEY)}catch(e){}}
+function pgForget(used){const had=PG.info&&(PG.info.items||[]).some(g=>g&&g.pid),c=PG.code;PG.code=null;PG.info=null;PG.exp=null;if(had)setTimeout(renderMenu,0);
+  if(isRvCode(c)){if(used)rvwUsed(c);else RVW.off=true}else try{localStorage.removeItem(PG_KEY)}catch(e){}}
 function pgPanelHTML(){if(!PG.info)return "";const I=PG.info,its=(I.items||[]).filter(g=>g&&(g.name||g.img));
   return `<div class="gb pgb fx-shine" style="--gb:#FFE9A8;--gi:#000096"><div class="gh"><span class="gtag">${esc(I.tag||"PRE-LAUNCH GIFT")}</span><b class="gt">${esc(I.title||"Free Gift Set")}</b>${PG.exp?`<span class="gend">Claim before ${esc(fmtDT(PG.exp))}</span>`:""}</div>
     <p class="gs">🎁 Reserved for you with code <b>${esc(PG.code)}</b>${I.mode==="surprise"?". Your surprise gift is picked when you send your payment proof. 🤫":". Comes free with this order:"}</p>
@@ -2691,7 +2723,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-26 13:39 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-26 18:54 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

@@ -1542,3 +1542,11 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .top.nmtop .wrap>.logo,.top.nmbot .wrap>.logo{flex:0 1 auto}
 .top.nmsz .logo #brandTxt,.top.nmsz.nmtop .logo #brandTxt,.top.nmsz.nmbot .logo #brandTxt{font-size:var(--nm-size,14px)}
 .top.nmtop:not(.nmsz) #brandTxt,.top.nmbot:not(.nmsz) #brandTxt{font-size:13px}
+/* review reward: below-the-box messages, menu picture */
+.rvu{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;background:var(--ub,#FFF4D6);color:var(--ui,#0B0B45);border:2px dashed #F5A623;border-radius:16px;padding:10px 14px;margin:0 0 10px}
+.rvu>span{font-size:26px}.rvu p{margin:0;flex:1 1 180px;font-size:14px;line-height:1.35}.rvu>button{border:0;border-radius:99px;background:#000096;color:#fff;font:700 13px inherit;padding:8px 14px;cursor:pointer}
+.rvpk{display:flex;flex-wrap:wrap;gap:8px;width:100%}.rvpk button{display:flex;align-items:center;gap:8px;flex:1 1 140px;border:2px solid #E5E5F0;border-radius:14px;background:#fff;color:#0B0B45;font:700 13px inherit;padding:6px 10px 6px 6px;cursor:pointer;text-align:left}
+.rvpk button img,.rvpk button i{width:44px;height:44px;border-radius:10px;object-fit:cover;display:grid;place-items:center;font-style:normal;font-size:22px;flex:none}
+.gplate,.rvpk .gplate{width:52px;flex:none;border-radius:12px;overflow:hidden;display:block}.gplate .plate{width:100%;aspect-ratio:1;border-radius:12px}
+.rvplate{width:130px;animation:rvhop .9s ease-in-out infinite}.rvplate .plate{width:100%;aspect-ratio:1;border-radius:50%;overflow:hidden}
+@media (prefers-reduced-motion:reduce){.rvplate{animation:none!important}}
