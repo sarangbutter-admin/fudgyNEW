@@ -1833,3 +1833,4 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .gplate,.rvpk .gplate{width:52px;flex:none;border-radius:12px;overflow:hidden;display:block}.gplate .plate{width:100%;aspect-ratio:1;border-radius:12px}
 .rvplate{width:130px;animation:rvhop .9s ease-in-out infinite}.rvplate .plate{width:100%;aspect-ratio:1;border-radius:50%;overflow:hidden}
 @media (prefers-reduced-motion:reduce){.rvplate{animation:none!important}}
+.slottm{display:inline-flex;align-items:center;gap:6px}.slottm .in{width:112px}

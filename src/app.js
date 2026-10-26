@@ -148,6 +148,16 @@ function defaultRev(){return {on:false,days:7,minBox:6,mode:"random",daily:20,va
   none:{icon:"🎁",img:"",fx:"sparkle",title:"Thanks for rating!",text:"No surprise this time, but we loved hearing from you. See you at your next order!",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
   choose:{title:"Pick your gift",text:"Choose the surprise you want:"}}}
 function defaultLabel(){return {logo:"",qr:"",qrCaption:"",notes:"",warnOn:true,warn1:"UNBOXING WITH UNCUT VIDEO!",warn2:"CONTACT US IF SEAL BROKEN"}}
+// time slots can be any range ("13:30 to 15:00"); the label is built from two time pickers
+const slotFmt=m=>{const h=Math.floor(m/60),mi=m%60;return String(h).padStart(2,"0")+(mi?":"+String(mi).padStart(2,"0"):"")},slotMk=(a,b)=>slotFmt(a)+" to "+slotFmt(b);
+const slotHM=m=>String(Math.floor(m/60)%24).padStart(2,"0")+":"+String(m%60).padStart(2,"0"),hmMin=v=>{const m=/^(\d{2}):(\d{2})$/.exec(v||"");return m?+m[1]*60+ +m[2]:null};
+const slotEndMin=t=>{const m=/^\s*(\d{1,2})(?::(\d{2}))?\s*(?:to|-)\s*(\d{1,2})(?::(\d{2}))?\s*$/i.exec(t||"");if(m){const e=+m[3]*60+ +(m[4]||0);return e>=0&&e<=1440?e:null}const a=slotStartMin(t);return a===null?null:Math.min(1440,a+60)};
+const slotSort=(a,b)=>(slotStartMin(a.t)??0)-(slotStartMin(b.t)??0);
+const slotRowTimes=(x,at,i)=>{const a=slotStartMin(x.t)??600,b=slotEndMin(x.t)??a+60;return `<span class="slottm"><input class="in" type="time" step="300" data-${at}from="${i}" value="${slotHM(a)}" aria-label="Starts"> <b>to</b> <input class="in" type="time" step="300" data-${at}to="${i}" value="${slotHM(Math.min(b,1439))}" aria-label="Ends"></span>`};
+function slotNext(list){const last=list.slice().sort(slotSort).pop(),a=last?Math.min(1380,slotEndMin(last.t)??600):600;let st=a,t=slotMk(st,Math.min(st+60,1440));while(list.some(y=>y.t===t)&&st<1380){st+=30;t=slotMk(st,Math.min(st+60,1440))}return list.some(y=>y.t===t)?null:t}
+function slotChange(list,i,el){const x=list[i];if(!x)return false;const row=el.closest(".slotrow"),f=hmMin(row.querySelector('[data-slfrom],[data-sdfrom]').value),t=hmMin(row.querySelector('[data-slto],[data-sdto]').value);
+  if(f===null||t===null)return false;if(t<=f){toast("The end must be later than the start.");renderAdmin();return false}
+  const nl=slotMk(f,t);if(list.some((y,j)=>j!==i&&y.t===nl)){toast("That time slot already exists.");renderAdmin();return false}x.t=nl;return true}
 const SLOT_PRESETS=Array.from({length:23},(_,h)=>String(h).padStart(2,"0")+" to "+String(h+1).padStart(2,"0"));
 function migrate(db){
   if(db.settings){const D={samedayOn:false,samedayLeadH:3,samedayCutoff:15,samedayFee:8,samedayPayMin:60,minPayMin:30,rejPayMin:120,payCdColor:"#C8102E",payCdSize:"L",payCdFx:true,pickupOn:true,pickupLeadH:24,schedOn:true,schedLeadH:24,samedayMsg:"Sorry Sameday closed Today.\nyour order will be send tomorrow.",sdSlotOn:false,sdSlots:[{t:"16 to 17",on:true,limit:0},{t:"17 to 18",on:true,limit:0},{t:"18 to 19",on:true,limit:0}],samedayOk:"OK",samedayGo:"Continue with Sameday anyway",schedMaxDays:7,courierNoteOn:true,courierNote:"We need at least 3 hours of lead time. Once we have requested a courier, any delay or failed delivery is beyond our responsibility.",coWarnOn:true,coWarnEmoji:"⚠️",coWarnTitle:"Wait! Check your details",coWarnText:"Please make sure your name, WhatsApp number and address are correct before you place your order. We use them to send you updates and deliver your box.",coWarnOk:"Yes, my details are correct",coWarnBack:"Go back"};for(const k in D)if(db.settings[k]===undefined)db.settings[k]=D[k];
@@ -4003,7 +4013,7 @@ function viewDelivery(){
       <label class="af" style="margin-top:8px">Note<textarea class="in" rows="2" maxlength="300" data-k="settings::courierNote">${esc(s.courierNote||"")}</textarea></label>
       <h3 style="margin:18px 0 4px;font-size:15px">Time slots</h3><p class="sub" style="margin:0 0 8px">One-hour boxes on a 24-hour clock. Pick the hour in each box, switch it on or off, and set how many paid orders it takes per day (0 = no limit). Only orders with confirmed payment use up the limit. A full slot can't be chosen by customers.</p>
       <div class="stack slotlist" style="gap:8px">${(s.slots||[]).map((x,i)=>`<div class="pmcard slotrow">
-        <select class="in" data-slotsel="${i}" aria-label="Time slot ${i+1}">${SLOT_PRESETS.map(t=>`<option value="${t}" ${t===x.t?"selected":""} ${t!==x.t&&s.slots.some(y=>y.t===t)?"disabled":""}>${t}</option>`).join("")}</select>
+        ${slotRowTimes(x,"sl",i)}
         <label class="chk"><input type="checkbox" data-sloton="${i}" ${x.on?"checked":""}> <b>On</b></label>
         <label class="af slotlim">Limit per day<div class="money-in"><input class="in" type="number" min="0" step="1" data-slotlim="${i}" value="${+x.limit||0}"><span style="padding-right:10px">orders</span></div></label>
         <small class="note">Paid today: ${slotUsed(ymd(shopNow().d),x.t)}</small>
@@ -4012,7 +4022,7 @@ function viewDelivery(){
       <h3 style="margin:18px 0 4px;font-size:15px">Sameday time slots</h3><p class="sub" style="margin:0 0 8px">Let customers choose a time for today's sameday delivery. A slot that starts sooner than the sameday lead time is greyed out. After the order-by hour customers can't choose a slot.</p>
       <label class="chk"><input type="checkbox" data-k="settings::sdSlotOn" ${s.sdSlotOn?"checked":""}> <b>Customers choose a sameday time slot</b></label>
       <div class="stack slotlist" style="gap:8px;margin-top:8px">${(s.sdSlots||[]).map((x,i)=>`<div class="pmcard slotrow">
-        <select class="in" data-sdsel="${i}" aria-label="Sameday slot ${i+1}">${SLOT_PRESETS.map(t=>`<option value="${t}" ${t===x.t?"selected":""} ${t!==x.t&&s.sdSlots.some(y=>y.t===t)?"disabled":""}>${t}</option>`).join("")}</select>
+        ${slotRowTimes(x,"sd",i)}
         <label class="chk"><input type="checkbox" data-sdon="${i}" ${x.on!==false?"checked":""}> <b>On</b></label>
         <label class="af slotlim">Limit per day<div class="money-in"><input class="in" type="number" min="0" step="1" data-sdlim="${i}" value="${+x.limit||0}"><span style="padding-right:10px">orders</span></div></label>
         <button class="ghost" type="button" data-sddel="${i}">Remove</button></div>`).join("")}</div>
@@ -4146,7 +4156,7 @@ function viewSettings(){
 
 /* --- admin wiring --- */
 function openCwPreview(){openModal(`<div class="cw-card cw-prev">${cwHTML()}</div><p class="note" style="text-align:center">Preview only. Unsaved changes show here too.</p><div style="text-align:center"><button class="ghost" type="button" data-mclose>Close preview</button></div>`,"cwprev")}
-function slotSync(){const t=DB.settings;t.slots.sort((a,b)=>SLOT_PRESETS.indexOf(a.t)-SLOT_PRESETS.indexOf(b.t));t.times=t.slots.filter(x=>x.on).map(x=>x.t);saveDB()}
+function slotSync(){const t=DB.settings;t.slots.sort(slotSort);t.times=t.slots.filter(x=>x.on).map(x=>x.t);saveDB()}
 function setK(el){
   const [coll,id,field]=el.dataset.k.split(":");
   let v=el.type==="checkbox"?el.checked:el.type==="number"?Math.max(0,parseFloat(el.value)||0):el.value;
@@ -4405,8 +4415,8 @@ am.addEventListener("click",e=>{
   else if(d.aadd!==undefined){const na={id:uid(),name:"New extra",desc:"",price:1,active:false};DB.addons.push(na);saveDB();toast("Extra added, turned off");renderAdmin();showNew(document.querySelector(`[data-k="addons:${na.id}:name"]`)?.closest("tr"))}
   else if(d.adel){delConfirm("this extra",()=>needOwner("delete an extra").then(()=>{DB.addons=DB.addons.filter(a=>a.id!==d.adel);saveDB();toast("Extra deleted");renderAdmin()}).catch(()=>{}))}
   else if(d.cwprev!==undefined){openCwPreview()}
-  else if(d.slotadd!==undefined){const sl=DB.settings.slots,mx=Math.max(-1,...sl.map(x=>SLOT_PRESETS.indexOf(x.t))),un=SLOT_PRESETS.filter(t=>!sl.some(x=>x.t===t)),u=un.find(t=>SLOT_PRESETS.indexOf(t)>mx)||un[0];if(!u){toast("All 23 time slots are already added.");return}DB.settings.slots.push({t:u,on:true,limit:0});slotSync();toast("Saved");renderAdmin();showNew([...document.querySelectorAll(".slotrow")].pop(),false)}
-  else if(d.sdadd!==undefined){const sl=DB.settings.sdSlots=DB.settings.sdSlots||[],un=SLOT_PRESETS.filter(t=>!sl.some(x=>x.t===t)),u=un.find(t=>+t.slice(0,2)>=10)||un[0];if(!u){toast("All slots are already added.");return}sl.push({t:u,on:true,limit:0});sl.sort((a,b)=>SLOT_PRESETS.indexOf(a.t)-SLOT_PRESETS.indexOf(b.t));saveDB();toast("Saved");renderAdmin()}
+  else if(d.slotadd!==undefined){const sl=DB.settings.slots,u=slotNext(sl);if(!u){toast("No room for another slot today.");return}sl.push({t:u,on:true,limit:0});slotSync();toast("Saved");renderAdmin();showNew([...document.querySelectorAll(".slotrow")].pop(),false)}
+  else if(d.sdadd!==undefined){const sl=DB.settings.sdSlots=DB.settings.sdSlots||[],u=slotNext(sl);if(!u){toast("No room for another slot today.");return}sl.push({t:u,on:true,limit:0});sl.sort(slotSort);saveDB();toast("Saved");renderAdmin()}
   else if(d.sddel!==undefined){DB.settings.sdSlots.splice(+d.sddel,1);saveDB();toast("Saved");renderAdmin()}
   else if(d.slotdel!==undefined){const i=+d.slotdel,x=DB.settings.slots[i];if(x&&x.on&&DB.settings.slots.filter(y=>y.on).length<2){toast("Keep at least one time slot on.");return}DB.settings.slots.splice(i,1);slotSync();toast("Saved");renderAdmin()}
   else if(d.closed){const i=+d.closed,c=DB.settings.closedWeekdays;DB.settings.closedWeekdays=c.includes(i)?c.filter(x=>x!==i):[...c,i];saveDB();toast("Saved");renderAdmin()}
@@ -4432,7 +4442,8 @@ am.addEventListener("change",e=>{
   if(el.dataset.upload){uploadPhoto(el.dataset.upload,el.files[0],el.closest(".upl"));return}
   if(el.dataset.saleView){const s=DB.sales.find(x=>x.id===el.dataset.saleView);if(s&&GV_KEYS.includes(el.value)){s.view=el.value;saveDB();toast("Gift pictures: "+GV_OPTS.find(x=>x[0]===el.value)[1])}return}
   if(el.dataset.draft&&el.tagName==="SELECT"){A.draft[el.dataset.draft]=el.value;updatePreview();return}
-  if(el.dataset.sdsel!==undefined){const x=DB.settings.sdSlots[+el.dataset.sdsel];if(x&&!DB.settings.sdSlots.some(y=>y.t===el.value)){x.t=el.value;DB.settings.sdSlots.sort((a,b)=>SLOT_PRESETS.indexOf(a.t)-SLOT_PRESETS.indexOf(b.t));saveDB();toast("Saved")}renderAdmin();return}
+  if(el.dataset.sdfrom!==undefined||el.dataset.sdto!==undefined){const i=+(el.dataset.sdfrom??el.dataset.sdto);if(slotChange(DB.settings.sdSlots,i,el)){DB.settings.sdSlots.sort(slotSort);saveDB();toast("Saved");renderAdmin()}return}
+  if(el.dataset.slfrom!==undefined||el.dataset.slto!==undefined){const i=+(el.dataset.slfrom??el.dataset.slto);if(slotChange(DB.settings.slots,i,el)){slotSync();toast("Saved");renderAdmin()}return}
   if(el.dataset.sdon!==undefined){const x=DB.settings.sdSlots[+el.dataset.sdon];if(x){x.on=el.checked;saveDB();toast("Saved")}return}
   if(el.dataset.sdlim!==undefined){const x=DB.settings.sdSlots[+el.dataset.sdlim];if(x){x.limit=Math.max(0,Math.round(parseFloat(el.value)||0));el.value=x.limit;saveDB();toast("Saved")}return}
   if(el.dataset.slotsel!==undefined){const x=DB.settings.slots[+el.dataset.slotsel];if(x&&!DB.settings.slots.some(y=>y.t===el.value)){x.t=el.value;slotSync();toast("Saved")}renderAdmin();return}

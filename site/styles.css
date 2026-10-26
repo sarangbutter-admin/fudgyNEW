@@ -522,10 +522,12 @@ footer a{color:var(--white)}
 .side .role{font-size:11px;opacity:.7;margin:0 8px 18px;letter-spacing:.12em;text-transform:uppercase;font-weight:600}
 .nav .count{font-size:12px;background:var(--white);color:var(--blue);border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums}
 .nav .count.live{background:var(--red);color:var(--white)}
+.nav .nl{display:inline-flex;align-items:center;gap:9px;min-width:0}
 .nav button[aria-current="page"] .count:not(.live){background:var(--blue);color:var(--white)}
 @media (max-width:860px){
   .admin{grid-template-columns:minmax(0,1fr)}
   .side .role{display:none}
+  .nav .nl{gap:7px}.nav .ni{width:auto}
 }
 .ahead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:16px}
 .ahead h1{font-size:clamp(24px,3vw,32px);color:var(--blue)}
@@ -728,6 +730,7 @@ body.pcd-fx .bell-pay{animation:pcdGlow 1.6s ease-in-out infinite}
 
 /* unpublished-changes bar (shop settings, marquee banner, landing page) */
 .draftbar .btn{min-height:44px}.draftbar .ghost{min-height:44px;background:#fff}
+[data-tab].pend .nl::after{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;background:#E0A800;margin-left:8px;vertical-align:middle}
 
 /* refunds */
 .st-refunded,.mo-chip.st-refunded{background:#DDF3E5;color:#0a6b34}
@@ -766,6 +769,8 @@ body.pcd-fx .bell-pay{animation:pcdGlow 1.6s ease-in-out infinite}
 .pe-photo .plate{width:110px;height:110px}
 
 /* time slots */
+.slotrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:12px 14px}
+.slotrow select{width:112px}.slotrow .slotlim{margin:0;flex:0 0 auto}.slotrow .slotlim .money-in{width:150px}
 .slotrow .note{margin-left:auto}.slotrow .ghost{flex:0 0 auto}
 .sd-card{text-align:center;max-width:380px}.sd-card .sdmsg{font-size:17px;line-height:1.5;margin:6px 0 20px;color:var(--ink,#000096)}.sd-card .btn{min-width:140px}
 
@@ -1550,3 +1555,4 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .gplate,.rvpk .gplate{width:52px;flex:none;border-radius:12px;overflow:hidden;display:block}.gplate .plate{width:100%;aspect-ratio:1;border-radius:12px}
 .rvplate{width:130px;animation:rvhop .9s ease-in-out infinite}.rvplate .plate{width:100%;aspect-ratio:1;border-radius:50%;overflow:hidden}
 @media (prefers-reduced-motion:reduce){.rvplate{animation:none!important}}
+.slottm{display:inline-flex;align-items:center;gap:6px}.slottm .in{width:112px}
