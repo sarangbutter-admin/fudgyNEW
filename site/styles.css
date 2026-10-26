@@ -1533,3 +1533,7 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .rvc.rvhot{border-color:#C8102E;animation:rvredbox .9s ease-in-out infinite}.rvstar.rvhot{filter:drop-shadow(0 0 6px #C8102E)}
 @keyframes rvredblink{50%{opacity:.25}}@keyframes rvredbox{50%{box-shadow:0 0 0 4px rgba(200,16,46,.35),0 0 16px rgba(200,16,46,.7)}}
 @media (prefers-reduced-motion:reduce){.rvcd.rvhot,.rvc.rvhot{animation:none!important}}
+/* brand name above or below the logo */
+.top.nmtop .logo,.top.nmbot .logo{flex-direction:column;gap:2px;align-items:flex-start}
+.top.nmtop .logo{flex-direction:column-reverse}
+.top.nmtop #brandTxt,.top.nmbot #brandTxt{font-size:.62em;line-height:1;letter-spacing:0}
