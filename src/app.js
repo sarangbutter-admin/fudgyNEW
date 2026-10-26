@@ -141,7 +141,7 @@ function defaultProofPop(){return {on:true,emoji:"🙏",img:"",cookies:[],fx:tru
 function defaultAlerts(){return {on:true,sound:true,vol:70,repeat:false,stay:true,custom:"",customName:"",
   ev:{order:{on:true,snd:"register"},proof:{on:true,snd:"chime"},paid:{on:false,snd:"bell"},complaint:{on:true,snd:"alarm"},courier:{on:true,snd:"alarm"}}}}
 function defaultRev(){return {on:false,days:7,minBox:6,mode:"random",daily:20,validDays:7,redeemDays:30,
-  bn:{card:true,star:true,icon:"⭐",title:"How was your order {code}?",sub:"Rate your cookies and win a surprise gift 🎁",bg:"#FFF4D6",ink:"#0B0B45",line:"#FFD166",fx:"shine",tipOn:true,tip:"Rate your order and win a surprise gift!"},
+  bn:{card:true,star:true,icon:"⭐",title:"How was your order {code}?",sub:"Rate your cookies and win a surprise gift 🎁",bg:"#FFF4D6",ink:"#0B0B45",line:"#FFD166",fx:"shine",tipOn:true,tip:"Rate your order and win a surprise gift!",cd:true,cdText:"Review ends in {time}",cdHot:24,cdTip:"Last chance! Review ends in {time}"},
   win:{icon:"🎉",img:"",fx:"confetti",title:"You won a surprise!",text:"{reward}",btn:"Great!",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
   sad:{icon:"🥺",img:"",fx:"rain",title:"Thank you for rating",text:"We're sorry it wasn't perfect this time. We'd love to make it right, so please order again soon.",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
   none:{icon:"🎁",img:"",fx:"sparkle",title:"Thanks for rating!",text:"No surprise this time, but we loved hearing from you. See you at your next order!",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
@@ -1641,7 +1641,7 @@ function rvRender(){const card=$("#rvCard"),star=$("#rvStar");if(!card||!star)re
   if(!o){const t=$("#rvTip");if(t)t.hidden=true;return}
   const fx=["shine","pulse","glow","bounce","none"].includes(b.fx)?b.fx:"shine";
   if(!card.hidden){card.className="rvc rvfx-"+fx;card.style.setProperty("--rbg",hexOk(b.bg,"#FFF4D6"));card.style.setProperty("--rink",hexOk(b.ink,"#0B0B45"));card.style.setProperty("--rline",hexOk(b.line,"#FFD166"));card.dataset.rvgo=o.id;
-    card.innerHTML=`<span class="rvst" aria-hidden="true">★★★★★</span><b>${esc(String(b.title||"").replace(/\{code\}/g,"#"+o.code))}</b><small>${esc(b.sub||"")}${list.length>1?` · ${list.length} orders`:""}</small>`}
+    card.innerHTML=`<span class="rvst" aria-hidden="true">★★★★★</span><b>${esc(String(b.title||"").replace(/\{code\}/g,"#"+o.code))}</b><small>${esc(b.sub||"")}${list.length>1?` · ${list.length} orders`:""}</small>${rvCd(o)}`}
   if(!star.hidden){star.textContent=String(b.icon||"⭐").trim().slice(0,2)||"⭐";star.dataset.rvgo=o.id;star.setAttribute("aria-label",String(b.tip||"Rate your order"))}
   let seen={};try{seen=JSON.parse(localStorage.getItem("delidome-rvtip")||"{}")}catch(e){}
   if(b.tipOn!==false&&!star.hidden&&!seen[o.id]&&!RVT.t){RVT.t=setTimeout(()=>{RVT.t=0;const t=$("#rvTip"),s2=$("#rvStar");if(!t||!s2||s2.hidden||!$("#moSheet").hidden)return;
@@ -1649,6 +1649,19 @@ function rvRender(){const card=$("#rvCard"),star=$("#rvStar");if(!card||!star)re
     const br=s2.getBoundingClientRect(),tr=t.getBoundingClientRect();t.style.setProperty("--ar",Math.max(10,Math.round(tr.right-(br.left+br.width/2)-6))+"px");
     seen[o.id]=1;try{localStorage.setItem("delidome-rvtip",JSON.stringify(seen))}catch(e){}setTimeout(()=>{t.hidden=true},9000)},4200)}}
 const RVT={t:0};
+const rvEnd=o=>(+o.completedAt||+o.updatedAt||0)+(+DB.revrew.days||7)*864e5;
+const rvTime=ms=>{const m=Math.max(0,Math.floor(ms/6e4)),d=Math.floor(m/1440),h=Math.floor(m%1440/60);return d?d+"d "+h+"h":h?h+"h "+String(m%60).padStart(2,"0")+"m":m+"m"};
+const rvHot=o=>rvEnd(o)-Date.now()<=(+DB.revrew.bn.cdHot||24)*36e5;
+const rvCd=o=>{const b=DB.revrew.bn||{};return rvOn()&&b.cd!==false?`<span class="rvcd${rvHot(o)?" rvhot":""}" data-rvend="${rvEnd(o)}">⏰ ${esc(String(b.cdText||"Review ends in {time}").replace(/\{time\}/g,rvTime(rvEnd(o)-Date.now())))}</span>`:""};
+// morning, afternoon and night: the arm tip comes back once in each while the deadline is close
+function rvSlotTip(){const l=rvOrders().filter(rvHot),o=l[0],b=DB.revrew.bn||{},t=$("#rvTip"),st=$("#rvStar");if(!o||b.cd===false||b.tipOn===false||!t||!st||st.hidden||!$("#moSheet").hidden||!$("#rvPop").hidden)return;
+  const h=new Date().getHours(),sl=h<12?"m":h<17?"a":"n",k=o.id+"|"+new Date().toDateString()+"|"+sl;let seen={};try{seen=JSON.parse(localStorage.getItem("delidome-rvtip2")||"{}")}catch(e){}
+  if(seen[k])return;seen[k]=1;for(const x in seen)if(x.split("|")[1]!==new Date().toDateString())delete seen[x];try{localStorage.setItem("delidome-rvtip2",JSON.stringify(seen))}catch(e){}
+  t.innerHTML="<b>⏰ "+esc(String(b.tipTitle||"Review time"))+"</b><span>"+esc(String(b.cdTip||"Last chance! Review ends in {time}").replace(/\{time\}/g,rvTime(rvEnd(o)-Date.now())))+"</span>";t.hidden=false;setTimeout(()=>{t.hidden=true},9000)}
+function rvTick(){if(!DB||!DB.revrew)return;const now=Date.now(),hot=(+DB.revrew.bn.cdHot||24)*36e5,tx=String(DB.revrew.bn.cdText||"Review ends in {time}");let any=false;
+  document.querySelectorAll("[data-rvend]").forEach(e=>{const l=+e.dataset.rvend-now;any=true;if(l<=0){rvRender();return}e.textContent="⏰ "+tx.replace(/\{time\}/g,rvTime(l));e.classList.toggle("rvhot",l<=hot)});
+  const o=rvOrders()[0],h=!!(o&&rvOn()&&DB.revrew.bn.cd!==false&&rvEnd(o)-now<=hot);const st=$("#rvStar"),cd=$("#rvCard");if(st)st.classList.toggle("rvhot",h);if(cd)cd.classList.toggle("rvhot",h);
+  if(!(Math.floor(now/1000)%60))rvSlotTip()}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-rvgo]");if(!b)return;e.preventDefault();const t=$("#rvTip");if(t)t.hidden=true;try{closeBell()}catch(x){}openMO(b.dataset.rvgo);setTimeout(()=>{const r=$("#moCard .rstars");r&&r.scrollIntoView({block:"center"})},120)});
 const rvFill=(t,d)=>String(t||"").replace(/\{reward\}/g,(d&&d.item&&d.item.name)||"").replace(/\{code\}/g,(d&&d.code)||"");
 const rvFree=p=>PG.info&&PG.code&&(PG.info.items||[]).some(g=>g&&g.pid===p.id)?`<span class="rvfree">🎁 FREE reward</span>`:"";
@@ -1699,7 +1712,7 @@ function drawBell(list){
   if(BELLF!=="deals")payDue().forEach(o=>{
     items.push({at:Infinity,h:`<button class="bell-it bell-pay" type="button" data-bellgo="${o.id}"><span class="bell-ic" aria-hidden="true">⏰</span><span class="bell-tx"><small>Order #${esc(o.code)} · ${isRej(o)?"payment rejected":"waiting for payment"}</small><b>${isRej(o)?"Payment rejected – please send a new proof":"Pay now or you'll miss your cookies!"}</b>${isRej(o)&&o.rejected.reason?`<span class="bell-rej">Reason: ${esc(o.rejected.reason)}</span>`:""}<span class="bell-cdrow">Time left: <span class="cd" data-exp="${o.expiresAt}">${fmtLeft(o.expiresAt-Date.now())}</span></span></span><span class="bell-ch" aria-hidden="true">›</span></button>`})});
   if(BELLF!=="deals")rvOrders().forEach(o=>{
-    items.push({at:Infinity,h:`<button class="bell-it bell-pay" type="button" data-rvgo="${o.id}"><span class="bell-ic" aria-hidden="true">${esc(String((DB.revrew.bn||{}).icon||"⭐").slice(0,2))}</span><span class="bell-tx"><small>Order #${esc(o.code)} · review</small><b>${esc(String((DB.revrew.bn||{}).tip||"Rate your order and win a surprise gift!"))}</b></span><span class="bell-ch" aria-hidden="true">›</span></button>`})});
+    items.push({at:Infinity,h:`<button class="bell-it bell-pay" type="button" data-rvgo="${o.id}"><span class="bell-ic" aria-hidden="true">${esc(String((DB.revrew.bn||{}).icon||"⭐").slice(0,2))}</span><span class="bell-tx"><small>Order #${esc(o.code)} · review${rvCd(o)?" · "+rvCd(o):""}</small><b>${esc(String((DB.revrew.bn||{}).tip||"Rate your order and win a surprise gift!"))}</b></span><span class="bell-ch" aria-hidden="true">›</span></button>`})});
   if(BELLF!=="deals")refundList().forEach(o=>{
     items.push({at:o.refund.at,h:`<button class="bell-it${o.refund.at>SEENV?" new":""}" type="button" data-bellgo="${o.id}"><span class="bell-ic" aria-hidden="true">💸</span><span class="bell-tx"><small>Order #${esc(o.code)} · ${fmtAgo(o.refund.at)}</small><b>${o.refund.full?"Your order was refunded":"Part of your order was refunded"}: ${money(o.refund.amount)}</b><span>${o.refund.note?esc(o.refund.note)+" · ":""}It can take a few days to show in your account.</span></span><span class="bell-ch" aria-hidden="true">›</span></button>`})});
   if(BELLF!=="deals")list.forEach(x=>{const st=x.m.status,o=x.o,lab=x.m.courier?"Courier update":st==="complaint"?"Complaint update":st?stLabel(st,o.mode):"Update";
@@ -1809,7 +1822,7 @@ function ratingHTML(o){
     return done?`<div class="rrow"><b>${esc(p.name)}</b><span class="stars" role="img" aria-label="You rated ${done} out of 5">${starStr(done)}</span></div>`
     :`<div class="rrow"><b>${esc(p.name)}</b><div class="rstars" role="group" aria-label="Rate ${esc(p.name)}">${[1,2,3,4,5].map(n=>`<button type="button" data-rstar="${pid}" data-n="${n}" aria-label="${n} star${n>1?"s":""}">★</button>`).join("")}</div><input class="in" data-rcomment="${pid}" maxlength="200" placeholder="Say something about it (optional)" aria-label="Comment on ${esc(p.name)}"></div>`}).join("");
   const left=ids.some(pid=>prod(pid)&&!rated[pid]);
-  return `<div class="dsec"><h4>Rate your cookies</h4>${rows}${left?`<p class="err" id="rtErr" hidden></p><button class="btn btn-blue btn-sm" type="button" data-rsubmit style="margin-top:8px">Send ratings</button>`:`<p class="hint" style="margin:8px 0 0">Thanks for rating!</p>`}</div>`;
+  return `<div class="dsec"><h4>Rate your cookies</h4>${rvOn()&&!o.rv&&o.status==="completed"&&(+o.size||0)>=(+DB.revrew.minBox||6)&&rvEnd(o)>Date.now()&&left?`<p style="margin:0 0 8px">${rvCd(o)}</p>`:""}${rows}${left?`<p class="err" id="rtErr" hidden></p><button class="btn btn-blue btn-sm" type="button" data-rsubmit style="margin-top:8px">Send ratings</button>`:`<p class="hint" style="margin:8px 0 0">Thanks for rating!</p>`}</div>`;
 }
 function complaintHTML(o){
   if(o.status!=="ready"&&o.status!=="completed")return "";
@@ -1990,7 +2003,7 @@ function sweepOrders(){
   if(view==="store"){sanitizeCart();renderStoreStatic();renderStore();renderEditBar();if(!$("#moSheet").hidden)renderMO()}
   else if(view==="admin")renderAdmin();
 }
-setInterval(()=>{tickCountdowns();if(Math.round(Date.now()/1000)%10===0)sweepOrders()},1000);
+setInterval(()=>{try{rvTick()}catch(e){}tickCountdowns();if(Math.round(Date.now()/1000)%10===0)sweepOrders()},1000);
 
 /* ================= pre-launch page =================
    While the owner has it on (Pre-launch tab), customers see only this page: a banner like the Top banner, a countdown to the
@@ -6400,7 +6413,7 @@ function viewRevrew(){const R=DB.revrew,P=DB.revpool.items;if(SBH.on&&RVA.st===n
     ${it.type==="gift"?`<div class="grid2" style="margin-top:8px"><label class="af">Stock (blank = unlimited)<input class="in" type="number" min="0" data-rvp="${i}.stock" value="${it.stock??""}"></label><label class="af">Gift expires<input class="in" type="datetime-local" data-rvpd="${i}.until" value="${it.until?preDT(it.until):""}"></label></div>
     <label class="af" style="margin-top:8px">Icon (emoji, used when there is no picture)<input class="in" data-rvp="${i}.icon" maxlength="4" value="${esc(it.icon||"🎁")}"></label>
     <div class="colin" style="gap:6px;margin-top:8px;flex-wrap:wrap"><input class="in" data-rvp="${i}.img" placeholder="Picture link (optional)" value="${esc(it.img||"")}" style="flex:1;min-width:140px"><label class="ghost mqbtn">Upload<input type="file" accept="image/*" data-rvpup="${i}" hidden></label></div>`:""}
-    <div class="grid2" style="margin-top:8px"><label class="af">Chance weight (higher = more often)<input class="in" type="number" min="1" max="100" data-rvp="${i}.weight" value="${+it.weight||1}"></label>
+    <div class="grid2" style="margin-top:8px"><label class="af">Chance (% of draws, decimals ok: 0.5 = 0.5%)<input class="in" type="number" min="0" max="100" step="0.01" data-rvp="${i}.pct" value="${it.pct??""}" placeholder="equal share"></label>
       <div class="af">Status<div style="font-weight:700;color:${bad?"#C8102E":"#0A6B34"}">${!SBH.on?"–":bad?"Not drawn (out of stock, missing or expiring soon)":"In the draw"}${s.used!=null?` · given ${s.used}`:""}</div></div></div>
     <button class="ghost sm" type="button" data-rvprm="${i}" style="margin-top:8px">Remove</button></div>`}).join("");
   return head("Review rewards","Customers who rate a delivered box of "+(+R.minBox||6)+"+ get one draw. Only orders where every flavor got 5 stars can win.")+MOCK+`<div class="stack">
@@ -6408,18 +6421,19 @@ function viewRevrew(){const R=DB.revrew,P=DB.revpool.items;if(SBH.on&&RVA.st===n
     ${SBH.on?`<p class="note" style="margin:8px 0 0">Changes go live after you press <b>Save &amp; publish</b>. The rules stay hidden from customers.${RVA.st&&RVA.st.today!=null?` Today: ${RVA.st.today} rewards given, ${RVA.st.total||0} in total.`:""}</p>`:""}</section>
   <section class="panel"><h2>⚙️ Rules</h2><div class="grid2" style="margin-top:10px">${inp("Review window (days after delivery)","days",{num:1})}${inp("Minimum box size to qualify","minBox",{num:1})}${inp("Daily limit (rewards per day)","daily",{num:1})}${inp("Coupon must stay valid at least (days)","validDays",{num:1})}${inp("Reward code valid for (days)","redeemDays",{num:1})}
     ${sel("Who picks the gift","mode",[["random","Random draw"],["choose","Customer chooses"]])}</div>
+    ${(()=>{const it=DB.revpool.items,set=it.filter(x=>x.pct!=null&&x.pct!=="").reduce((a,x)=>a+(+x.pct||0),0);return it.length?`<p class="note"><b>Total ${+set.toFixed(2)}%</b> of draws win something. ${set>=100?"Percentages above 100 are scaled to fit.":"The other "+(+(100-set).toFixed(2))+"% get the no-reward message."} A reward that is out of stock loses its share (those draws become no reward). Items with an empty chance share the draw equally.</p>`:""})()}
     <p class="note">Gifts that are out of stock or expire within 7 days are never drawn. One reward per order; only one reward gift applies to each new order.</p></section>
   <section class="panel"><h2>🎁 Reward pool</h2><p class="sub">Coupons or cookies / gifts the draw can give.</p>${rows||`<p class="note">Nothing yet.</p>`}
     <div class="colin" style="gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn btn-blue btn-sm" type="button" data-rvadd="gift">+ Add cookie / gift</button><button class="btn btn-ghost-blue btn-sm" type="button" data-rvadd="coupon">+ Add coupon</button></div></section>
-  <section class="panel"><h2>⭐ Reminder</h2><div class="grid2" style="margin-top:10px">${sw("bn.card","Card in the shop page")}${sw("bn.star","Blinking star in the top bar")}${sw("bn.tipOn","Show the arm tip once")}</div>
-    <div class="grid2" style="margin-top:10px">${inp("Star icon","bn.icon",{max:4})}${sel("Card effect","bn.fx",[["shine","Shine"],["pulse","Pulse"],["glow","Glow"],["bounce","Bounce"],["none","None"]])}${inp("Card title ({code} = order number)","bn.title")}${inp("Card line","bn.sub")}${inp("Arm tip title","bn.tipTitle",{ph:"Review time"})}${inp("Arm tip and bell text","bn.tip")}</div>
+  <section class="panel"><h2>⭐ Reminder</h2><div class="grid2" style="margin-top:10px">${sw("bn.card","Card in the shop page")}${sw("bn.star","Blinking star in the top bar")}${sw("bn.tipOn","Show the arm tip once")}${sw("bn.cd","Countdown to the review deadline")}</div>
+    <div class="grid2" style="margin-top:10px">${inp("Star icon","bn.icon",{max:4})}${sel("Card effect","bn.fx",[["shine","Shine"],["pulse","Pulse"],["glow","Glow"],["bounce","Bounce"],["none","None"]])}${inp("Card title ({code} = order number)","bn.title")}${inp("Card line","bn.sub")}${inp("Arm tip title","bn.tipTitle",{ph:"Review time"})}${inp("Arm tip and bell text","bn.tip")}${inp("Countdown text ({time})","bn.cdText")}${inp("Turn red and blink when less than (hours) left","bn.cdHot",{num:1})}${inp("Last-chance tip, 3 times a day ({time})","bn.cdTip")}</div>
     <div class="grid3" style="margin-top:10px">${col("Card background","bn.bg","#FFF4D6")}${col("Card text","bn.ink","#0B0B45")}${col("Card border","bn.line","#FFD166")}</div></section>
   <section class="panel"><h2>🎯 Choose-a-gift screen</h2><div class="grid2" style="margin-top:10px">${inp("Title","choose.title")}${inp("Text","choose.text")}</div></section>
   ${msg("win","🎉 Winner message",true)}${msg("sad","🥺 Below 5 stars message")}${msg("none","🎁 No reward message")}</div>`}
 function rvPrev(k){rvOutcome({st:k==="win"?"win":k==="sad"?"sad":"none",code:"RV-ABC123",kind:"gift",exp:Date.now()+30*864e5,item:{name:"Free cookie"}},null)}
 am.addEventListener("input",e=>{if(A.tab!=="revrew")return;const el=e.target;
   if(el.dataset.rv&&el.type!=="checkbox"&&el.type!=="file"){rvSet(el.dataset.rv,el.dataset.rvnum?Math.max(0,+el.value||0):el.value);return}
-  if(el.dataset.rvp){const[i,f]=el.dataset.rvp.split("."),it=DB.revpool.items[+i];if(!it||el.tagName==="SELECT")return;it[f]=f==="stock"?(el.value===""?null:+el.value):f==="weight"?Math.max(1,+el.value||1):el.value;saveSoon()}});
+  if(el.dataset.rvp){const[i,f]=el.dataset.rvp.split("."),it=DB.revpool.items[+i];if(!it||el.tagName==="SELECT")return;it[f]=f==="stock"?(el.value===""?null:+el.value):f==="pct"?(el.value===""?null:Math.min(100,Math.max(0,+el.value||0))):el.value;saveSoon()}});
 am.addEventListener("change",async e=>{if(A.tab!=="revrew")return;const el=e.target;
   if(el.dataset.rv&&el.type==="checkbox"){rvSet(el.dataset.rv,el.checked);if(el.dataset.rv==="on")renderAdmin();return}
   if(el.dataset.rv&&el.tagName==="SELECT"){rvSet(el.dataset.rv,el.value);return}
@@ -6428,7 +6442,7 @@ am.addEventListener("change",async e=>{if(A.tab!=="revrew")return;const el=e.tar
   if(el.dataset.rvup||el.dataset.rvpup){const f=(el.files||[])[0],tg=el.dataset.rvup,i=el.dataset.rvpup;el.value="";if(!f)return;
     try{const u=SBH.on?await SBK.upload(await lpResize(f,600,true)):await lpResize(f,600,true);if(tg)rvSet(tg,u);else{DB.revpool.items[+i].img=u;saveSoon()}renderAdmin()}catch(er){toast(er.message||"Couldn't add that picture.")}}});
 am.addEventListener("click",e=>{if(A.tab!=="revrew")return;const b=e.target.closest("button");if(!b)return;const d=b.dataset;
-  if(d.rvadd){const n=DB.revpool.items.length;if(n>=30){toast("Up to 30 rewards.");return}DB.revpool.items.push({id:"r"+Date.now().toString(36)+n,type:d.rvadd,code:"",name:"",img:"",stock:null,until:null,weight:1});saveSoon();renderAdmin()}
+  if(d.rvadd){const n=DB.revpool.items.length;if(n>=30){toast("Up to 30 rewards.");return}DB.revpool.items.push({id:"r"+Date.now().toString(36)+n,type:d.rvadd,code:"",name:"",img:"",stock:null,until:null,pct:10});saveSoon();renderAdmin()}
   else if(d.rvprm!==undefined){armed(b,()=>{DB.revpool.items.splice(+d.rvprm,1);saveSoon();renderAdmin()})}
   else if(d.rvprev)rvPrev(d.rvprev)});
 function preGet(k){return k.split(".").reduce((o,x)=>o==null?undefined:o[x],DB.prelaunch)}

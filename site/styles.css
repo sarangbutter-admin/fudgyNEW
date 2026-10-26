@@ -1529,3 +1529,7 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .rvtk{position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;padding:14px 20px;border-radius:16px;background:linear-gradient(135deg,#FFD166,#FF9F43);color:#0B0B45;font-size:17px;box-shadow:0 8px 20px rgba(255,159,67,.5);animation:rvhop 1s ease-in-out infinite}
 .rvtk span{font-size:34px}.rvtk::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.8) 50%,transparent 65%);transform:translateX(-120%);animation:rvshine 2s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.rvfree,.rvdrew,.rvtk{animation:none!important}.rvtk::after{display:none}}
+.rvcd{display:inline-block;font:700 12px/1.2 inherit;margin-top:4px}.rvcd.rvhot{color:#C8102E;animation:rvredblink .8s steps(2,end) infinite}
+.rvc.rvhot{border-color:#C8102E;animation:rvredbox .9s ease-in-out infinite}.rvstar.rvhot{filter:drop-shadow(0 0 6px #C8102E)}
+@keyframes rvredblink{50%{opacity:.25}}@keyframes rvredbox{50%{box-shadow:0 0 0 4px rgba(200,16,46,.35),0 0 16px rgba(200,16,46,.7)}}
+@media (prefers-reduced-motion:reduce){.rvcd.rvhot,.rvc.rvhot{animation:none!important}}
