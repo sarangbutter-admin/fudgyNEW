@@ -970,7 +970,7 @@ body.pcd-fx .bell-pay{animation:pcdGlow 1.6s ease-in-out infinite}
 /* performance: compare with an earlier time */
 .db-k .pcd{display:block;margin-top:6px;font-size:12px;font-weight:600;color:#5A5F86}
 .db-k .pcd.up{color:#0E7A3E}.db-k .pcd.down{color:#C8102E}
-.draftbar{position:static}
+.draftbar{position:sticky;top:0;z-index:30}
 .hrsticky{position:static!important;max-height:none!important}
 
 /* check-your-details pop-up (checkout) */
@@ -1434,9 +1434,6 @@ tr.justadded td{background:rgba(0,0,150,.07)}
 .closecta{background:#FFD43B!important;color:#000096!important;border-color:#FFD43B!important}
 @media (prefers-reduced-motion:reduce){.boxlid .bow,.boxlid .lidlock{animation:none}}
 /* unpublished changes: the publish bar floats at the bottom of the screen until you publish or discard */
-.draftbar.busy{position:fixed!important;top:auto;left:auto;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(640px,calc(100vw - 24px));margin:0;z-index:70;box-shadow:0 12px 32px rgba(0,0,40,.28)}
-body.dd-draft #amain{padding-bottom:150px}
-body.dd-draft .toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))!important}
 /* shop top bar look (Shop settings > Top bar) */
 .top.hdc{background:var(--hd-bg,color-mix(in srgb,var(--white) 92%,transparent))}
 .top .logo.lgs-pill,.top .logo.lgs-rounded,.top .logo.lgs-square{background:var(--lg-bg,#fff);padding:6px 14px 6px 10px}
