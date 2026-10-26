@@ -1540,3 +1540,5 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .top.nmtop .wrap,.top.nmbot .wrap{padding-block:7px}
 .top.nmtop:not(.lgsz) #logoMark img,.top.nmbot:not(.lgsz) #logoMark img{height:24px}
 .top.nmtop .wrap>.logo,.top.nmbot .wrap>.logo{flex:0 1 auto}
+.top.nmsz .logo #brandTxt,.top.nmsz.nmtop .logo #brandTxt,.top.nmsz.nmbot .logo #brandTxt{font-size:var(--nm-size,14px)}
+.top.nmtop:not(.nmsz) #brandTxt,.top.nmbot:not(.nmsz) #brandTxt{font-size:13px}
