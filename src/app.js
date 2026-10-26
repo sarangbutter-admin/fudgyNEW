@@ -150,7 +150,7 @@ function defaultRev(){return {on:false,days:7,minBox:6,mode:"random",daily:20,va
 function defaultLabel(){return {logo:"",qr:"",qrCaption:"",notes:"",warnOn:true,warn1:"UNBOXING WITH UNCUT VIDEO!",warn2:"CONTACT US IF SEAL BROKEN"}}
 const SLOT_PRESETS=Array.from({length:23},(_,h)=>String(h).padStart(2,"0")+" to "+String(h+1).padStart(2,"0"));
 function migrate(db){
-  if(db.settings){const D={samedayOn:false,samedayLeadH:3,samedayCutoff:15,samedayFee:8,samedayPayMin:60,minPayMin:30,rejPayMin:120,payCdColor:"#C8102E",payCdSize:"L",payCdFx:true,pickupOn:true,pickupLeadH:24,schedOn:true,schedLeadH:24,samedayMsg:"Sorry Sameday closed Today.\nyour order will be send tomorrow.",samedayOk:"OK",samedayGo:"Continue with Sameday anyway",schedMaxDays:7,courierNoteOn:true,courierNote:"We need at least 3 hours of lead time. Once we have requested a courier, any delay or failed delivery is beyond our responsibility.",coWarnOn:true,coWarnEmoji:"⚠️",coWarnTitle:"Wait! Check your details",coWarnText:"Please make sure your name, WhatsApp number and address are correct before you place your order. We use them to send you updates and deliver your box.",coWarnOk:"Yes, my details are correct",coWarnBack:"Go back"};for(const k in D)if(db.settings[k]===undefined)db.settings[k]=D[k];
+  if(db.settings){const D={samedayOn:false,samedayLeadH:3,samedayCutoff:15,samedayFee:8,samedayPayMin:60,minPayMin:30,rejPayMin:120,payCdColor:"#C8102E",payCdSize:"L",payCdFx:true,pickupOn:true,pickupLeadH:24,schedOn:true,schedLeadH:24,samedayMsg:"Sorry Sameday closed Today.\nyour order will be send tomorrow.",sdSlotOn:false,sdSlots:[{t:"16 to 17",on:true,limit:0},{t:"17 to 18",on:true,limit:0},{t:"18 to 19",on:true,limit:0}],samedayOk:"OK",samedayGo:"Continue with Sameday anyway",schedMaxDays:7,courierNoteOn:true,courierNote:"We need at least 3 hours of lead time. Once we have requested a courier, any delay or failed delivery is beyond our responsibility.",coWarnOn:true,coWarnEmoji:"⚠️",coWarnTitle:"Wait! Check your details",coWarnText:"Please make sure your name, WhatsApp number and address are correct before you place your order. We use them to send you updates and deliver your box.",coWarnOk:"Yes, my details are correct",coWarnBack:"Go back"};for(const k in D)if(db.settings[k]===undefined)db.settings[k]=D[k];
     if(!Array.isArray(db.settings.slots)){const hs=(db.settings.times||[]).map(slotStartMin).filter(m=>m!==null).map(m=>Math.floor(m/60));if(!hs.length)hs.push(10);db.settings.slots=SLOT_PRESETS.map((t,h)=>({t,on:true,limit:0})).filter((x,h)=>hs.includes(h))}
     db.settings.times=db.settings.slots.filter(x=>x.on).map(x=>x.t)}
   db.label=Object.assign(defaultLabel(),db.label||{});
@@ -448,9 +448,16 @@ function dayOptions(){
   return Array.from({length:k==="scheduled"?schedDays():7},(_,i)=>addDays(start,i));
 }
 // keep the chosen option, day and time valid
-function fixWhen(){
+// sameday time slots: the customer picks a one-hour box for today, only while sameday is still open
+const sdSlotList=()=>(DB.settings.sdSlots||[]).filter(x=>x&&x.on!==false&&String(x.t||"").trim());
+const sdSlotsOn=()=>!!DB.settings.sdSlotOn&&sdSlotList().length>0&&samedayOpen();
+const sdTooSoon=t=>{const m=slotStartMin(t);return m!==null&&slotWall(ymd(shopNow().d),m)<shopNowT()+Math.max(0,+DB.settings.samedayLeadH||0)*3600e3};
+const sdFull=t=>{const c=(DB.settings.sdSlots||[]).find(x=>x.t===t),l=c&&+c.limit||0;return l>0&&slotUsed(ymd(shopNow().d),t)>=l};
+// the order-by hour passed while sameday was picked: tell the customer (pop-up) instead of quietly moving them to another option
+function sdWatch(){const m=$("#sdSheet");if(m&&m.hidden&&S.mode!=="pickup"&&S.speed==="sameday"&&!S.sdLate&&!samedayOpen()&&samedayLate())openSdPop()}
+function fixWhen(){sdWatch();
   if(!optAvail(optOf(S))){const k=["pickup","scheduled","sameday"].find(optAvail);if(k){S.mode=k==="pickup"?"pickup":"delivery";S.speed=k==="sameday"?"sameday":"scheduled"}}
-  if(optOf(S)==="sameday"){S.day=ymd(shopNow().d);S.time="Same day";return}
+  if(optOf(S)==="sameday"){S.day=ymd(shopNow().d);if(sdSlotsOn()){if(!(sdSlotList().some(x=>x.t===S.time)&&!sdTooSoon(S.time)&&!sdFull(S.time)))S.time=null}else S.time="Same day";return}
   if(!dayOptions().some(d=>ymd(d)===S.day)){S.day=null;S.time=null}
   if(S.time&&!DB.settings.times.includes(S.time))S.time=null;
   if(S.time&&S.day&&slotTooSoon(S.day,S.time,optOf(S)))S.time=null;
@@ -546,7 +553,7 @@ function renderMenu(){
 function renderOpts(){
   const set=DB.settings;fixWhen();
   $("#modes").innerHTML=["sameday","pickup","scheduled"].filter(optOn).map(k=>{const late=k==="sameday"&&!samedayOpen()&&samedayLate(),ok=optAvail(k)||late;return `<button class="chip" type="button" data-opt="${k}" ${late?"data-late=\"1\"":""} ${ok?"":"disabled"}>${OPT_NAME[k]}${ok?"":" (closed today)"}</button>`}).join("");
-  const sd=optOf(S)==="sameday";$("#dayBlock").hidden=sd;$("#timeBlock").hidden=sd;
+  const sd=optOf(S)==="sameday";$("#dayBlock").hidden=sd;$("#timeBlock").hidden=sd&&!sdSlotsOn();
   {const k=optOf(S),t=String(set.courierNote||"").trim(),on=set.courierNoteOn!==false&&!!t;$("#cnoteSd").hidden=!(on&&k==="sameday");$("#cnoteSch").hidden=!(on&&k==="scheduled");$("#cnoteSd").textContent=$("#cnoteSch").textContent=t}
   $("#days").innerHTML = dayOptions().map(d=>{const closed=set.closedWeekdays.includes(d.getDay());
     return `<button class="day" type="button" data-day="${ymd(d)}" ${closed?`disabled aria-label="${fmtDay(ymd(d))}, closed"`:""}><small>${DOW[d.getDay()]}</small><strong>${d.getDate()}</strong></button>`}).join("");
@@ -555,7 +562,9 @@ function renderOpts(){
   renderTimes();
 }
 function renderTimes(){
-  const k=optOf(S);$("#times").innerHTML=DB.settings.times.map(t=>{const full=slotFull(S.day,t),off=!!S.day&&k!=="sameday"&&slotTooSoon(S.day,t,k);return `<button class="chip" type="button" data-time="${esc(t)}" ${full?`disabled aria-label="${esc(t)}, full"`:off?`disabled aria-label="${esc(t)}, too soon"`:""}>${esc(t)}${full?" · Full":""}</button>`}).join("");
+  const k=optOf(S);if(k==="sameday"&&sdSlotsOn()){$("#times").innerHTML=sdSlotList().map(x=>{const t=x.t,full=sdFull(t),off=sdTooSoon(t);return `<button class="chip" type="button" data-time="${esc(t)}" ${full?`disabled aria-label="${esc(t)}, full"`:off?`disabled aria-label="${esc(t)}, too soon"`:""}>${esc(t)}${full?" · Full":""}</button>`}).join("");
+    document.querySelectorAll("[data-time]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.time===S.time));return}
+  $("#times").innerHTML=DB.settings.times.map(t=>{const full=slotFull(S.day,t),off=!!S.day&&k!=="sameday"&&slotTooSoon(S.day,t,k);return `<button class="chip" type="button" data-time="${esc(t)}" ${full?`disabled aria-label="${esc(t)}, full"`:off?`disabled aria-label="${esc(t)}, too soon"`:""}>${esc(t)}${full?" · Full":""}</button>`}).join("");
   document.querySelectorAll("[data-time]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.time===S.time));
 }
 function renderStoreStatic(){
@@ -577,7 +586,7 @@ function renderStoreStatic(){
 function ctaState(){
   const left=S.size-boxN();
   if(S.step===1) return left>0?{label:`Pick ${left} more`,dis:false,go:"pick"}:!S.closed?{label:"🔒 Close the box",dis:false,go:"close"}:{label:"Choose a day",dis:false,go:"step2"};
-  if(!S.day||!S.time) return {label:"Pick a day and time",dis:false,go:"when"};
+  if(!S.day||!S.time) return {label:optOf(S)==="sameday"?"Pick a time for today":"Pick a day and time",dis:false,go:"when"};
   if(bsPending(S))return {label:`Checkout (${money(total())})`,dis:false,go:"needcourier"};
   return {label:`Checkout (${money(total())})`,dis:false,go:"checkout"};
 }
@@ -632,7 +641,7 @@ function renderStore(){
   if(S.step===2){
     S.addons.forEach(id=>{const a=DB.addons.find(x=>x.id===id);if(a)L+=`<div><dt class="withlv">${lvAddon(a,18,true)}${esc(a.name)}</dt><dd>${addonPr(a)}</dd></div>`});
     L+=`<div><dt>${OPT_NAME[optOf(S)]}</dt><dd>${q.feePending?"Choose a courier":q.fee?money(q.fee):fbHTML("Del")}</dd></div>`;
-    if(S.day)L+=`<div><dt>When</dt><dd>${S.mode!=="pickup"&&S.speed==="sameday"?(samedayOpen()?"Today (sameday)":"Sameday (after the cut-off)"):fmtDay(S.day)+(S.time?", "+esc(S.time):"")}</dd></div>`;
+    if(S.day)L+=`<div><dt>When</dt><dd>${S.mode!=="pickup"&&S.speed==="sameday"?(samedayOpen()?"Today (sameday)"+(S.time&&S.time!=="Same day"?", "+esc(S.time):""):"Sameday (after the cut-off)"):fmtDay(S.day)+(S.time?", "+esc(S.time):"")}</dd></div>`;
     if(bsOn()&&S.mode==="delivery"){const sh=bsShip(S);
       L+=`<div class="bscour${q.feePending?" need":""}" id="bsRow"><dt>Courier</dt><dd><button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?esc(scName())+" · Change":"🛵 Choose courier"}</button></dd></div>`}
   }
@@ -1112,7 +1121,7 @@ function closeCoWarn(){const m=$("#cwSheet");if(!m||m.hidden)return;m.hidden=tru
 $("#cwSheet").addEventListener("click",e=>{if(e.target.closest("[data-cwok]")){closeCoWarn();openCheckout();return}if(e.target.id==="cwSheet"||e.target.closest("[data-cwback]"))closeCoWarn()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeCoWarn()});
 function cta(go){if(go==="pick"){if(document.activeElement)document.activeElement.blur();scrollToEl($("#menuGrid"));return}
-  if(go==="when"){if(document.activeElement)document.activeElement.blur();const sd=$("#dayBlock").hidden;scrollToEl($(!sd&&!S.day?"#dayBlock":!sd&&S.day&&!$("#timeBlock").hidden?"#timeBlock":"#step2"));return}
+  if(go==="when"){if(document.activeElement)document.activeElement.blur();const sd=$("#dayBlock").hidden;scrollToEl($(!sd&&!S.day?"#dayBlock":!$("#timeBlock").hidden&&(!sd||!S.time)?"#timeBlock":!sd&&S.day&&!$("#timeBlock").hidden?"#timeBlock":"#step2"));return}
   if(go==="needcourier"){bsNudge();return}
   if(go==="close"){closeBox();return}
   if(go==="step2")goStep(2);else if(go==="checkout")openCoWarn()}
@@ -1457,6 +1466,7 @@ $("#sdSheet").addEventListener("click",e=>{
   renderOpts();renderStore();const tb=$("#timeBlock");tb&&tb.scrollIntoView&&tb.scrollIntoView({behavior:"smooth",block:"center"});
 });
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSdPop()});
+setInterval(()=>{try{if(S.speed==="sameday"&&S.mode!=="pickup"){sdWatch();if(S.time&&sdSlotsOn()&&sdTooSoon(S.time)){fixWhen();renderStore()}}}catch(e){}},20000);
 $("#times").addEventListener("click",e=>{const b=e.target.closest("[data-time]");if(b){S.time=b.dataset.time;renderStore()}});
 $("#extras").addEventListener("click",e=>{const b=e.target.closest("[data-addon]");if(!b)return;const id=b.dataset.addon;
   S.addons=S.addons.includes(id)?S.addons.filter(x=>x!==id):[...S.addons,id];renderStore();if(!RM&&S.addons.includes(id))bump(b.querySelector(".tick"))});
@@ -1485,6 +1495,7 @@ $("#coForm").addEventListener("submit",e=>{
   const q=quote({...S,phone:$("#coPhone").value.trim()}),del=S.mode==="delivery",ed=S.editId?DB.orders.find(x=>x.id===S.editId&&x.status==="awaiting"):null;
   if(S.coupon&&q.couponErr){const m=q.couponErr;S.coupon="";$("#coErr").textContent=m+" The coupon was removed, so please check your new total.";$("#coErr").hidden=false;renderStore();openCheckout();return}
   if(bsPending(S)){$("#coErr").textContent="Please choose a courier to see your delivery price.";$("#coErr").hidden=false;bsSumDraw();$("#bsSum").scrollIntoView({block:"center"});return}
+  if(S.mode!=="pickup"&&S.speed==="sameday"&&!S.sdLate&&!samedayOpen()&&samedayLate()){openSdPop();return}
   const notify=(document.querySelector('input[name="coNotify"]:checked')||{value:"both"}).value;
   const cust={name:$("#coName").value.trim(),email:$("#coEmail").value.trim(),phone:$("#coPhone").value.trim(),
     address:del?$("#coAddr").value.trim():""};
@@ -3998,6 +4009,14 @@ function viewDelivery(){
         <small class="note">Paid today: ${slotUsed(ymd(shopNow().d),x.t)}</small>
         <button class="ghost" type="button" data-slotdel="${i}">Remove</button></div>`).join("")}</div>
       <button class="ghost" type="button" data-slotadd style="margin-top:8px">+ Add time slot</button>
+      <h3 style="margin:18px 0 4px;font-size:15px">Sameday time slots</h3><p class="sub" style="margin:0 0 8px">Let customers choose a time for today's sameday delivery. A slot that starts sooner than the sameday lead time is greyed out. After the order-by hour customers can't choose a slot.</p>
+      <label class="chk"><input type="checkbox" data-k="settings::sdSlotOn" ${s.sdSlotOn?"checked":""}> <b>Customers choose a sameday time slot</b></label>
+      <div class="stack slotlist" style="gap:8px;margin-top:8px">${(s.sdSlots||[]).map((x,i)=>`<div class="pmcard slotrow">
+        <select class="in" data-sdsel="${i}" aria-label="Sameday slot ${i+1}">${SLOT_PRESETS.map(t=>`<option value="${t}" ${t===x.t?"selected":""} ${t!==x.t&&s.sdSlots.some(y=>y.t===t)?"disabled":""}>${t}</option>`).join("")}</select>
+        <label class="chk"><input type="checkbox" data-sdon="${i}" ${x.on!==false?"checked":""}> <b>On</b></label>
+        <label class="af slotlim">Limit per day<div class="money-in"><input class="in" type="number" min="0" step="1" data-sdlim="${i}" value="${+x.limit||0}"><span style="padding-right:10px">orders</span></div></label>
+        <button class="ghost" type="button" data-sddel="${i}">Remove</button></div>`).join("")}</div>
+      <button class="ghost" type="button" data-sdadd style="margin-top:8px">+ Add sameday slot</button>
       <h3 style="margin:18px 0 4px;font-size:15px">Sameday closed pop-up</h3><p class="sub" style="margin:0 0 8px">Shown when a customer taps Sameday shipment after the order-by time. The first button switches them to a day and time slot. The second button lets them keep Sameday anyway (leave it empty to hide it). Those orders show "ordered after the cut-off".</p>
       <label class="af">Message<textarea class="in" rows="3" data-k="settings::samedayMsg">${esc(s.samedayMsg)}</textarea></label>
       <div class="grid2" style="margin-top:8px"><label class="af">Button name<input class="in" data-k="settings::samedayOk" value="${esc(s.samedayOk)}" maxlength="20"></label><label class="af">Keep Sameday button<input class="in" data-k="settings::samedayGo" value="${esc(s.samedayGo||"")}" maxlength="40" placeholder="(hidden)"></label></div>
@@ -4387,6 +4406,8 @@ am.addEventListener("click",e=>{
   else if(d.adel){delConfirm("this extra",()=>needOwner("delete an extra").then(()=>{DB.addons=DB.addons.filter(a=>a.id!==d.adel);saveDB();toast("Extra deleted");renderAdmin()}).catch(()=>{}))}
   else if(d.cwprev!==undefined){openCwPreview()}
   else if(d.slotadd!==undefined){const sl=DB.settings.slots,mx=Math.max(-1,...sl.map(x=>SLOT_PRESETS.indexOf(x.t))),un=SLOT_PRESETS.filter(t=>!sl.some(x=>x.t===t)),u=un.find(t=>SLOT_PRESETS.indexOf(t)>mx)||un[0];if(!u){toast("All 23 time slots are already added.");return}DB.settings.slots.push({t:u,on:true,limit:0});slotSync();toast("Saved");renderAdmin();showNew([...document.querySelectorAll(".slotrow")].pop(),false)}
+  else if(d.sdadd!==undefined){const sl=DB.settings.sdSlots=DB.settings.sdSlots||[],un=SLOT_PRESETS.filter(t=>!sl.some(x=>x.t===t)),u=un.find(t=>+t.slice(0,2)>=10)||un[0];if(!u){toast("All slots are already added.");return}sl.push({t:u,on:true,limit:0});sl.sort((a,b)=>SLOT_PRESETS.indexOf(a.t)-SLOT_PRESETS.indexOf(b.t));saveDB();toast("Saved");renderAdmin()}
+  else if(d.sddel!==undefined){DB.settings.sdSlots.splice(+d.sddel,1);saveDB();toast("Saved");renderAdmin()}
   else if(d.slotdel!==undefined){const i=+d.slotdel,x=DB.settings.slots[i];if(x&&x.on&&DB.settings.slots.filter(y=>y.on).length<2){toast("Keep at least one time slot on.");return}DB.settings.slots.splice(i,1);slotSync();toast("Saved");renderAdmin()}
   else if(d.closed){const i=+d.closed,c=DB.settings.closedWeekdays;DB.settings.closedWeekdays=c.includes(i)?c.filter(x=>x!==i):[...c,i];saveDB();toast("Saved");renderAdmin()}
   else if(d.pbg){openBg(d.pbg);return}
@@ -4411,6 +4432,9 @@ am.addEventListener("change",e=>{
   if(el.dataset.upload){uploadPhoto(el.dataset.upload,el.files[0],el.closest(".upl"));return}
   if(el.dataset.saleView){const s=DB.sales.find(x=>x.id===el.dataset.saleView);if(s&&GV_KEYS.includes(el.value)){s.view=el.value;saveDB();toast("Gift pictures: "+GV_OPTS.find(x=>x[0]===el.value)[1])}return}
   if(el.dataset.draft&&el.tagName==="SELECT"){A.draft[el.dataset.draft]=el.value;updatePreview();return}
+  if(el.dataset.sdsel!==undefined){const x=DB.settings.sdSlots[+el.dataset.sdsel];if(x&&!DB.settings.sdSlots.some(y=>y.t===el.value)){x.t=el.value;DB.settings.sdSlots.sort((a,b)=>SLOT_PRESETS.indexOf(a.t)-SLOT_PRESETS.indexOf(b.t));saveDB();toast("Saved")}renderAdmin();return}
+  if(el.dataset.sdon!==undefined){const x=DB.settings.sdSlots[+el.dataset.sdon];if(x){x.on=el.checked;saveDB();toast("Saved")}return}
+  if(el.dataset.sdlim!==undefined){const x=DB.settings.sdSlots[+el.dataset.sdlim];if(x){x.limit=Math.max(0,Math.round(parseFloat(el.value)||0));el.value=x.limit;saveDB();toast("Saved")}return}
   if(el.dataset.slotsel!==undefined){const x=DB.settings.slots[+el.dataset.slotsel];if(x&&!DB.settings.slots.some(y=>y.t===el.value)){x.t=el.value;slotSync();toast("Saved")}renderAdmin();return}
   if(el.dataset.sloton!==undefined){const x=DB.settings.slots[+el.dataset.sloton];if(x){if(!el.checked&&DB.settings.slots.filter(y=>y.on).length<2){el.checked=true;toast("Keep at least one time slot on.");return}x.on=el.checked;slotSync();toast("Saved")}return}
   if(el.dataset.slotlim!==undefined){const x=DB.settings.slots[+el.dataset.slotlim];if(x){x.limit=Math.max(0,Math.round(parseFloat(el.value)||0));el.value=x.limit;slotSync();toast("Saved")}return}
