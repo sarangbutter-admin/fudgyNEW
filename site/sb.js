@@ -124,6 +124,7 @@
   H.rvClaim = async function (id, choice) { var d = await K.rpc("rv_claim", { p_id: id, p_token: tk(id), p_choice: choice || "" }); return d; };
   H.rvStatus = function () { return K.rpc("admin_rv_status", {}, true); };
   H.dokuCreate = async function (id, group, pass) { var d = await K.fn("doku", { action: "create", id: id, token: tk(id), group: group, pass: pass || "" }); if (d && d.error) throw new Error(d.error); return d; };
+  H.rpcPub = function (name, args) { return K.rpc(name, args, false); };
   H.changePassword = function (o, n) { return K.changePassword(o, n); };
   H.tsVerify = async function (token, action) { var d = await K.fn("turnstile", { action: action, token: token }); if (!d || d.error || !d.pass) throw new Error((d && d.error) || "The security check failed. Please try again."); return d; };
   H.tsGet = function () { return K.rpc("admin_ts_get", {}, true); };
@@ -209,7 +210,7 @@
     document.body.appendChild(el);
     var err = $q("#adlErr"); if (msg) { err.textContent = msg; err.hidden = false; }
     el.querySelector("a").addEventListener("click", function () { el.remove(); });
-    var tsh = null; tsLoginMount(el.querySelector("form")).then(function (h) { tsh = h; });
+    var tsh = null; tsLoginMount(el.querySelector("form")).then(function (h) { tsh = h; }); loginHelp(el.querySelector("form"));
     el.querySelector("form").addEventListener("submit", async function (e) {
       e.preventDefault();
       var em = $q("#adlEmail").value.trim(), pw = $q("#adlPass").value, b = $q("#adlGo");

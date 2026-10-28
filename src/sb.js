@@ -125,6 +125,7 @@
   H.rvClaim = async function (id, choice) { var d = await K.rpc("rv_claim", { p_id: id, p_token: tk(id), p_choice: choice || "" }); return d; };
   H.rvStatus = function () { return K.rpc("admin_rv_status", {}, true); };
   H.dokuCreate = async function (id, group, pass) { var d = await K.fn("doku", { action: "create", id: id, token: tk(id), group: group, pass: pass || "" }); if (d && d.error) throw new Error(d.error); return d; };
+  H.rpcPub = function (name, args) { return K.rpc(name, args, false); };
   H.changePassword = function (o, n) { return K.changePassword(o, n); };
   H.tsVerify = async function (token, action) { var d = await K.fn("turnstile", { action: action, token: token }); if (!d || d.error || !d.pass) throw new Error((d && d.error) || "The security check failed. Please try again."); return d; };
   H.tsGet = function () { return K.rpc("admin_ts_get", {}, true); };
@@ -210,7 +211,7 @@
     document.body.appendChild(el);
     var err = $q("#adlErr"); if (msg) { err.textContent = msg; err.hidden = false; }
     el.querySelector("a").addEventListener("click", function () { el.remove(); });
-    var tsh = null; tsLoginMount(el.querySelector("form")).then(function (h) { tsh = h; });
+    var tsh = null; tsLoginMount(el.querySelector("form")).then(function (h) { tsh = h; }); loginHelp(el.querySelector("form"));
     el.querySelector("form").addEventListener("submit", async function (e) {
       e.preventDefault();
       var em = $q("#adlEmail").value.trim(), pw = $q("#adlPass").value, b = $q("#adlGo");
@@ -242,7 +243,7 @@
     var err = $q("#adlErr");
     if (msg) { err.textContent = msg; err.hidden = false; }
     $q("#adlEmail").focus();
-    var tsh = null; tsLoginMount(el.querySelector("form")).then(function (h) { tsh = h; });
+    var tsh = null; tsLoginMount(el.querySelector("form")).then(function (h) { tsh = h; }); loginHelp(el.querySelector("form"));
     el.querySelector("form").addEventListener("submit", async function (e) {
       e.preventDefault();
       var em = $q("#adlEmail").value.trim(), pw = $q("#adlPass").value, b = $q("#adlGo");
@@ -258,12 +259,13 @@
 
   /* ================= Cloudflare Turnstile on the sign-in forms ================= */
   // Supabase Auth checks the token itself once "CAPTCHA protection" is switched on in the Supabase dashboard (Authentication -> Attack Protection)
-  var TSL = { key: undefined, loading: null };
+  var TSL = { key: undefined, loading: null, help: "" };
   async function tsLoginKey() {
     if (TSL.key !== undefined) return TSL.key;
     try {
       var pub = await K.rpc("shop_public", {}), st = pub && pub.docs && pub.docs.settings;
       if (typeof st === "string") st = JSON.parse(st);
+      TSL.help = st && st.affHelpEmail ? String(st.affHelpEmail) : "";
       var T = st && st.turnstile;
       TSL.key = (T && T.on && T.siteKey && !(T.where && T.where.login === false)) ? String(T.siteKey) : "";
     } catch (e) { TSL.key = ""; }
@@ -276,6 +278,15 @@
       s.onload = function () { res(); }; s.onerror = function () { TSL.loading = null; rej(new Error("The security check could not load.")); };
       document.head.appendChild(s);
     }));
+  }
+  // under the sign-in button: "Forgot your password? Email us" and the link to apply as an affiliator
+  async function loginHelp(form) {
+    await tsLoginKey();
+    var C = window.DELIDOME_CONFIG || {}, shop = String(C.shopUrl || "").replace(/\/+$/, ""), p = document.createElement("p");
+    p.className = "adl-sub"; p.style.cssText = "margin-top:12px;display:grid;gap:6px";
+    var mail = TSL.help ? '<a href="mailto:' + TSL.help.replace(/"/g, "") + '?subject=' + encodeURIComponent("Password reset request") + '&body=' + encodeURIComponent("Hello, I forgot my password. Please reset it.\nMy username: ") + '">Forgot your password? Email us</a>' : "Forgot your password? Ask the owner to reset it.";
+    p.innerHTML = '<span>' + mail + '</span>' + (shop ? '<span>Want to become an affiliator? <a href="' + shop + '/?apply=affiliate" target="_blank" rel="noopener">Apply here</a></span>' : "");
+    form.appendChild(p);
   }
   // adds the widget above the sign-in button; returns { key, token(), reset() }
   async function tsLoginMount(form) {

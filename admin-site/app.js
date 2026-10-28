@@ -161,7 +161,8 @@ function slotChange(list,i,el){const x=list[i];if(!x)return false;const row=el.c
   const nl=slotMk(f,t);if(list.some((y,j)=>j!==i&&y.t===nl)){toast("That time slot already exists.");renderAdmin();return false}x.t=nl;return true}
 const SLOT_PRESETS=Array.from({length:23},(_,h)=>String(h).padStart(2,"0")+" to "+String(h+1).padStart(2,"0"));
 function migrate(db){
-  if(db.settings&&!db.settings.turnstile)db.settings.turnstile={on:false,siteKey:"",where:{whatsapp:true,courier:true,doku:true,proof:true,coupon:true}};
+  if(db.settings&&!db.settings.turnstile)db.settings.turnstile={on:false,siteKey:"",where:{whatsapp:true,courier:true,doku:true,proof:true,coupon:true,apply:true}};
+  if(db.settings&&db.settings.turnstile&&db.settings.turnstile.where&&db.settings.turnstile.where.apply===undefined)db.settings.turnstile.where.apply=true;
   if(db.settings&&!db.settings.doku)db.settings.doku={on:false,methods:[{k:"va",name:"Virtual account (bank)",on:true,payer:"owner",pct:0,fixed:0},{k:"qris",name:"QRIS",on:true,payer:"owner",pct:0,fixed:0},{k:"ewallet",name:"E-wallet (OVO, DANA, ShopeePay)",on:true,payer:"customer",pct:0,fixed:0},{k:"card",name:"Credit card",on:false,payer:"customer",pct:0,fixed:0},{k:"retail",name:"Alfamart / Indomaret",on:false,payer:"customer",pct:0,fixed:0},{k:"paylater",name:"PayLater",on:false,payer:"customer",pct:0,fixed:0}]};
   if(db.settings){const D={samedayOn:false,samedayLeadH:3,samedayCutoff:15,samedayFee:8,samedayPayMin:60,minPayMin:30,rejPayMin:120,payCdColor:"#C8102E",payCdSize:"L",payCdFx:true,pickupOn:true,pickupLeadH:24,schedOn:true,schedLeadH:24,samedayMsg:"Sorry Sameday closed Today.\nyour order will be send tomorrow.",sdSlotOn:false,sdSlots:[{t:"16 to 17",on:true,limit:0},{t:"17 to 18",on:true,limit:0},{t:"18 to 19",on:true,limit:0}],samedayOk:"OK",samedayGo:"Continue with Sameday anyway",schedMaxDays:7,courierNoteOn:true,courierNote:"We need at least 3 hours of lead time. Once we have requested a courier, any delay or failed delivery is beyond our responsibility.",coWarnOn:true,coWarnEmoji:"⚠️",coWarnTitle:"Wait! Check your details",coWarnText:"Please make sure your name, WhatsApp number and address are correct before you place your order. We use them to send you updates and deliver your box.",coWarnOk:"Yes, my details are correct",coWarnBack:"Go back"};for(const k in D)if(db.settings[k]===undefined)db.settings[k]=D[k];
     if(!Array.isArray(db.settings.slots)){const hs=(db.settings.times||[]).map(slotStartMin).filter(m=>m!==null).map(m=>Math.floor(m/60));if(!hs.length)hs.push(10);db.settings.slots=SLOT_PRESETS.map((t,h)=>({t,on:true,limit:0})).filter((x,h)=>hs.includes(h))}
@@ -1408,6 +1409,31 @@ function rateOrder(o,rt){
     p.reviews.push({id:uid(),user:(o.customer.name.split(' ')[0]||'Customer').slice(0,30),text:(r.comment||'').trim()||'Rated '+r.n+' out of 5',stars:r.n,at:Date.now(),src:'customer',orderId:o.id});o.rated[pid]=r.n});
   saveDB();return Promise.resolve();
 }
+/* --- "Become an affiliator": the apply form and the status page (private link) --- */
+const AP={f:{name:"",phone:"",email:"",handle:"",social:"",why:""},busy:false,err:"",done:null,status:null};
+const AP_KEY="delidome-affapp";
+function apOpen(){AP.err="";AP.done=null;AP.status=null;let tok="";try{tok=localStorage.getItem(AP_KEY)||""}catch(e){}apDraw();$("#apSheet").hidden=false;document.body.style.overflow="hidden";if(tok)apStatus(tok,true)}
+function apClose(){const m=$("#apSheet");if(!m||m.hidden)return;m.hidden=true;document.body.style.overflow=""}
+async function apStatus(tok,quiet){if(!SBH.on)return;try{const r=await SBH.rpcPub("aff_app_status",{p_token:tok});if(r&&r.ok){AP.status=r;apDraw()}else if(!quiet){AP.err="We could not find that application.";apDraw()}}catch(e){}}
+function apDraw(){const c=$("#apCard"),F=AP.f,S=AP.status,shop=location.origin+location.pathname;
+  const head=`<div class="sheet-top"><div><h3>🤝 Become an affiliator</h3></div><button class="x" type="button" data-apclose aria-label="Close">✕</button></div>`;
+  if(!SBH.on){c.innerHTML=head+`<p class="mo-sub">Applications work on the live shop.</p>`;return}
+  if(S&&S.ok){const m=S.status==="approved"?`<div class="mo-pay" style="background:#E6F6EC;border-color:#9AD3AE"><b>✅ Approved!</b><span>Hi ${esc(S.name)}. We sent you your sign-in details${S.username?` (username <b>${esc(S.username)}</b>)`:""}. Please check your WhatsApp or email.</span></div>`
+      :S.status==="rejected"?`<div class="mo-pay" style="background:#FCE3E8"><b>Sorry, not this time</b><span>Hi ${esc(S.name)}. ${S.reason?"Reason: "+esc(S.reason):"We cannot accept your application."}</span></div>`
+      :`<div class="mo-pay"><b>⏳ We are looking at your application</b><span>Hi ${esc(S.name)}. We will answer by WhatsApp or email. You can come back to this page anytime to check.</span></div>`;
+    c.innerHTML=head+m+`<div class="colin" style="margin-top:12px"><button class="btn btn-ghost-blue btn-sm" type="button" data-apclose>Close</button></div>`;return}
+  const f=(l,k,o={})=>`<div class="field"><label>${l}</label>${o.rows?`<textarea data-apf="${k}" rows="${o.rows}" maxlength="${o.max||300}" placeholder="${esc(o.ph||"")}">${esc(F[k])}</textarea>`:`<input data-apf="${k}" ${o.type?`type="${o.type}"`:""} maxlength="${o.max||80}" value="${esc(F[k])}" placeholder="${esc(o.ph||"")}" autocomplete="${o.ac||"off"}">`}</div>`;
+  c.innerHTML=head+(AP.done?`<div class="mo-pay" style="background:#E6F6EC;border-color:#9AD3AE"><b>✅ Application sent!</b><span>Thank you, ${esc(AP.done.name)}. We will answer by WhatsApp or email. Keep this private link to check your result:</span><input class="in" readonly value="${esc(shop+"?affstatus="+AP.done.token)}" onclick="this.select()"></div>`
+    :`<p class="mo-sub" style="margin:0 0 10px">Share our cookies with your followers and earn a commission on every order you bring. Tell us a little about you.</p>
+    <form class="form" id="apForm" novalidate>${f("Your name","name",{ac:"name"})}${f("WhatsApp number","phone",{type:"tel",ac:"tel",max:30})}${f("Email (optional)","email",{type:"email",ac:"email",max:120})}${f("Username you would like (optional)","handle",{max:30,ph:"like alpha"})}${f("Your Instagram / TikTok / website (optional)","social",{rows:2,max:300})}${f("Why do you want to join? How will you share us?","why",{rows:3,max:600})}
+    ${AP.err?`<p class="err" role="alert">${esc(AP.err)}</p>`:""}<button class="btn btn-blue" type="submit" ${AP.busy?"disabled":""}>${AP.busy?"Sending…":"Send my application"}</button></form>`)}
+$("#apSheet").addEventListener("click",e=>{if(e.target.id==="apSheet"||e.target.closest("[data-apclose]"))apClose()});
+$("#apSheet").addEventListener("input",e=>{const k=e.target.dataset.apf;if(k)AP.f[k]=e.target.value});
+$("#apSheet").addEventListener("submit",async e=>{e.preventDefault();if(AP.busy)return;const F=AP.f;
+  if(String(F.name).trim().length<2){AP.err="Please type your name.";apDraw();return}if(normPhone(F.phone).length<7){AP.err="Please type a valid WhatsApp number.";apDraw();return}
+  AP.busy=true;AP.err="";apDraw();
+  try{const r=await withPass("apply",()=>SBH.rpcPub("aff_apply",{p:F}));if(r&&r.token){try{localStorage.setItem(AP_KEY,r.token)}catch(x){}AP.done={name:F.name,token:r.token};AP.f={name:"",phone:"",email:"",handle:"",social:"",why:""}}}
+  catch(er){AP.err=er.message||"Couldn't send. Please try again."}AP.busy=false;apDraw()});
 function openReviews(id){RV.pid=id;RV.stars=0;RV.oid=null;renderReviews();$("#rvSheet").hidden=false;document.body.style.overflow="hidden"}
 function closeReviews(){const m=$("#rvSheet");if(!m||m.hidden)return;m.hidden=true;document.body.style.overflow=""}
 $("#menuGrid").addEventListener("click",e=>{const b=e.target.closest("[data-reviews]");if(b)openReviews(b.dataset.reviews)});
@@ -2755,6 +2781,8 @@ function affCapture(){if(affDone)return;affDone=true;try{
     localStorage.setItem(AFF_KEY,JSON.stringify({code,src,at:Date.now()}));
     if(SBH.on&&SBH.affHit)SBH.affHit(code,vid,src)}
   if(q.get("paid"))setTimeout(dkReturn,1800);
+  if(q.get("apply")==="affiliate")setTimeout(apOpen,600);
+  if(q.get("affstatus")){const tk=q.get("affstatus");try{localStorage.setItem(AP_KEY,tk)}catch(e){}setTimeout(apOpen,600)}
   const sz=parseInt(q.get("size"),10),again=(fn,n=20)=>{const t=setInterval(()=>{let ok=false;try{ok=fn()}catch(e){}if(ok||--n<=0)clearInterval(t)},400)};
   if(to)again(()=>{const c=document.querySelector(`.card[data-id="${CSS.escape(to)}"]`);if(!c)return false;c.scrollIntoView({block:"center",behavior:RM?"auto":"smooth"});c.classList.add("affhl");setTimeout(()=>c.classList.remove("affhl"),2600);return true});
   if(sz>0&&!to)again(()=>{if(!activeSizes().length)return false;if(!activeSizes().some(x=>x.n===sz))return true;if(!S.editId&&S.size!==sz)setSize(sz);
@@ -4147,7 +4175,7 @@ $("#amain").addEventListener("click",async e=>{if(!e.target.closest("[data-dksav
 const TSA={st:null,loading:false,busy:false};
 async function tsLoadSt(){if(TSA.loading||!SBH.on)return;TSA.loading=true;try{TSA.st=await SBH.tsGet()}catch(e){TSA.st={err:e.message}}TSA.loading=false;if(A.tab==="settings")renderAdmin()}
 function viewTs(){const T=DB.settings.turnstile,st=TSA.st;if(SBH.on&&st===null&&!TSA.loading)tsLoadSt();
-  const W=[["whatsapp","WhatsApp number / placing the order"],["courier","Courier price check"],["doku","Checkout with DOKU"],["proof","Uploading a payment proof"],["coupon","Coupon input"],["login","Team, staff and affiliator sign-in"]];
+  const W=[["whatsapp","WhatsApp number / placing the order"],["courier","Courier price check"],["doku","Checkout with DOKU"],["proof","Uploading a payment proof"],["coupon","Coupon input"],["login","Team, staff and affiliator sign-in"],["apply","Affiliator application form"]];
   return `<h3 style="margin:18px 0 4px;font-size:16px">Security check (Cloudflare Turnstile)</h3><p class="sub" style="margin-top:0">A quick "I am not a robot" check that blocks bots. Customers see it once when they do one of the actions below, then it stays valid for 10 minutes. Create a free Turnstile widget in your Cloudflare account to get the two keys. Goes live when you press Save &amp; publish.</p>
     <label class="chk"><input type="checkbox" data-tsk="on" ${T.on?"checked":""}> <b>Security check is ${T.on?"ON":"OFF"}</b></label>
     <label class="af" style="margin-top:8px">Site key (public)<input class="in" data-tsk="siteKey" maxlength="80" value="${esc(T.siteKey||"")}" placeholder="0x4AAAAAAA..."></label>
@@ -4224,6 +4252,7 @@ function viewSettings(){
         <label class="chk" style="padding-bottom:12px"><input type="checkbox" data-k="settings::payCdFx" ${s.payCdFx!==false?"checked":""}> Lively (pulsing)</label></div>
       ${viewDoku()}
       ${viewTs()}
+      <h3 style="margin:18px 0 4px;font-size:16px">Affiliator help</h3><p class="sub" style="margin-top:0">Shown on the sign-in page as "Forgot your password? Email us". It opens an email to this address.</p><label class="af">Help email<input class="in" type="email" maxlength="120" data-k="settings::affHelpEmail" value="${esc(DB.settings.affHelpEmail||"")}" placeholder="you@yourshop.com"></label>
       <h3 style="margin:18px 0 4px;font-size:16px">Payment methods</h3><p class="sub" style="margin-top:0">Add as many as you need (bank, e-wallet, QRIS). Customers see the ones that are switched on. If you add a picture such as a QR code, customers can tap it to save it.</p>
       <div class="stack" style="gap:12px">${DB.payMethods.map(m=>`<div class="pmcard">
         <div class="pmtop"><span class="sw" title="Show to customers"><input type="checkbox" data-pmon="${m.id}" ${m.on?"checked":""} aria-label="Show ${esc(m.name||"method")} to customers"><span></span></span><input class="in" data-pm="${m.id}|name" maxlength="40" value="${esc(m.name)}" placeholder="Method name, e.g. Bank transfer" aria-label="Method name"><button class="danger" type="button" data-pmdel="${m.id}">Delete</button></div>
@@ -6383,6 +6412,33 @@ async function affLoadRep(id,mine){const [f,t]=afRange();AF.repLoading=true;
 async function affLoadProds(){try{const r=await SBH.rpc("shop_public",{});AF.prods=(r.products||[]).map(p=>({id:p.id,name:p.name,status:p.status}));AF.sizes=(r.sizes||[]).filter(z=>z.active!==false).map(z=>({n:z.n})).sort((a,b)=>a.n-b.n)}catch(e){AF.prods=[];AF.sizes=[]}
   if(AF.rep){if(document.getElementById("affView"))affRender();else if(A.tab==="affiliates")renderAdmin()}}
 const AF_QUICK={flash:["🔥 Flash sale is on","A flash sale is running now. Share your link so your followers can order while it lasts."],coupon:["🎟 New coupon","A new coupon is live: CODE. Share it with your followers."],feature:["✨ New feature","New for affiliators: "]};
+/* --- applications to become an affiliator (owner): approve with an account, or reject with a reason --- */
+const AFA={list:null,loading:false,err:"",open:null,f:{},msg:null,busy:false};
+async function afaLoad(){if(AFA.loading||!SBH.on)return;AFA.loading=true;try{AFA.list=await SBH.rpc("admin_aff_apps",{});AFA.err=""}catch(e){AFA.err=e.message;AFA.list=[]}AFA.loading=false;if(A.tab==="affiliates")renderAdmin()}
+const afaPw=()=>{const c="abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";let s="";for(let i=0;i<10;i++)s+=c[Math.floor(Math.random()*c.length)];return s};
+function afaMsgFor(a,kind,d){const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,""),site=location.origin+location.pathname.replace(/[^/]*$/,"");
+  return kind==="approve"?`Hi ${a.name}! Your application to become an affiliator at ${(DB.page&&DB.page.name)||"our shop"} is approved. 🎉\nSign in here: ${site}\nUsername: ${d.username}\nPassword: ${d.password}\nPlease change your password after you sign in. In your dashboard you can also choose your own coupon name.`
+    :`Hi ${a.name}, thank you for applying to become an affiliator at ${(DB.page&&DB.page.name)||"our shop"}. Sorry, we cannot accept your application this time.\nReason: ${d.reason}\nYou are welcome to apply again later.`}
+function afAppsHTML(){const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,""),link=shop+"/?apply=affiliate";
+  if(AFA.list===null&&!AFA.loading)afaLoad();const L=AFA.list||[],pend=L.filter(x=>x.status==="pending").length,F=AFA.f;
+  const wa=(a,t)=>`https://wa.me/${String(a.phone).replace(/\D/g,"").replace(/^0/,"62")}?text=${encodeURIComponent(t)}`;
+  const card=a=>{const open=AFA.open===a.id;return `<div class="pmcard" style="gap:6px"><div class="afhead"><div><b>${esc(a.name)}</b> <span class="note" style="margin:0">${esc(a.phone)}${a.email?" · "+esc(a.email):""}</span><div class="note" style="margin:2px 0 0">${new Date(a.at).toLocaleString()} · ${a.status==="pending"?"⏳ waiting":a.status==="approved"?"✅ approved":"✕ rejected"}${a.handle?" · wants @"+esc(a.handle):""}</div></div></div>
+      ${a.social?`<div class="note" style="margin:0"><b>Social:</b> ${esc(a.social)}</div>`:""}${a.why?`<div class="note" style="margin:0"><b>Why:</b> ${esc(a.why)}</div>`:""}${a.status==="rejected"&&a.reason?`<div class="note" style="margin:0"><b>Reason:</b> ${esc(a.reason)}</div>`:""}
+      ${a.status==="pending"&&!open?`<div class="colin" style="gap:8px"><button class="btn btn-blue btn-sm" type="button" data-afaopen="${a.id}|approve">Approve</button><button class="btn btn-ghost-blue btn-sm" type="button" data-afaopen="${a.id}|reject">Reject</button></div>`:""}
+      ${open&&F.kind==="approve"?`<div class="grid2"><label class="af">Username<input class="in" data-afaf="username" maxlength="30" value="${esc(F.username||"")}"></label><label class="af">Link code (letters or numbers)<input class="in" data-afaf="code" maxlength="20" value="${esc(F.code||"")}"></label><label class="af">Commission (%)<input class="in" type="number" min="0" max="90" step="0.5" data-afaf="rate" value="${esc(F.rate??10)}"></label><label class="af">Password (they can change it)<input class="in" data-afaf="password" maxlength="40" value="${esc(F.password||"")}"></label></div>
+        <div class="colin" style="gap:8px"><button class="btn btn-blue btn-sm" type="button" data-afadecide="${a.id}|approve" ${AFA.busy?"disabled":""}>Create the account</button><button class="ghost" type="button" data-afaopen="">Cancel</button></div>`:""}
+      ${open&&F.kind==="reject"?`<label class="af">Reason (the applicant sees it)<textarea class="in" rows="2" maxlength="300" data-afaf="reason">${esc(F.reason||"")}</textarea></label><div class="colin" style="gap:8px"><button class="btn btn-blue btn-sm" type="button" data-afadecide="${a.id}|reject" ${AFA.busy?"disabled":""}>Reject</button><button class="ghost" type="button" data-afaopen="">Cancel</button></div>`:""}
+      ${AFA.msg&&AFA.msg.id===a.id?`<div class="rvu" style="--ub:#E6F7EC;--ui:#0A4D27"><span aria-hidden="true">💬</span><p style="white-space:pre-wrap">${esc(AFA.msg.text)}</p><a class="btn btn-blue btn-sm" target="_blank" rel="noopener" href="${esc(wa(a,AFA.msg.text))}">Send on WhatsApp</a>${a.email?`<a class="btn btn-ghost-blue btn-sm" href="mailto:${esc(a.email)}?subject=${encodeURIComponent("Your affiliator application")}&body=${encodeURIComponent(AFA.msg.text)}">Send by email</a>`:""}</div>`:""}</div>`};
+  return `<section class="panel"><h2>📝 Applications to become an affiliator${pend?` <span class="spill" style="background:#C8102E;color:#fff">${pend} new</span>`:""}</h2>
+    <div class="af">Apply link (send it to customers)<div class="colin"><input class="in" readonly value="${esc(link)}" onclick="this.select()" style="flex:1"><button class="ghost" type="button" data-afacopy="${esc(link)}">Copy</button></div></div>
+    ${AFA.err?`<p class="err">${esc(AFA.err)}</p>`:""}<div class="stack" style="gap:8px;margin-top:10px">${L.length?L.map(card).join(""):`<p class="note">${AFA.loading?"Loading…":"No applications yet."}</p>`}</div></section>`}
+document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.afaf;if(k)AFA.f[k]=e.target.value});
+document.addEventListener("click",async e=>{const c=e.target.closest("[data-afacopy]");if(c){try{await navigator.clipboard.writeText(c.dataset.afacopy);toast("Link copied")}catch(x){toast(c.dataset.afacopy)}return}
+  const o=e.target.closest("[data-afaopen]");if(o){const [id,kind]=(o.dataset.afaopen||"").split("|");AFA.msg=null;if(!id){AFA.open=null;AFA.f={}}else{const a=(AFA.list||[]).find(x=>x.id===id)||{};AFA.open=id;AFA.f=kind==="approve"?{kind,username:(a.handle||String(a.name||"").toLowerCase().replace(/[^a-z0-9]+/g,"")).slice(0,30),code:String(a.handle||a.name||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,12),rate:10,password:afaPw()}:{kind,reason:""}}renderAdmin();return}
+  const d=e.target.closest("[data-afadecide]");if(!d)return;const [id,kind]=d.dataset.afadecide.split("|"),a=(AFA.list||[]).find(x=>x.id===id),F=AFA.f;if(!a)return;AFA.busy=true;renderAdmin();
+  try{await SBH.rpc("admin_aff_app_decide",{p_id:id,p_action:kind,p_reason:F.reason||"",p:{username:F.username,code:F.code,rate:F.rate,password:F.password}});
+    AFA.msg={id,text:afaMsgFor(a,kind,F)};AFA.open=null;AFA.list=null;AF.list=null;toast(kind==="approve"?"Account created. Send them the message below.":"Rejected. You can send them the reason below.")}catch(er){toast(er.message||"Couldn't save.")}
+  AFA.busy=false;renderAdmin()});
 function afAnnHTML(L){const F=AF.annf||(AF.annf={to:"all",title:"",body:""}),A=AF.ann||[];
   return `<section class="panel"><h2>📣 Announcements to affiliators</h2><p class="note" style="margin:2px 0 10px">It appears in the 🔔 bell on their page. Use it for a flash sale, a new coupon or a new feature. Order, payout and account news is sent automatically.</p>
     <div class="chips">${[["flash","🔥 Flash sale"],["coupon","🎟 New coupon"],["feature","✨ New feature"]].map(([k,l])=>`<button class="fchip" type="button" data-afannfill="${k}">${l}</button>`).join("")}</div>
@@ -6448,6 +6504,7 @@ function viewAffiliates(){
     ${(()=>{const m={};L.forEach(x=>(x.sources||[]).forEach(r=>{const o=m[r.src]||(m[r.src]={src:r.src,views:0,orders:0,sales:0,who:{}});o.views+=+r.views||0;o.orders+=+r.orders||0;o.sales+=+r.sales||0;if((+r.views||0)+(+r.orders||0)>0)o.who[x.code]=(o.who[x.code]||0)+(+r.views||0)+(+r.orders||0)}));
       const rows=Object.values(m).sort((a,b)=>b.views-a.views||b.orders-a.orders),tv=rows.reduce((a,r)=>a+r.views,0)||1;
       return `<section class="panel"><h2>Where visitors came from (all affiliators)</h2>${rows.length?`<div class="aftable"><div class="afrow afth afsrc"><span>Source</span><span>Views</span><span>Orders</span><span>Sales</span><span>Top affiliators</span></div>${rows.map(r=>`<div class="afrow afsrc"><span>${esc(AF_SRC[r.src]||r.src)}<i class="afbar" style="width:${Math.round(r.views/tv*100)}%"></i></span><span>${r.views} <small>${Math.round(r.views/tv*100)}%</small></span><span>${r.orders}</span><span>${money(r.sales)}</span><span>${Object.entries(r.who).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([c])=>esc(c)).join(", ")}</span></div>`).join("")}</div>`:`<p class="note">No visits from affiliate links in this period yet.</p>`}</section>`})()}
+    ${afAppsHTML()}
     ${afAnnHTML(L)}
     ${form}
     <section class="panel"><h2>Affiliators (${L.length})</h2>
@@ -6553,7 +6610,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 17:25 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 17:35 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;afCpnLoad();AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

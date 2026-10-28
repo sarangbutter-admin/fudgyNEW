@@ -158,7 +158,8 @@ function slotChange(list,i,el){const x=list[i];if(!x)return false;const row=el.c
   const nl=slotMk(f,t);if(list.some((y,j)=>j!==i&&y.t===nl)){toast("That time slot already exists.");renderAdmin();return false}x.t=nl;return true}
 const SLOT_PRESETS=Array.from({length:23},(_,h)=>String(h).padStart(2,"0")+" to "+String(h+1).padStart(2,"0"));
 function migrate(db){
-  if(db.settings&&!db.settings.turnstile)db.settings.turnstile={on:false,siteKey:"",where:{whatsapp:true,courier:true,doku:true,proof:true,coupon:true}};
+  if(db.settings&&!db.settings.turnstile)db.settings.turnstile={on:false,siteKey:"",where:{whatsapp:true,courier:true,doku:true,proof:true,coupon:true,apply:true}};
+  if(db.settings&&db.settings.turnstile&&db.settings.turnstile.where&&db.settings.turnstile.where.apply===undefined)db.settings.turnstile.where.apply=true;
   if(db.settings&&!db.settings.doku)db.settings.doku={on:false,methods:[{k:"va",name:"Virtual account (bank)",on:true,payer:"owner",pct:0,fixed:0},{k:"qris",name:"QRIS",on:true,payer:"owner",pct:0,fixed:0},{k:"ewallet",name:"E-wallet (OVO, DANA, ShopeePay)",on:true,payer:"customer",pct:0,fixed:0},{k:"card",name:"Credit card",on:false,payer:"customer",pct:0,fixed:0},{k:"retail",name:"Alfamart / Indomaret",on:false,payer:"customer",pct:0,fixed:0},{k:"paylater",name:"PayLater",on:false,payer:"customer",pct:0,fixed:0}]};
   if(db.settings){const D={samedayOn:false,samedayLeadH:3,samedayCutoff:15,samedayFee:8,samedayPayMin:60,minPayMin:30,rejPayMin:120,payCdColor:"#C8102E",payCdSize:"L",payCdFx:true,pickupOn:true,pickupLeadH:24,schedOn:true,schedLeadH:24,samedayMsg:"Sorry Sameday closed Today.\nyour order will be send tomorrow.",sdSlotOn:false,sdSlots:[{t:"16 to 17",on:true,limit:0},{t:"17 to 18",on:true,limit:0},{t:"18 to 19",on:true,limit:0}],samedayOk:"OK",samedayGo:"Continue with Sameday anyway",schedMaxDays:7,courierNoteOn:true,courierNote:"We need at least 3 hours of lead time. Once we have requested a courier, any delay or failed delivery is beyond our responsibility.",coWarnOn:true,coWarnEmoji:"⚠️",coWarnTitle:"Wait! Check your details",coWarnText:"Please make sure your name, WhatsApp number and address are correct before you place your order. We use them to send you updates and deliver your box.",coWarnOk:"Yes, my details are correct",coWarnBack:"Go back"};for(const k in D)if(db.settings[k]===undefined)db.settings[k]=D[k];
     if(!Array.isArray(db.settings.slots)){const hs=(db.settings.times||[]).map(slotStartMin).filter(m=>m!==null).map(m=>Math.floor(m/60));if(!hs.length)hs.push(10);db.settings.slots=SLOT_PRESETS.map((t,h)=>({t,on:true,limit:0})).filter((x,h)=>hs.includes(h))}
@@ -1393,6 +1394,31 @@ function rateOrder(o,rt){
     p.reviews.push({id:uid(),user:(o.customer.name.split(' ')[0]||'Customer').slice(0,30),text:(r.comment||'').trim()||'Rated '+r.n+' out of 5',stars:r.n,at:Date.now(),src:'customer',orderId:o.id});o.rated[pid]=r.n});
   saveDB();return Promise.resolve();
 }
+/* --- "Become an affiliator": the apply form and the status page (private link) --- */
+const AP={f:{name:"",phone:"",email:"",handle:"",social:"",why:""},busy:false,err:"",done:null,status:null};
+const AP_KEY="delidome-affapp";
+function apOpen(){AP.err="";AP.done=null;AP.status=null;let tok="";try{tok=localStorage.getItem(AP_KEY)||""}catch(e){}apDraw();$("#apSheet").hidden=false;document.body.style.overflow="hidden";if(tok)apStatus(tok,true)}
+function apClose(){const m=$("#apSheet");if(!m||m.hidden)return;m.hidden=true;document.body.style.overflow=""}
+async function apStatus(tok,quiet){if(!SBH.on)return;try{const r=await SBH.rpcPub("aff_app_status",{p_token:tok});if(r&&r.ok){AP.status=r;apDraw()}else if(!quiet){AP.err="We could not find that application.";apDraw()}}catch(e){}}
+function apDraw(){const c=$("#apCard"),F=AP.f,S=AP.status,shop=location.origin+location.pathname;
+  const head=`<div class="sheet-top"><div><h3>🤝 Become an affiliator</h3></div><button class="x" type="button" data-apclose aria-label="Close">✕</button></div>`;
+  if(!SBH.on){c.innerHTML=head+`<p class="mo-sub">Applications work on the live shop.</p>`;return}
+  if(S&&S.ok){const m=S.status==="approved"?`<div class="mo-pay" style="background:#E6F6EC;border-color:#9AD3AE"><b>✅ Approved!</b><span>Hi ${esc(S.name)}. We sent you your sign-in details${S.username?` (username <b>${esc(S.username)}</b>)`:""}. Please check your WhatsApp or email.</span></div>`
+      :S.status==="rejected"?`<div class="mo-pay" style="background:#FCE3E8"><b>Sorry, not this time</b><span>Hi ${esc(S.name)}. ${S.reason?"Reason: "+esc(S.reason):"We cannot accept your application."}</span></div>`
+      :`<div class="mo-pay"><b>⏳ We are looking at your application</b><span>Hi ${esc(S.name)}. We will answer by WhatsApp or email. You can come back to this page anytime to check.</span></div>`;
+    c.innerHTML=head+m+`<div class="colin" style="margin-top:12px"><button class="btn btn-ghost-blue btn-sm" type="button" data-apclose>Close</button></div>`;return}
+  const f=(l,k,o={})=>`<div class="field"><label>${l}</label>${o.rows?`<textarea data-apf="${k}" rows="${o.rows}" maxlength="${o.max||300}" placeholder="${esc(o.ph||"")}">${esc(F[k])}</textarea>`:`<input data-apf="${k}" ${o.type?`type="${o.type}"`:""} maxlength="${o.max||80}" value="${esc(F[k])}" placeholder="${esc(o.ph||"")}" autocomplete="${o.ac||"off"}">`}</div>`;
+  c.innerHTML=head+(AP.done?`<div class="mo-pay" style="background:#E6F6EC;border-color:#9AD3AE"><b>✅ Application sent!</b><span>Thank you, ${esc(AP.done.name)}. We will answer by WhatsApp or email. Keep this private link to check your result:</span><input class="in" readonly value="${esc(shop+"?affstatus="+AP.done.token)}" onclick="this.select()"></div>`
+    :`<p class="mo-sub" style="margin:0 0 10px">Share our cookies with your followers and earn a commission on every order you bring. Tell us a little about you.</p>
+    <form class="form" id="apForm" novalidate>${f("Your name","name",{ac:"name"})}${f("WhatsApp number","phone",{type:"tel",ac:"tel",max:30})}${f("Email (optional)","email",{type:"email",ac:"email",max:120})}${f("Username you would like (optional)","handle",{max:30,ph:"like alpha"})}${f("Your Instagram / TikTok / website (optional)","social",{rows:2,max:300})}${f("Why do you want to join? How will you share us?","why",{rows:3,max:600})}
+    ${AP.err?`<p class="err" role="alert">${esc(AP.err)}</p>`:""}<button class="btn btn-blue" type="submit" ${AP.busy?"disabled":""}>${AP.busy?"Sending…":"Send my application"}</button></form>`)}
+$("#apSheet").addEventListener("click",e=>{if(e.target.id==="apSheet"||e.target.closest("[data-apclose]"))apClose()});
+$("#apSheet").addEventListener("input",e=>{const k=e.target.dataset.apf;if(k)AP.f[k]=e.target.value});
+$("#apSheet").addEventListener("submit",async e=>{e.preventDefault();if(AP.busy)return;const F=AP.f;
+  if(String(F.name).trim().length<2){AP.err="Please type your name.";apDraw();return}if(normPhone(F.phone).length<7){AP.err="Please type a valid WhatsApp number.";apDraw();return}
+  AP.busy=true;AP.err="";apDraw();
+  try{const r=await withPass("apply",()=>SBH.rpcPub("aff_apply",{p:F}));if(r&&r.token){try{localStorage.setItem(AP_KEY,r.token)}catch(x){}AP.done={name:F.name,token:r.token};AP.f={name:"",phone:"",email:"",handle:"",social:"",why:""}}}
+  catch(er){AP.err=er.message||"Couldn't send. Please try again."}AP.busy=false;apDraw()});
 function openReviews(id){RV.pid=id;RV.stars=0;RV.oid=null;renderReviews();$("#rvSheet").hidden=false;document.body.style.overflow="hidden"}
 function closeReviews(){const m=$("#rvSheet");if(!m||m.hidden)return;m.hidden=true;document.body.style.overflow=""}
 $("#menuGrid").addEventListener("click",e=>{const b=e.target.closest("[data-reviews]");if(b)openReviews(b.dataset.reviews)});
@@ -2312,6 +2338,8 @@ function affCapture(){if(affDone)return;affDone=true;try{
     localStorage.setItem(AFF_KEY,JSON.stringify({code,src,at:Date.now()}));
     if(SBH.on&&SBH.affHit)SBH.affHit(code,vid,src)}
   if(q.get("paid"))setTimeout(dkReturn,1800);
+  if(q.get("apply")==="affiliate")setTimeout(apOpen,600);
+  if(q.get("affstatus")){const tk=q.get("affstatus");try{localStorage.setItem(AP_KEY,tk)}catch(e){}setTimeout(apOpen,600)}
   const sz=parseInt(q.get("size"),10),again=(fn,n=20)=>{const t=setInterval(()=>{let ok=false;try{ok=fn()}catch(e){}if(ok||--n<=0)clearInterval(t)},400)};
   if(to)again(()=>{const c=document.querySelector(`.card[data-id="${CSS.escape(to)}"]`);if(!c)return false;c.scrollIntoView({block:"center",behavior:RM?"auto":"smooth"});c.classList.add("affhl");setTimeout(()=>c.classList.remove("affhl"),2600);return true});
   if(sz>0&&!to)again(()=>{if(!activeSizes().length)return false;if(!activeSizes().some(x=>x.n===sz))return true;if(!S.editId&&S.size!==sz)setSize(sz);
@@ -2830,7 +2858,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 17:25 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 17:35 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;afCpnLoad();AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

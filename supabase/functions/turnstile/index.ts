@@ -1,12 +1,12 @@
 // Delidome: Cloudflare Turnstile check. The shop shows the widget, sends the token here, and gets back a short "pass"
-// that the protected actions (WhatsApp / place order, coupon input, payment proof, courier check, DOKU checkout) need.
+// that the protected actions (WhatsApp / place order, coupon input, payment proof, courier check, DOKU checkout, affiliator application) need.
 // The Turnstile secret key is saved by the owner in Shop settings -> Security check (private table, never sent to the website).
 // Deploy:  supabase functions deploy turnstile
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
-const ACTIONS = ["whatsapp", "coupon", "proof", "courier", "doku"];
+const ACTIONS = ["whatsapp", "coupon", "proof", "courier", "doku", "apply"];
 const hex = (u: ArrayBuffer) => [...new Uint8Array(u)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
 Deno.serve(async (req) => {
