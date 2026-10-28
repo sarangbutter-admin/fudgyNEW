@@ -1174,7 +1174,7 @@ body.pcd-fx .bell-pay{animation:pcdGlow 1.6s ease-in-out infinite}
 .boxlid{position:absolute;inset:-6px;z-index:4;cursor:pointer;-webkit-tap-highlight-color:transparent;transform-origin:50% 100%}
 .boxlid[hidden]{display:none}
 .boxlid .lidin{position:absolute;inset:0;border-radius:20px;background:#fff;overflow:hidden;box-shadow:0 12px 26px rgba(0,0,40,.4),inset 0 -8px 0 #e6e9ff}
-.boxlid .lg{position:absolute;left:0;width:70%;top:50%;transform:translateY(-50%);display:grid;justify-items:center;gap:4px;color:var(--blue)}
+.boxlid .lg{position:absolute;left:0;width:70%;top:50%;transform:translateY(-50%);display:grid;justify-items:center;gap:4px;color:var(--blue);z-index:3}
 .boxlid .lg svg,.boxlid .lg img{width:56px;height:auto;max-height:46px;object-fit:contain}
 .boxlid .lg b{font:800 clamp(16px,4.6vw,22px)/1 var(--display);letter-spacing:-.01em}
 .boxlid .rib{position:absolute;background:linear-gradient(90deg,#B81E3A,#E8384F 25%,#F45B6E 50%,#E8384F 75%,#B81E3A)}
