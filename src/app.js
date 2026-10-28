@@ -6439,6 +6439,24 @@ document.addEventListener("click",async e=>{const c=e.target.closest("[data-afac
   try{await SBH.rpc("admin_aff_app_decide",{p_id:id,p_action:kind,p_reason:F.reason||"",p:{username:F.username,code:F.code,rate:F.rate,password:F.password}});
     AFA.msg={id,text:afaMsgFor(a,kind,F)};AFA.open=null;AFA.list=null;AF.list=null;toast(kind==="approve"?"Account created. Send them the message below.":"Rejected. You can send them the reason below.")}catch(er){toast(er.message||"Couldn't save.")}
   AFA.busy=false;renderAdmin()});
+/* --- forgot password: the owner checks the email came from the registered address, then sets a new password --- */
+const AFE={map:{},loaded:false},AFR={q:"",found:null,sender:"",pw:"",done:null,busy:false,err:""};
+async function afeLoad(){if(AFE.loaded||!SBH.on)return;AFE.loaded=true;try{AFE.map=await SBH.rpc("admin_aff_emails",{})||{}}catch(e){AFE.loaded=false}}
+function afResetHTML(){afeLoad();const R=AFR,f=R.found,same=f&&f.email&&R.sender&&R.sender.trim().toLowerCase()===String(f.email).toLowerCase();
+  const site=location.origin+location.pathname.replace(/[^/]*$/,"");
+  return `<section class="panel"><h2>🔑 Forgot password</h2><p class="note" style="margin:0 0 8px">When an affiliator emails you (subject "Forgot password reset"), type the username from their email, check that it came from their registered email, then set a new password and send it to them.</p>
+    <div class="colin" style="gap:8px;flex-wrap:wrap"><input class="in" data-afr="q" maxlength="40" placeholder="Username from their email" value="${esc(R.q)}" style="flex:1;min-width:160px"><button class="btn btn-ghost-blue btn-sm" type="button" data-afrfind ${R.busy?"disabled":""}>Look up</button></div>
+    ${R.err?`<p class="err">${esc(R.err)}</p>`:""}
+    ${f?`<div class="pmcard" style="margin-top:10px;gap:6px"><div><b>${esc(f.name||f.username)}</b> <span class="note" style="margin:0">@${esc(f.username)}${f.status!=="active"?" · "+esc(f.status):""}</span></div>
+      <div class="note" style="margin:0"><b>Registered email:</b> ${f.email?esc(f.email):"none saved yet (add it in Edit first)"}</div>
+      ${f.email?`<label class="af">The email address the message came from<input class="in" data-afr="sender" maxlength="120" value="${esc(R.sender)}" placeholder="from@email.com"></label>
+      ${R.sender?`<div class="note" style="margin:0"><b>${same?"✅ Same address. You can reset the password.":"✕ Different address. Do not reset it."}</b></div>`:""}`:""}
+      ${same?`<div class="grid2"><label class="af">New password<input class="in" data-afr="pw" maxlength="40" value="${esc(R.pw||(R.pw=afaPw()))}"></label></div><div class="colin"><button class="btn btn-blue btn-sm" type="button" data-afrset ${R.busy?"disabled":""}>Set new password</button></div>`:""}
+      ${R.done?`<div class="rvu" style="--ub:#E6F7EC;--ui:#0A4D27"><span aria-hidden="true">✅</span><p style="white-space:pre-wrap">${esc(R.done)}</p><a class="btn btn-blue btn-sm" href="mailto:${esc(f.email)}?subject=${encodeURIComponent("Your new password")}&body=${encodeURIComponent(R.done)}">Reply by email</a></div>`:""}</div>`:""}</section>`}
+document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.afr;if(k){AFR[k]=e.target.value;if(k==="sender"){clearTimeout(AFR.t);AFR.t=setTimeout(()=>{if(A.tab==="affiliates"){const y=scrollY;renderAdmin();scrollTo(0,y)}},500)}}});
+document.addEventListener("click",async e=>{const fb=e.target.closest("[data-afrfind]"),sb=e.target.closest("[data-afrset]");if(!fb&&!sb)return;
+  if(fb){AFR.busy=true;AFR.err="";AFR.found=null;AFR.done=null;AFR.sender="";AFR.pw="";renderAdmin();try{const r=await SBH.rpc("admin_aff_lookup",{p_username:AFR.q});if(r&&r.ok)AFR.found=r;else AFR.err="No affiliator with that username."}catch(er){AFR.err=er.message}AFR.busy=false;renderAdmin();return}
+  AFR.busy=true;renderAdmin();try{await SBH.rpc("admin_aff_reset",{p_id:AFR.found.id,p_password:AFR.pw});const site=location.origin+location.pathname.replace(/[^/]*$/,"");AFR.done=`Hi ${AFR.found.name||AFR.found.username}, we reset your password.\nUsername: ${AFR.found.username}\nNew password: ${AFR.pw}\nSign in at ${site} and change it in your dashboard.`;toast("Password reset")}catch(er){AFR.err=er.message}AFR.busy=false;renderAdmin()});
 function afAnnHTML(L){const F=AF.annf||(AF.annf={to:"all",title:"",body:""}),A=AF.ann||[];
   return `<section class="panel"><h2>📣 Announcements to affiliators</h2><p class="note" style="margin:2px 0 10px">It appears in the 🔔 bell on their page. Use it for a flash sale, a new coupon or a new feature. Order, payout and account news is sent automatically.</p>
     <div class="chips">${[["flash","🔥 Flash sale"],["coupon","🎟 New coupon"],["feature","✨ New feature"]].map(([k,l])=>`<button class="fchip" type="button" data-afannfill="${k}">${l}</button>`).join("")}</div>
@@ -6488,6 +6506,7 @@ function viewAffiliates(){
       <label class="af">Commission (% of the product value)<input class="in" type="number" min="0" max="90" step="0.5" data-aff="rate" value="${esc(String(F.rate??10))}"></label>
       <label class="af">Their coupon code (optional, make it in Coupons first)<input class="in" data-aff="coupon" maxlength="30" value="${esc(F.coupon||"")}" list="afCpList"><datalist id="afCpList">${(DB.coupons||[]).map(c=>`<option value="${esc(c.code)}">`).join("")}</datalist></label>
       <label class="af">Account<select class="in" data-aff="status">${[["active","Active"],["paused","Paused (can sign in, earns nothing)"],["disabled","Switched off (can't sign in)"]].map(([v,l])=>`<option value="${v}" ${(F.status||"active")===v?"selected":""}>${l}</option>`).join("")}</select></label></div>
+    <label class="af" style="margin-top:10px">Registered email (password reset requests must come from it)<input class="in" type="email" data-aff="email" maxlength="120" value="${esc(F.email!==undefined?F.email:(F.id&&AFE.map[F.id])||"")}" placeholder="name@email.com"></label>
     <label class="af" style="margin-top:10px">Private note<input class="in" data-aff="note" maxlength="300" value="${esc(F.note||"")}"></label>
     ${AF.ferr?`<p class="adl-err" style="margin-top:8px">${esc(AF.ferr)}</p>`:""}
     <div class="colin" style="margin-top:12px"><button class="btn btn-blue" type="button" data-afsave>${F.id?"Save changes":"Create affiliator"}</button><button class="ghost" type="button" data-afcancel>Cancel</button></div>
@@ -6505,6 +6524,7 @@ function viewAffiliates(){
       const rows=Object.values(m).sort((a,b)=>b.views-a.views||b.orders-a.orders),tv=rows.reduce((a,r)=>a+r.views,0)||1;
       return `<section class="panel"><h2>Where visitors came from (all affiliators)</h2>${rows.length?`<div class="aftable"><div class="afrow afth afsrc"><span>Source</span><span>Views</span><span>Orders</span><span>Sales</span><span>Top affiliators</span></div>${rows.map(r=>`<div class="afrow afsrc"><span>${esc(AF_SRC[r.src]||r.src)}<i class="afbar" style="width:${Math.round(r.views/tv*100)}%"></i></span><span>${r.views} <small>${Math.round(r.views/tv*100)}%</small></span><span>${r.orders}</span><span>${money(r.sales)}</span><span>${Object.entries(r.who).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([c])=>esc(c)).join(", ")}</span></div>`).join("")}</div>`:`<p class="note">No visits from affiliate links in this period yet.</p>`}</section>`})()}
     ${afAppsHTML()}
+    ${SBH.on?afResetHTML():""}
     ${afAnnHTML(L)}
     ${form}
     <section class="panel"><h2>Affiliators (${L.length})</h2>
@@ -6516,7 +6536,7 @@ function viewAffiliates(){
         ${x.tot.review_n>0||x.tot.approved_n>0||x.tot.hold_n>0?`<div class="afbadges">${x.tot.review_n>0?`<span class="afbadge red blink">${x.tot.review_n} need approval</span>`:""}${x.tot.approved_n>0?`<span class="afbadge green">${x.tot.approved_n} waiting payout</span>`:""}${x.tot.hold_n>0?`<span class="afbadge amber">${x.tot.hold_n} on hold</span>`:""}</div>`:""}</div>`).join("")}</div>`:`<p class="note">${L.length?"No affiliators match this filter.":"No affiliators yet. Press + Add affiliator."}</p>`}</section>
     <section class="panel"><h2>Orders from all affiliators</h2><p class="sub">Open an order to see its details, or open an affiliator to approve, void or pay.</p>${afChips(AF.orders||[],false)}${afOrdersHTML(AF.orders||[],"all")}</section></div>`}
 async function affSave(){const F=AF.form;AF.ferr="";
-  try{await SBH.rpc("admin_aff_save",{p:{id:F.id||"",username:F.username||"",password:F.password||"",name:F.name||"",phone:F.phone||"",code:F.code||"",rate:F.rate,coupon:F.coupon||"",status:F.status||"active",note:F.note||""}});
+  try{await SBH.rpc("admin_aff_save",{p:{id:F.id||"",username:F.username||"",password:F.password||"",name:F.name||"",phone:F.phone||"",code:F.code||"",rate:F.rate,coupon:F.coupon||"",status:F.status||"active",note:F.note||""}}).then(async r=>{const id=(r&&r.id)||F.id;if(id&&F.email!==undefined){await SBH.rpc("admin_aff_email",{p_id:id,p_email:F.email||""});AFE.map[id]=String(F.email||"").toLowerCase()}return r});
     toast(F.id?"Affiliator saved":"Affiliator created");AF.form=null;affLoadList()}catch(e){AF.ferr=e.message;renderAdmin()}}
 am.addEventListener("input",e=>{const el=e.target;if(el.dataset.aff!==undefined&&AF.form){AF.form[el.dataset.aff]=el.value}
   if(AF.act&&el.id==="afReason")AF.act.reason=el.value;if(AF.act&&el.id==="afPayNote")AF.act.note=el.value});

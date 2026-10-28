@@ -284,7 +284,7 @@
     await tsLoginKey();
     var C = window.DELIDOME_CONFIG || {}, shop = String(C.shopUrl || "").replace(/\/+$/, ""), p = document.createElement("p");
     p.className = "adl-sub"; p.style.cssText = "margin-top:12px;display:grid;gap:6px";
-    var mail = TSL.help ? '<a href="mailto:' + TSL.help.replace(/"/g, "") + '?subject=' + encodeURIComponent("Password reset request") + '&body=' + encodeURIComponent("Hello, I forgot my password. Please reset it.\nMy username: ") + '">Forgot your password? Email us</a>' : "Forgot your password? Ask the owner to reset it.";
+    var mail = TSL.help ? '<a href="mailto:' + TSL.help.replace(/"/g, "") + '?subject=' + encodeURIComponent("Forgot password reset") + '&body=' + encodeURIComponent("Hello, I forgot my password. Please reset it.\n\nMy username: (type your username here)\n\nI am writing from the email address I registered with you.") + '">Forgot your password? Email us</a><br><small>Write from your registered email and type your username.</small>' : "Forgot your password? Ask the owner to reset it.";
     p.innerHTML = '<span>' + mail + '</span>' + (shop ? '<span>Want to become an affiliator? <a href="' + shop + '/?apply=affiliate" target="_blank" rel="noopener">Apply here</a></span>' : "");
     form.appendChild(p);
   }
