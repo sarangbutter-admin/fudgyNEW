@@ -139,7 +139,7 @@ function defaultAlerts(){return {on:true,sound:true,vol:70,repeat:false,stay:tru
   ev:{order:{on:true,snd:"register"},proof:{on:true,snd:"chime"},paid:{on:false,snd:"bell"},complaint:{on:true,snd:"alarm"},courier:{on:true,snd:"alarm"}}}}
 function defaultRev(){return {on:false,days:7,minBox:6,mode:"random",daily:20,validDays:7,redeemDays:30,claimMin:6,claimMode:"auto",
   upg:{icon:"🎁",one:"You have 1 reward waiting! Upgrade to a box of {min} or more to claim it.",many:"You have {n} rewards waiting! Upgrade to a box of {min} or more to claim one.",man:"You have {n} reward code(s) saved. Type one in the coupon box to claim it.",chg:"You have {n} rewards. Only one can be used per order.",pickTitle:"Choose the reward for this order",useBtn:"Use my reward",changeBtn:"Change",bg:"#FFF4D6",ink:"#0B0B45"},
-  bn:{card:true,star:true,icon:"⭐",title:"How was your order {code}?",sub:"Rate your cookies and open a blind box 🎁",bg:"#FFF4D6",ink:"#0B0B45",line:"#FFD166",fx:"shine",tipOn:true,tip:"Rate your order and open a blind box!",cd:true,cdText:"Review ends in {time}",cdHot:24,cdTip:"Last chance! Review ends in {time}"},
+  bn:{card:true,star:true,icon:"⭐",starImg:"",starFx:"blink",starSpeed:100,waitIcon:"📦",waitImg:"",waitFx:"shake",waitSpeed:100,title:"How was your order {code}?",sub:"Rate your cookies and open a blind box 🎁",bg:"#FFF4D6",ink:"#0B0B45",line:"#FFD166",fx:"shine",tipOn:true,tip:"Rate your order and open a blind box!",cd:true,cdText:"Review ends in {time}",cdHot:24,cdTip:"Last chance! Review ends in {time}"},
   win:{icon:"🎉",img:"",fx:"confetti",title:"You won a surprise!",text:"{reward}",btn:"Great!",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
   sad:{icon:"🥺",img:"",fx:"rain",title:"Thank you for rating",text:"We're sorry it wasn't perfect this time. We'd love to make it right, so please order again soon.",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
   none:{icon:"🎁",img:"",fx:"sparkle",title:"Thanks for rating!",text:"No surprise this time, but we loved hearing from you. See you at your next order!",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
@@ -1661,10 +1661,12 @@ function rvRender(){const card=$("#rvCard"),star=$("#rvStar");if(!card||!star)re
   if(!card.hidden){card.className="rvc rvfx-"+fx;card.style.setProperty("--rbg",hexOk(b.bg,"#FFF4D6"));card.style.setProperty("--rink",hexOk(b.ink,"#0B0B45"));card.style.setProperty("--rline",hexOk(b.line,"#FFD166"));card.dataset.rvgo=o.id;
     card.innerHTML=o.rv?`<span class="rvst" aria-hidden="true">📦</span><b>${esc("Your "+bbName()+" is waiting!")}</b><small>${esc(bbCfg().tip)}${list.length>1?` · ${list.length} orders`:""}</small>`
       :`<span class="rvst" aria-hidden="true">★★★★★</span><b>${esc(String(b.title||"").replace(/\{code\}/g,"#"+o.code))}</b><small>${esc(b.sub||"")}${list.length>1?` · ${list.length} orders`:""}</small>${rvCd(o)}`}
-  if(!star.hidden){star.textContent=String(b.icon||"⭐").trim().slice(0,2)||"⭐";star.dataset.rvgo=o.id;star.setAttribute("aria-label",String(b.tip||"Rate your order"))}
+  if(!star.hidden){const wt=!!o.rv,ic=wt?String(b.waitIcon||"📦").trim().slice(0,2)||"📦":String(b.icon||"⭐").trim().slice(0,2)||"⭐",im=wt?(safeMedia(b.waitImg)||safeMedia(bbCfg().img)):safeMedia(b.starImg),fxk=wt?b.waitFx:b.starFx,sfx=["blink","shake","bounce","pulse","float","glow","none"].includes(fxk)?fxk:wt?"shake":"blink";
+    star.className="bagbtn rvstar rvsfx-"+sfx;star.style.setProperty("--rvsd",(100/Math.max(40,Math.min(250,+(wt?b.waitSpeed:b.starSpeed)||100))).toFixed(2));star.dataset.ic=ic;
+    star.innerHTML=im?(mqIsVideo(im)?`<video src="${esc(im)}" autoplay loop muted playsinline></video>`:`<img src="${esc(im)}" alt="">`):esc(ic);star.dataset.rvgo=o.id;star.setAttribute("aria-label",String(b.tip||"Rate your order"))}
   let seen={};try{seen=JSON.parse(localStorage.getItem("delidome-rvtip")||"{}")}catch(e){}
   if(b.tipOn!==false&&!star.hidden&&!seen[o.id]&&!RVT.t){RVT.t=setTimeout(()=>{RVT.t=0;const t=$("#rvTip"),s2=$("#rvStar");if(!t||!s2||s2.hidden||!$("#moSheet").hidden)return;
-    t.innerHTML="<b>"+esc(s2.textContent)+" "+esc(String(DB.revrew.bn.tipTitle||"Review time"))+"</b><span>"+esc(String(DB.revrew.bn.tip||""))+"</span>";t.hidden=false;
+    t.innerHTML="<b>"+esc(s2.dataset.ic||"⭐")+" "+esc(String(DB.revrew.bn.tipTitle||"Review time"))+"</b><span>"+esc(String(DB.revrew.bn.tip||""))+"</span>";t.hidden=false;
     const br=s2.getBoundingClientRect(),tr=t.getBoundingClientRect();t.style.setProperty("--ar",Math.max(10,Math.round(tr.right-(br.left+br.width/2)-6))+"px");
     seen[o.id]=1;try{localStorage.setItem("delidome-rvtip",JSON.stringify(seen))}catch(e){}setTimeout(()=>{t.hidden=true},9000)},4200)}}
 const RVT={t:0};
@@ -2761,7 +2763,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 00:38 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 00:46 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

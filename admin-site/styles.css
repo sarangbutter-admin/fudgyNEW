@@ -1784,7 +1784,7 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .fdnote{display:block;width:fit-content;justify-self:start;align-self:flex-start;margin-top:6px;background:#0A6B34;color:#fff;font-size:12px;font-weight:800;border-radius:999px;padding:4px 10px}
 
 /* review rewards */
-.rvstar{font-size:19px;line-height:1;animation:rvblink 1.1s ease-in-out infinite}.rvstar[hidden],.rvc[hidden]{display:none}
+.rvstar{font-size:19px;line-height:1}.rvstar img,.rvstar video{width:26px;height:26px;object-fit:contain;display:block;border-radius:6px;pointer-events:none}.rvstar[hidden],.rvc[hidden]{display:none}
 @keyframes rvblink{0%,100%{transform:scale(1) rotate(0);filter:drop-shadow(0 0 0 #FFD166)}50%{transform:scale(1.25) rotate(-12deg);filter:drop-shadow(0 0 7px #FFD166)}}
 .rvc{display:grid;gap:2px;width:100%;margin:12px 0 0;padding:12px 16px;border:2px solid var(--rline,#FFD166);border-radius:18px;background:var(--rbg,#FFF4D6);color:var(--rink,#0B0B45);text-align:left;font:inherit;cursor:pointer;position:relative;overflow:hidden}
 .rvc b{font-size:15px}.rvc small{font-size:12.5px;opacity:.85}.rvst{color:#F5A623;letter-spacing:3px;font-size:16px}
@@ -1849,3 +1849,11 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .bbcard{display:flex;align-items:center;gap:12px;width:100%;border:2px dashed #F5A623;background:#FFF4D6;color:#0B0B45;border-radius:16px;padding:10px 14px;font:inherit;text-align:left;cursor:pointer}
 .bbcard span:last-child{display:grid;gap:2px}.bbcard small{font-size:12px;opacity:.8}
 .bbprev{display:grid;place-items:center;padding:14px;background:#EEF0FF;border-radius:14px}
+
+.rvsfx-blink{animation:rvblink calc(1.1s*var(--rvsd,1)) ease-in-out infinite}
+.rvsfx-shake{animation:bbshake calc(.6s*var(--rvsd,1)) linear infinite}
+.rvsfx-bounce{animation:bbbounce calc(1s*var(--rvsd,1)) ease-in-out infinite}
+.rvsfx-pulse{animation:bbpulse calc(1.2s*var(--rvsd,1)) ease-in-out infinite}
+.rvsfx-float{animation:bbfloat calc(2s*var(--rvsd,1)) ease-in-out infinite}
+.rvsfx-glow{animation:rvsglow calc(1.4s*var(--rvsd,1)) ease-in-out infinite}
+@keyframes rvsglow{50%{box-shadow:0 0 0 4px rgba(255,209,102,.55),0 0 16px rgba(255,209,102,.95)}}
