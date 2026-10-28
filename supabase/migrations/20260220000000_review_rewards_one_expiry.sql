@@ -1,19 +1,20 @@
 -- Delidome migration 51: review rewards all share ONE validity rule.
 --  * cookie and gift rewards: the code is valid "redeemDays" days from the win (revrew doc, default 30)
 --  * coupon rewards: the coupon's own end date (shown to the customer)
---  * nothing is skipped because its date is "close": only an ended / not-yet-started / switched-off coupon, or a sold-out item, is left out
---  * the old per-gift "until" date and the "validDays" setting are no longer used
+--  * a coupon is not drawn when it ends sooner than "validDays" days from now (revrew doc, default 7), when it is off, not started, or used up
+--  * cookies and gifts are never skipped because of a date; a sold-out item is left out
+--  * the old per-gift "until" date is no longer used
 -- Safe to run more than once.
 
 create or replace function public.rv_item_ok(it jsonb, cfg jsonb) returns boolean
 language plpgsql stable security definer set search_path = public as $$
-declare t bigint := public.now_ms(); c jsonb; en bigint; st bigint; need bigint := public.now_ms() + coalesce((cfg ->> 'validDays')::int, 7) * 86400000::bigint; stock int; used int; un bigint;
+declare t bigint := public.now_ms(); c jsonb; en bigint; st bigint; stock int; used int; need bigint := public.now_ms() + greatest(0, coalesce(nullif(cfg ->> 'validDays', '')::numeric::int, 7)) * 86400000::bigint;
 begin
   if it ->> 'type' = 'coupon' then
     select data into c from public.coll where coll = 'coupons' and data ->> 'code' = upper(coalesce(it ->> 'code', '')) limit 1;
     if c is null or not coalesce((c ->> 'on')::boolean, false) then return false; end if;
     en := public.cp_ms(c ->> 'endsAt'); st := public.cp_ms(c ->> 'startsAt');
-    if en is not null and en < t then return false; end if;
+    if en is not null and en < need then return false; end if;
     if st is not null and st > t then return false; end if;
     if coalesce((c ->> 'maxUses')::int, 0) > 0 and public.cp_uses(upper(it ->> 'code'), null) >= (c ->> 'maxUses')::int then return false; end if;
     return true;
@@ -42,7 +43,3 @@ do $$ declare d text; begin
     execute d;
   end if;
 end $$;
-
--- migration 51b: a coupon reward is still skipped when its end date is closer than the "Coupon must stay valid at least (days)" rule (revrew.validDays, default 7).
--- Cookies and gifts have no such rule. Re-run the coupon branch of rv_item_ok:
---   if en is not null and en < need then return false; end if;   with need = now + validDays days
