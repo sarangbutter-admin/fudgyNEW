@@ -1,3 +1,6 @@
 # Edge Function settings (used by `supabase functions deploy`)
 [functions.biteship-webhook]
 verify_jwt = false
+
+[functions.doku-webhook]
+verify_jwt = false

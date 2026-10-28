@@ -161,6 +161,7 @@ function slotChange(list,i,el){const x=list[i];if(!x)return false;const row=el.c
   const nl=slotMk(f,t);if(list.some((y,j)=>j!==i&&y.t===nl)){toast("That time slot already exists.");renderAdmin();return false}x.t=nl;return true}
 const SLOT_PRESETS=Array.from({length:23},(_,h)=>String(h).padStart(2,"0")+" to "+String(h+1).padStart(2,"0"));
 function migrate(db){
+  if(db.settings&&!db.settings.doku)db.settings.doku={on:false,methods:[{k:"va",name:"Virtual account (bank)",on:true,payer:"owner",pct:0,fixed:0},{k:"qris",name:"QRIS",on:true,payer:"owner",pct:0,fixed:0},{k:"ewallet",name:"E-wallet (OVO, DANA, ShopeePay)",on:true,payer:"customer",pct:0,fixed:0},{k:"card",name:"Credit card",on:false,payer:"customer",pct:0,fixed:0},{k:"retail",name:"Alfamart / Indomaret",on:false,payer:"customer",pct:0,fixed:0},{k:"paylater",name:"PayLater",on:false,payer:"customer",pct:0,fixed:0}]};
   if(db.settings){const D={samedayOn:false,samedayLeadH:3,samedayCutoff:15,samedayFee:8,samedayPayMin:60,minPayMin:30,rejPayMin:120,payCdColor:"#C8102E",payCdSize:"L",payCdFx:true,pickupOn:true,pickupLeadH:24,schedOn:true,schedLeadH:24,samedayMsg:"Sorry Sameday closed Today.\nyour order will be send tomorrow.",sdSlotOn:false,sdSlots:[{t:"16 to 17",on:true,limit:0},{t:"17 to 18",on:true,limit:0},{t:"18 to 19",on:true,limit:0}],samedayOk:"OK",samedayGo:"Continue with Sameday anyway",schedMaxDays:7,courierNoteOn:true,courierNote:"We need at least 3 hours of lead time. Once we have requested a courier, any delay or failed delivery is beyond our responsibility.",coWarnOn:true,coWarnEmoji:"⚠️",coWarnTitle:"Wait! Check your details",coWarnText:"Please make sure your name, WhatsApp number and address are correct before you place your order. We use them to send you updates and deliver your box.",coWarnOk:"Yes, my details are correct",coWarnBack:"Go back"};for(const k in D)if(db.settings[k]===undefined)db.settings[k]=D[k];
     if(!Array.isArray(db.settings.slots)){const hs=(db.settings.times||[]).map(slotStartMin).filter(m=>m!==null).map(m=>Math.floor(m/60));if(!hs.length)hs.push(10);db.settings.slots=SLOT_PRESETS.map((t,h)=>({t,on:true,limit:0})).filter((x,h)=>hs.includes(h))}
     db.settings.times=db.settings.slots.filter(x=>x.on).map(x=>x.t)}
@@ -1554,7 +1555,7 @@ function renderDone(o,ed,preview){
   $("#doneCode").textContent=o.code;
   $("#doneView").dataset.id=preview?"":o.id;
   $("#doneCd").innerHTML=`<small>${esc(T.cdLabel)}</small><span class="cd" data-exp="${o.expiresAt}">${fmtLeft(o.expiresAt-Date.now())}</span>`;
-  $("#donePM").innerHTML=payMethodsHTML();
+  DKS.done=o.id;$("#donePM").innerHTML=dkChoice(o)+`<div class="dkhide${dkAuto(o)?" dkoff":""}">${payMethodsHTML()}</div>`;$("#donePay").hidden=dkAuto(o);
   $("#donePay").textContent=T.payBtn;$("#doneClose").textContent=T.trackBtn;$("#newBox").textContent=T.buildBtn;
   $("#checkoutView").hidden=true;$("#doneView").hidden=false;
   if(preview){const sv=$("#storeView");sv.hidden=false;sv.classList.add("th-only");$("#sheet").hidden=false;document.body.style.overflow="hidden"}
@@ -1809,6 +1810,25 @@ function renderBag(){
   renderBell();
 }
 const MO={id:null,cform:false,rate:{}};
+/* DOKU online payment: the customer chooses auto confirmation (DOKU) or manual confirmation by the store */
+const DKS={sel:{},done:null,busy:false};
+const dkOn=()=>!!(SBH.on&&DB.settings.doku&&DB.settings.doku.on);
+const dkAuto=o=>dkOn()&&(DKS.sel[o.id]||"auto")==="auto";
+const dkFee=(m,t)=>m.payer==="customer"?Math.round(t*(+m.pct||0)/100+(+m.fixed||0)):0;
+function dkChoice(o){if(!dkOn())return "";const D=DB.settings.doku,auto=dkAuto(o),ms=(D.methods||[]).filter(m=>m&&m.on!==false&&m.k);
+  return `<div class="dkp" data-dko="${esc(o.id)}"><div class="mo-sub">How do you want to pay?</div>
+    <div class="dkc"><button class="dko" type="button" data-dksel="auto" aria-pressed="${auto}"><b>⚡ Auto confirmation</b><small>Pay online with DOKU. Your order is confirmed right away.</small></button>
+    <button class="dko" type="button" data-dksel="manual" aria-pressed="${!auto}"><b>🧾 Manual confirmation</b><small>Pay by transfer and send your proof. The store confirms it.</small></button></div>
+    ${auto?`<div class="dkms">${ms.map(m=>{const f=dkFee(m,+o.total||0);return `<button class="dkm" type="button" data-dkgrp="${esc(m.k)}"><span><b>${esc(m.name||m.k)}</b><small>${f>0?"+ "+money(f)+" payment fee · you pay "+money((+o.total||0)+f):"No extra fee · you pay "+money(+o.total||0)}</small></span><i aria-hidden="true">›</i></button>`}).join("")||`<p class="mo-sub">No online payment method is on right now.</p>`}</div>`:""}</div>`}
+function dkRefresh(id){const o=DB.orders.find(x=>x.id===id);if(!o)return;
+  if(!$("#doneView").hidden&&DKS.done===id){$("#donePM").innerHTML=dkChoice(o)+`<div class="dkhide${dkAuto(o)?" dkoff":""}">${payMethodsHTML()}</div>`;$("#donePay").hidden=dkAuto(o)}
+  if(!$("#moSheet").hidden)renderMO()}
+document.addEventListener("click",async e=>{const sb=e.target.closest("[data-dksel]"),gb=e.target.closest("[data-dkgrp]");if(!sb&&!gb)return;const id=(e.target.closest("[data-dko]")||{dataset:{}}).dataset.dko;if(!id)return;
+  if(sb){DKS.sel[id]=sb.dataset.dksel;dkRefresh(id);return}
+  if(DKS.busy)return;DKS.busy=true;gb.disabled=true;try{const r=await SBH.dokuCreate(id,gb.dataset.dkgrp);if(r&&r.url){location.href=r.url;return}toast("Couldn't open the payment page.")}catch(er){toast(er.message||"Couldn't open the payment page.")}finally{DKS.busy=false;gb.disabled=false}});
+// back from DOKU: ask DOKU once whether it was paid (the notification may take a few seconds)
+function dkReturn(){const c=new URLSearchParams(location.search).get("paid");if(!c)return;const o=DB.orders.find(x=>x.code===c);try{history.replaceState(null,"",location.pathname)}catch(e){}if(!o)return;
+  const chk=async n=>{try{const r=await SBH.dokuStatus(o.id);if(r&&r.paid){await SBH.loadShop(true);toast("Payment received. Thank you!");openMO(o.id);return}}catch(e){}if(n>0)setTimeout(()=>chk(n-1),4000);else{toast("We are waiting for your payment to be confirmed.");openMO(o.id)}};chk(3)}
 function payMethodsHTML(){
   const ms=DB.payMethods.filter(m=>m.on&&(m.name||m.details||m.img));
   if(!ms.length)return `<p class="mo-sub" style="margin:0">Please contact us for payment details.</p>`;
@@ -1939,14 +1959,14 @@ function renderMO(){
   ${o.status==="cancelled"?`<div class="mo-pay" style="background:#FCE3E8"><b>This order was cancelled.</b><span>${esc(o.cancelReason||"It was cancelled.")}</span><button class="btn btn-blue btn-sm" type="button" data-monew>Build a new box</button></div>`:""}
   ${awaiting?`<div class="mo-pay"><div><div class="mo-sub">Time left to pay</div><div class="mo-big cd" data-exp="${o.expiresAt}">${fmtLeft(o.expiresAt-Date.now())}</div><div class="mo-bar" style="margin-top:8px"><i data-expbar="${o.expiresAt}" data-expfrom="${o.createdAt||0}" style="width:${Math.max(0,Math.min(100,(o.expiresAt-Date.now())/total*100))}%"></i></div><p class="mo-sub" style="margin:8px 0 0">If it isn't paid in time, the order is cancelled automatically.</p></div>
     ${o.rejected?`<div class="rej-box" role="alert"><b>✕ Payment rejected</b><span>${o.rejected.reason?esc(o.rejected.reason):"We couldn't verify your payment proof."}</span><span>Please send a new payment proof below before the time runs out.</span></div>`:""}
-    <div><div class="mo-sub">Transfer exactly</div><div class="mo-big">${money(o.total)}</div></div>
+    ${dkChoice(o)}<div class="dkhide${dkAuto(o)?" dkoff":""}"><div><div class="mo-sub">Transfer exactly</div><div class="mo-big">${money(o.total)}</div></div>
     ${payMethodsHTML()}
     <form class="form" id="moPay" novalidate><h4 style="margin:0">Send your payment proof</h4>
       <div class="field"><label for="mpName">Full name</label><input id="mpName" value="${esc(o.customer.name)}" autocomplete="name" required placeholder="Name of the person who paid"></div>
       <div class="field"><label for="mpFile">Proof of payment (photo or screenshot)</label><input id="mpFile" type="file" accept="image/*"></div>
       <img class="proofimg" id="mpPrev" alt="Proof preview" hidden>
       <p class="err" id="mpErr" hidden></p>
-      <button class="btn btn-blue" type="submit">I've paid, send proof</button></form></div>`:""}
+      <button class="btn btn-blue" type="submit">I've paid, send proof</button></form></div></div>`:""}
   ${o.status==="review"&&o.proof?`<div class="mo-pay"><b>We're checking your payment.</b><span class="mo-sub">Sent ${fmtDT(o.proof.at)} by ${esc(o.proof.name)}. This page updates when it's confirmed.</span><img class="proofimg" src="${esc(imgOk(o.proof.img))}" alt="Your payment proof"></div>`:""}
   <div class="dsec" style="margin-top:18px"><h4>Track your order</h4>${o.status==="cancelled"?`<p class="hint" style="margin:0">Cancelled ${o.cancelReason?"":""}</p>`:moSteps(o)}${o.refund?`<ol class="track-l" style="margin-top:6px"><li class="done"><span class="dot">✓</span><span>${o.refund.full?"Refunded":"Partly refunded"} · ${money(o.refund.amount)}<small>${esc(fmtDT(o.refund.at))}</small></span></li></ol>`:""}</div>
   <div class="dsec"><h4>Your box of ${o.size}</h4><div class="summary" style="margin:0">${items}
@@ -2718,6 +2738,7 @@ function affCapture(){if(affDone)return;affDone=true;try{
     let vid=localStorage.getItem(VID_KEY);if(!vid){vid=uid()+uid();localStorage.setItem(VID_KEY,vid)}
     localStorage.setItem(AFF_KEY,JSON.stringify({code,src,at:Date.now()}));
     if(SBH.on&&SBH.affHit)SBH.affHit(code,vid,src)}
+  if(q.get("paid"))setTimeout(dkReturn,1800);
   const sz=parseInt(q.get("size"),10),again=(fn,n=20)=>{const t=setInterval(()=>{let ok=false;try{ok=fn()}catch(e){}if(ok||--n<=0)clearInterval(t)},400)};
   if(to)again(()=>{const c=document.querySelector(`.card[data-id="${CSS.escape(to)}"]`);if(!c)return false;c.scrollIntoView({block:"center",behavior:RM?"auto":"smooth"});c.classList.add("affhl");setTimeout(()=>c.classList.remove("affhl"),2600);return true});
   if(sz>0&&!to)again(()=>{if(!activeSizes().length)return false;if(!activeSizes().some(x=>x.n===sz))return true;if(!S.editId&&S.size!==sz)setSize(sz);
@@ -4084,6 +4105,28 @@ function viewDelivery(){
     ${bsPanel()}
   </div>`;
 }
+/* --- DOKU online payment (owner) --- */
+const DKA={st:null,loading:false,busy:false};
+async function dkLoad(){if(DKA.loading||!SBH.on)return;DKA.loading=true;try{DKA.st=await SBH.dokuGet()}catch(e){DKA.st={err:e.message}}DKA.loading=false;if(A.tab==="settings")renderAdmin()}
+function viewDoku(){const D=DB.settings.doku,st=DKA.st;if(SBH.on&&st===null&&!DKA.loading)dkLoad();
+  const url=((window.DELIDOME_CONFIG||{}).supabaseUrl||"")+"/functions/v1/doku-webhook";
+  return `<h3 style="margin:18px 0 4px;font-size:16px">Online payment (DOKU)</h3><p class="sub" style="margin-top:0">Customers choose <b>Auto confirmation</b> (DOKU) or <b>Manual confirmation</b> by you. Turn DOKU off and only manual confirmation stays. Goes live when you press Save &amp; publish.</p>
+    <label class="chk"><input type="checkbox" data-dk="on" ${D.on?"checked":""}> <b>DOKU payment is ${D.on?"ON":"OFF"}</b></label>
+    <div class="grid2" style="margin-top:10px"><label class="af">Environment<select class="in" data-dkk="env"><option value="sandbox" ${!st||st.env!=="production"?"selected":""}>Sandbox (test, fake money)</option><option value="production" ${st&&st.env==="production"?"selected":""}>Production (real money)</option></select></label>
+      <label class="af">Client ID<input class="in" data-dkk="clientId" maxlength="80" value="${esc(st&&st.clientId||"")}" autocomplete="off"></label></div>
+    <label class="af" style="margin-top:8px">Secret Key<input class="in" type="password" data-dkk="secret" maxlength="200" autocomplete="new-password" placeholder="${st&&st.hasKey?"Saved (type a new one to replace it)":"Paste your Secret Key"}"></label>
+    <div class="colin" style="gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn btn-blue btn-sm" type="button" data-dksave ${DKA.busy?"disabled":""}>Save keys</button><span class="note" style="margin:0">${!SBH.on?"Keys can only be saved on the live site.":st&&st.err?esc(st.err):st&&st.hasKey?"✓ Keys saved ("+esc(st.env)+")":"No keys saved yet."} Keys are stored privately and never shown on the shop.</span></div>
+    <div class="af" style="margin-top:10px">Notification URL (paste it in DOKU Back Office)<input class="in" readonly value="${esc(url)}" onclick="this.select()"></div>
+    <h4 style="margin:14px 0 4px">Methods and who pays the DOKU fee</h4><p class="note" style="margin:0 0 6px">"You pay" = the customer pays no extra. "Customer pays" = the fee below is added to their total (percent of the order plus a fixed amount).</p>
+    <div class="stack" style="gap:8px">${(D.methods||[]).map((m,i)=>`<div class="pmcard slotrow"><label class="chk"><input type="checkbox" data-dkm="${i}.on" ${m.on!==false?"checked":""}> <b>${esc(m.name||m.k)}</b></label>
+      <label class="af slotlim">Fee paid by<select class="in" data-dkm="${i}.payer"><option value="owner" ${m.payer==="owner"?"selected":""}>You</option><option value="customer" ${m.payer!=="owner"?"selected":""}>Customer</option></select></label>
+      ${m.payer!=="owner"?`<label class="af slotlim">Percent<div class="money-in"><input class="in" type="number" min="0" max="20" step="0.01" data-dkm="${i}.pct" value="${+m.pct||0}"><span style="padding-right:8px">%</span></div></label><label class="af slotlim">Plus fixed<div class="money-in"><input class="in" type="number" min="0" step="100" data-dkm="${i}.fixed" value="${+m.fixed||0}"></div></label>`:""}</div>`).join("")}</div>`}
+am.addEventListener("input",e=>{const el=e.target,k=el.dataset.dkm;if(!k)return;const [i,f]=k.split("."),m=DB.settings.doku.methods[+i];if(!m||el.type==="checkbox"||el.tagName==="SELECT")return;m[f]=Math.max(0,+el.value||0);saveSoon()});
+am.addEventListener("change",e=>{const el=e.target;
+  if(el.dataset.dk==="on"){DB.settings.doku.on=el.checked;saveDB();toast("Saved");renderAdmin();return}
+  if(el.dataset.dkm){const [i,f]=el.dataset.dkm.split("."),m=DB.settings.doku.methods[+i];if(!m)return;if(f==="on")m.on=el.checked;else if(f==="payer"){m.payer=el.value;saveDB();toast("Saved");renderAdmin();return}else m[f]=Math.max(0,+el.value||0);saveDB();toast("Saved")}});
+am.addEventListener("click",async e=>{if(!e.target.closest("[data-dksave]"))return;const g=k=>(document.querySelector(`[data-dkk="${k}"]`)||{}).value||"";
+  DKA.busy=true;try{DKA.st=await SBH.dokuSave({clientId:g("clientId"),secret:g("secret"),env:g("env")});toast("DOKU keys saved")}catch(er){toast(er.message||"Couldn't save the keys.")}DKA.busy=false;renderAdmin()});
 function viewSettings(){
   const s=DB.settings,th=DB.thanks,pp=DB.proofpop,al=DB.alerts;
   const hc=(l,k,d)=>`<label class="af">${l}<input type="color" data-k="settings::${k}" value="${HEX_OK.test(s[k]||"")?s[k]:d}" style="width:100%;height:42px"></label>`;
@@ -4148,6 +4191,7 @@ function viewSettings(){
       <div class="grid3" style="align-items:end"><label class="af">Timer color<input type="color" data-k="settings::payCdColor" value="${esc(s.payCdColor||"#C8102E")}" style="width:100%;height:42px"></label>
         <label class="af">Timer size<select class="in" data-k="settings::payCdSize">${[["M","Medium"],["L","Large"],["XL","Extra large"]].map(([v,l])=>`<option value="${v}" ${s.payCdSize===v?"selected":""}>${l}</option>`).join("")}</select></label>
         <label class="chk" style="padding-bottom:12px"><input type="checkbox" data-k="settings::payCdFx" ${s.payCdFx!==false?"checked":""}> Lively (pulsing)</label></div>
+      ${viewDoku()}
       <h3 style="margin:18px 0 4px;font-size:16px">Payment methods</h3><p class="sub" style="margin-top:0">Add as many as you need (bank, e-wallet, QRIS). Customers see the ones that are switched on. If you add a picture such as a QR code, customers can tap it to save it.</p>
       <div class="stack" style="gap:12px">${DB.payMethods.map(m=>`<div class="pmcard">
         <div class="pmtop"><span class="sw" title="Show to customers"><input type="checkbox" data-pmon="${m.id}" ${m.on?"checked":""} aria-label="Show ${esc(m.name||"method")} to customers"><span></span></span><input class="in" data-pm="${m.id}|name" maxlength="40" value="${esc(m.name)}" placeholder="Method name, e.g. Bank transfer" aria-label="Method name"><button class="danger" type="button" data-pmdel="${m.id}">Delete</button></div>

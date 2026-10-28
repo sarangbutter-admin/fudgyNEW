@@ -1860,3 +1860,12 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 
 /* free-reward tag on a flavor card: small, under the name, not over the picture */
 .card .rvfree{position:static;display:block;width:max-content;max-width:100%;margin:2px auto 0;background:#E6F7EC;color:#0A6B34;font-weight:800;font-size:10.5px;line-height:1.2;padding:3px 8px;border-radius:99px;animation:none;box-shadow:none}
+
+/* DOKU payment choice */
+.dkp{display:grid;gap:8px;margin:0 0 12px}.dkc{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dko{display:grid;gap:3px;text-align:left;border:2px solid #E5E5F0;border-radius:14px;background:#fff;color:#0B0B45;padding:10px 12px;font:inherit;cursor:pointer}.dko small{font-size:11.5px;opacity:.75;line-height:1.3}
+.dko[aria-pressed="true"]{border-color:#000096;background:#EEF0FF}
+.dkms{display:grid;gap:6px}.dkm{display:flex;align-items:center;justify-content:space-between;gap:10px;border:2px solid #E5E5F0;border-radius:14px;background:#fff;color:#0B0B45;padding:10px 14px;font:inherit;cursor:pointer;text-align:left}
+.dkm span{display:grid;gap:2px}.dkm small{font-size:12px;opacity:.75}.dkm i{font-style:normal;font-size:20px}.dkm:disabled{opacity:.5}
+.dkhide.dkoff{display:none}
+@media (max-width:420px){.dkc{grid-template-columns:1fr}}

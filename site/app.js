@@ -158,6 +158,7 @@ function slotChange(list,i,el){const x=list[i];if(!x)return false;const row=el.c
   const nl=slotMk(f,t);if(list.some((y,j)=>j!==i&&y.t===nl)){toast("That time slot already exists.");renderAdmin();return false}x.t=nl;return true}
 const SLOT_PRESETS=Array.from({length:23},(_,h)=>String(h).padStart(2,"0")+" to "+String(h+1).padStart(2,"0"));
 function migrate(db){
+  if(db.settings&&!db.settings.doku)db.settings.doku={on:false,methods:[{k:"va",name:"Virtual account (bank)",on:true,payer:"owner",pct:0,fixed:0},{k:"qris",name:"QRIS",on:true,payer:"owner",pct:0,fixed:0},{k:"ewallet",name:"E-wallet (OVO, DANA, ShopeePay)",on:true,payer:"customer",pct:0,fixed:0},{k:"card",name:"Credit card",on:false,payer:"customer",pct:0,fixed:0},{k:"retail",name:"Alfamart / Indomaret",on:false,payer:"customer",pct:0,fixed:0},{k:"paylater",name:"PayLater",on:false,payer:"customer",pct:0,fixed:0}]};
   if(db.settings){const D={samedayOn:false,samedayLeadH:3,samedayCutoff:15,samedayFee:8,samedayPayMin:60,minPayMin:30,rejPayMin:120,payCdColor:"#C8102E",payCdSize:"L",payCdFx:true,pickupOn:true,pickupLeadH:24,schedOn:true,schedLeadH:24,samedayMsg:"Sorry Sameday closed Today.\nyour order will be send tomorrow.",sdSlotOn:false,sdSlots:[{t:"16 to 17",on:true,limit:0},{t:"17 to 18",on:true,limit:0},{t:"18 to 19",on:true,limit:0}],samedayOk:"OK",samedayGo:"Continue with Sameday anyway",schedMaxDays:7,courierNoteOn:true,courierNote:"We need at least 3 hours of lead time. Once we have requested a courier, any delay or failed delivery is beyond our responsibility.",coWarnOn:true,coWarnEmoji:"⚠️",coWarnTitle:"Wait! Check your details",coWarnText:"Please make sure your name, WhatsApp number and address are correct before you place your order. We use them to send you updates and deliver your box.",coWarnOk:"Yes, my details are correct",coWarnBack:"Go back"};for(const k in D)if(db.settings[k]===undefined)db.settings[k]=D[k];
     if(!Array.isArray(db.settings.slots)){const hs=(db.settings.times||[]).map(slotStartMin).filter(m=>m!==null).map(m=>Math.floor(m/60));if(!hs.length)hs.push(10);db.settings.slots=SLOT_PRESETS.map((t,h)=>({t,on:true,limit:0})).filter((x,h)=>hs.includes(h))}
     db.settings.times=db.settings.slots.filter(x=>x.on).map(x=>x.t)}
@@ -1538,7 +1539,7 @@ function renderDone(o,ed,preview){
   $("#doneCode").textContent=o.code;
   $("#doneView").dataset.id=preview?"":o.id;
   $("#doneCd").innerHTML=`<small>${esc(T.cdLabel)}</small><span class="cd" data-exp="${o.expiresAt}">${fmtLeft(o.expiresAt-Date.now())}</span>`;
-  $("#donePM").innerHTML=payMethodsHTML();
+  DKS.done=o.id;$("#donePM").innerHTML=dkChoice(o)+`<div class="dkhide${dkAuto(o)?" dkoff":""}">${payMethodsHTML()}</div>`;$("#donePay").hidden=dkAuto(o);
   $("#donePay").textContent=T.payBtn;$("#doneClose").textContent=T.trackBtn;$("#newBox").textContent=T.buildBtn;
   $("#checkoutView").hidden=true;$("#doneView").hidden=false;
   if(preview){const sv=$("#storeView");sv.hidden=false;sv.classList.add("th-only");$("#sheet").hidden=false;document.body.style.overflow="hidden"}
@@ -1792,6 +1793,25 @@ function renderBag(){
   renderBell();
 }
 const MO={id:null,cform:false,rate:{}};
+/* DOKU online payment: the customer chooses auto confirmation (DOKU) or manual confirmation by the store */
+const DKS={sel:{},done:null,busy:false};
+const dkOn=()=>!!(SBH.on&&DB.settings.doku&&DB.settings.doku.on);
+const dkAuto=o=>dkOn()&&(DKS.sel[o.id]||"auto")==="auto";
+const dkFee=(m,t)=>m.payer==="customer"?Math.round(t*(+m.pct||0)/100+(+m.fixed||0)):0;
+function dkChoice(o){if(!dkOn())return "";const D=DB.settings.doku,auto=dkAuto(o),ms=(D.methods||[]).filter(m=>m&&m.on!==false&&m.k);
+  return `<div class="dkp" data-dko="${esc(o.id)}"><div class="mo-sub">How do you want to pay?</div>
+    <div class="dkc"><button class="dko" type="button" data-dksel="auto" aria-pressed="${auto}"><b>⚡ Auto confirmation</b><small>Pay online with DOKU. Your order is confirmed right away.</small></button>
+    <button class="dko" type="button" data-dksel="manual" aria-pressed="${!auto}"><b>🧾 Manual confirmation</b><small>Pay by transfer and send your proof. The store confirms it.</small></button></div>
+    ${auto?`<div class="dkms">${ms.map(m=>{const f=dkFee(m,+o.total||0);return `<button class="dkm" type="button" data-dkgrp="${esc(m.k)}"><span><b>${esc(m.name||m.k)}</b><small>${f>0?"+ "+money(f)+" payment fee · you pay "+money((+o.total||0)+f):"No extra fee · you pay "+money(+o.total||0)}</small></span><i aria-hidden="true">›</i></button>`}).join("")||`<p class="mo-sub">No online payment method is on right now.</p>`}</div>`:""}</div>`}
+function dkRefresh(id){const o=DB.orders.find(x=>x.id===id);if(!o)return;
+  if(!$("#doneView").hidden&&DKS.done===id){$("#donePM").innerHTML=dkChoice(o)+`<div class="dkhide${dkAuto(o)?" dkoff":""}">${payMethodsHTML()}</div>`;$("#donePay").hidden=dkAuto(o)}
+  if(!$("#moSheet").hidden)renderMO()}
+document.addEventListener("click",async e=>{const sb=e.target.closest("[data-dksel]"),gb=e.target.closest("[data-dkgrp]");if(!sb&&!gb)return;const id=(e.target.closest("[data-dko]")||{dataset:{}}).dataset.dko;if(!id)return;
+  if(sb){DKS.sel[id]=sb.dataset.dksel;dkRefresh(id);return}
+  if(DKS.busy)return;DKS.busy=true;gb.disabled=true;try{const r=await SBH.dokuCreate(id,gb.dataset.dkgrp);if(r&&r.url){location.href=r.url;return}toast("Couldn't open the payment page.")}catch(er){toast(er.message||"Couldn't open the payment page.")}finally{DKS.busy=false;gb.disabled=false}});
+// back from DOKU: ask DOKU once whether it was paid (the notification may take a few seconds)
+function dkReturn(){const c=new URLSearchParams(location.search).get("paid");if(!c)return;const o=DB.orders.find(x=>x.code===c);try{history.replaceState(null,"",location.pathname)}catch(e){}if(!o)return;
+  const chk=async n=>{try{const r=await SBH.dokuStatus(o.id);if(r&&r.paid){await SBH.loadShop(true);toast("Payment received. Thank you!");openMO(o.id);return}}catch(e){}if(n>0)setTimeout(()=>chk(n-1),4000);else{toast("We are waiting for your payment to be confirmed.");openMO(o.id)}};chk(3)}
 function payMethodsHTML(){
   const ms=DB.payMethods.filter(m=>m.on&&(m.name||m.details||m.img));
   if(!ms.length)return `<p class="mo-sub" style="margin:0">Please contact us for payment details.</p>`;
@@ -1921,14 +1941,14 @@ function renderMO(){
   ${o.status==="cancelled"?`<div class="mo-pay" style="background:#FCE3E8"><b>This order was cancelled.</b><span>${esc(o.cancelReason||"It was cancelled.")}</span><button class="btn btn-blue btn-sm" type="button" data-monew>Build a new box</button></div>`:""}
   ${awaiting?`<div class="mo-pay"><div><div class="mo-sub">Time left to pay</div><div class="mo-big cd" data-exp="${o.expiresAt}">${fmtLeft(o.expiresAt-Date.now())}</div><div class="mo-bar" style="margin-top:8px"><i data-expbar="${o.expiresAt}" data-expfrom="${o.createdAt||0}" style="width:${Math.max(0,Math.min(100,(o.expiresAt-Date.now())/total*100))}%"></i></div><p class="mo-sub" style="margin:8px 0 0">If it isn't paid in time, the order is cancelled automatically.</p></div>
     ${o.rejected?`<div class="rej-box" role="alert"><b>✕ Payment rejected</b><span>${o.rejected.reason?esc(o.rejected.reason):"We couldn't verify your payment proof."}</span><span>Please send a new payment proof below before the time runs out.</span></div>`:""}
-    <div><div class="mo-sub">Transfer exactly</div><div class="mo-big">${money(o.total)}</div></div>
+    ${dkChoice(o)}<div class="dkhide${dkAuto(o)?" dkoff":""}"><div><div class="mo-sub">Transfer exactly</div><div class="mo-big">${money(o.total)}</div></div>
     ${payMethodsHTML()}
     <form class="form" id="moPay" novalidate><h4 style="margin:0">Send your payment proof</h4>
       <div class="field"><label for="mpName">Full name</label><input id="mpName" value="${esc(o.customer.name)}" autocomplete="name" required placeholder="Name of the person who paid"></div>
       <div class="field"><label for="mpFile">Proof of payment (photo or screenshot)</label><input id="mpFile" type="file" accept="image/*"></div>
       <img class="proofimg" id="mpPrev" alt="Proof preview" hidden>
       <p class="err" id="mpErr" hidden></p>
-      <button class="btn btn-blue" type="submit">I've paid, send proof</button></form></div>`:""}
+      <button class="btn btn-blue" type="submit">I've paid, send proof</button></form></div></div>`:""}
   ${o.status==="review"&&o.proof?`<div class="mo-pay"><b>We're checking your payment.</b><span class="mo-sub">Sent ${fmtDT(o.proof.at)} by ${esc(o.proof.name)}. This page updates when it's confirmed.</span><img class="proofimg" src="${esc(imgOk(o.proof.img))}" alt="Your payment proof"></div>`:""}
   <div class="dsec" style="margin-top:18px"><h4>Track your order</h4>${o.status==="cancelled"?`<p class="hint" style="margin:0">Cancelled ${o.cancelReason?"":""}</p>`:moSteps(o)}${o.refund?`<ol class="track-l" style="margin-top:6px"><li class="done"><span class="dot">✓</span><span>${o.refund.full?"Refunded":"Partly refunded"} · ${money(o.refund.amount)}<small>${esc(fmtDT(o.refund.at))}</small></span></li></ol>`:""}</div>
   <div class="dsec"><h4>Your box of ${o.size}</h4><div class="summary" style="margin:0">${items}
@@ -2275,6 +2295,7 @@ function affCapture(){if(affDone)return;affDone=true;try{
     let vid=localStorage.getItem(VID_KEY);if(!vid){vid=uid()+uid();localStorage.setItem(VID_KEY,vid)}
     localStorage.setItem(AFF_KEY,JSON.stringify({code,src,at:Date.now()}));
     if(SBH.on&&SBH.affHit)SBH.affHit(code,vid,src)}
+  if(q.get("paid"))setTimeout(dkReturn,1800);
   const sz=parseInt(q.get("size"),10),again=(fn,n=20)=>{const t=setInterval(()=>{let ok=false;try{ok=fn()}catch(e){}if(ok||--n<=0)clearInterval(t)},400)};
   if(to)again(()=>{const c=document.querySelector(`.card[data-id="${CSS.escape(to)}"]`);if(!c)return false;c.scrollIntoView({block:"center",behavior:RM?"auto":"smooth"});c.classList.add("affhl");setTimeout(()=>c.classList.remove("affhl"),2600);return true});
   if(sz>0&&!to)again(()=>{if(!activeSizes().length)return false;if(!activeSizes().some(x=>x.n===sz))return true;if(!S.editId&&S.size!==sz)setSize(sz);
@@ -2789,7 +2810,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 00:59 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 03:05 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

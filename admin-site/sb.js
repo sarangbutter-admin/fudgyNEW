@@ -124,6 +124,10 @@
   };
   H.rvClaim = async function (id, choice) { var d = await K.rpc("rv_claim", { p_id: id, p_token: tk(id), p_choice: choice || "" }); return d; };
   H.rvStatus = function () { return K.rpc("admin_rv_status", {}, true); };
+  H.dokuCreate = async function (id, group) { var d = await K.fn("doku", { action: "create", id: id, token: tk(id), group: group }); if (d && d.error) throw new Error(d.error); return d; };
+  H.dokuStatus = async function (id) { var d = await K.fn("doku", { action: "status", id: id, token: tk(id) }); return d; };
+  H.dokuGet = function () { return K.rpc("admin_doku_get", {}, true); };
+  H.dokuSave = function (p) { return K.rpc("admin_doku_save", { p: p }, true); };
   H.preGift = function (code, phone) { return K.rpc("pre_gift_check", { p_code: code, p_phone: phone || "" }); };
   H.affHit = function (code, vid, src) { K.rpc("aff_hit", { p_code: code, p_vid: vid, p_src: src }).catch(function () {}); };
   function tk(id) { return TOK[id] || ""; }
