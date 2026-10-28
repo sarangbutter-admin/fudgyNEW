@@ -1869,3 +1869,7 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .dkm span{display:grid;gap:2px}.dkm small{font-size:12px;opacity:.75}.dkm i{font-style:normal;font-size:20px}.dkm:disabled{opacity:.5}
 .dkhide.dkoff{display:none}
 @media (max-width:420px){.dkc{grid-template-columns:1fr}}
+
+/* Turnstile check */
+.tsbox{position:fixed;inset:0;z-index:400;background:rgba(5,5,40,.6);display:grid;place-items:center;padding:16px}.tsbox[hidden]{display:none}
+.tscard{background:#fff;color:#0B0B45;border-radius:20px;padding:20px;width:min(360px,100%);display:grid;gap:10px;justify-items:center;text-align:center;box-shadow:0 20px 60px rgba(0,0,60,.45)}.tscard h3{margin:0}.tscard p{margin:0;font-size:14px}

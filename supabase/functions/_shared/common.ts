@@ -257,3 +257,17 @@ export async function bookOrder(db: any, key: string, cfg: any, row: { id: strin
   await keepPrivate(db, row.id, showLink ? "" : cl(cr.link, 300), showLink ? "" : cl(cr.tracking_id, 60));
   return { bship: nsh, order: next };
 }
+
+// Cloudflare Turnstile: when the owner turned the check on for this action, a valid pass (from the "turnstile" function) is required
+export async function tsGate(d: any, act: string, pass: unknown): Promise<string | null> {
+  const { data: s } = await d.from("docs").select("data").eq("key", "settings").maybeSingle();
+  const c = s?.data?.turnstile;
+  if (!c || !c.on || !c.siteKey || !c.where || !c.where[act]) return null;
+  const [{ data: kr }, { data: qr }] = await Promise.all([d.from("private_kv").select("data").eq("key", "turnstile_key").maybeSingle(), d.from("private_kv").select("data").eq("key", "quote_secret").maybeSingle()]);
+  if (!kr?.data?.secret || !qr?.data?.v) return null;
+  const p = String(pass || ""), i = p.lastIndexOf("."), msg = p.slice(0, i), parts = msg.split("|"), bad = "Please complete the security check and try again.";
+  if (i < 0 || parts[0] !== act || !(+parts[1] > Date.now())) return bad;
+  const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(String(qr.data.v)), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const hx = [...new Uint8Array(await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(msg)))].map((x) => x.toString(16).padStart(2, "0")).join("");
+  return hx === p.slice(i + 1) ? null : bad;
+}

@@ -161,6 +161,7 @@ function slotChange(list,i,el){const x=list[i];if(!x)return false;const row=el.c
   const nl=slotMk(f,t);if(list.some((y,j)=>j!==i&&y.t===nl)){toast("That time slot already exists.");renderAdmin();return false}x.t=nl;return true}
 const SLOT_PRESETS=Array.from({length:23},(_,h)=>String(h).padStart(2,"0")+" to "+String(h+1).padStart(2,"0"));
 function migrate(db){
+  if(db.settings&&!db.settings.turnstile)db.settings.turnstile={on:false,siteKey:"",where:{whatsapp:true,courier:true,doku:true,proof:true,coupon:true}};
   if(db.settings&&!db.settings.doku)db.settings.doku={on:false,methods:[{k:"va",name:"Virtual account (bank)",on:true,payer:"owner",pct:0,fixed:0},{k:"qris",name:"QRIS",on:true,payer:"owner",pct:0,fixed:0},{k:"ewallet",name:"E-wallet (OVO, DANA, ShopeePay)",on:true,payer:"customer",pct:0,fixed:0},{k:"card",name:"Credit card",on:false,payer:"customer",pct:0,fixed:0},{k:"retail",name:"Alfamart / Indomaret",on:false,payer:"customer",pct:0,fixed:0},{k:"paylater",name:"PayLater",on:false,payer:"customer",pct:0,fixed:0}]};
   if(db.settings){const D={samedayOn:false,samedayLeadH:3,samedayCutoff:15,samedayFee:8,samedayPayMin:60,minPayMin:30,rejPayMin:120,payCdColor:"#C8102E",payCdSize:"L",payCdFx:true,pickupOn:true,pickupLeadH:24,schedOn:true,schedLeadH:24,samedayMsg:"Sorry Sameday closed Today.\nyour order will be send tomorrow.",sdSlotOn:false,sdSlots:[{t:"16 to 17",on:true,limit:0},{t:"17 to 18",on:true,limit:0},{t:"18 to 19",on:true,limit:0}],samedayOk:"OK",samedayGo:"Continue with Sameday anyway",schedMaxDays:7,courierNoteOn:true,courierNote:"We need at least 3 hours of lead time. Once we have requested a courier, any delay or failed delivery is beyond our responsibility.",coWarnOn:true,coWarnEmoji:"⚠️",coWarnTitle:"Wait! Check your details",coWarnText:"Please make sure your name, WhatsApp number and address are correct before you place your order. We use them to send you updates and deliver your box.",coWarnOk:"Yes, my details are correct",coWarnBack:"Go back"};for(const k in D)if(db.settings[k]===undefined)db.settings[k]=D[k];
     if(!Array.isArray(db.settings.slots)){const hs=(db.settings.times||[]).map(slotStartMin).filter(m=>m!==null).map(m=>Math.floor(m/60));if(!hs.length)hs.push(10);db.settings.slots=SLOT_PRESETS.map((t,h)=>({t,on:true,limit:0})).filter((x,h)=>hs.includes(h))}
@@ -840,7 +841,7 @@ async function applyCoupon(code){
   code=cpNorm(code);if(!code){cpMsg("Type your coupon code first.",false);return}
   if(PG.code!==code.toUpperCase()){const g=await pgCheck(code,($("#coPhone")||{}).value||"");
     if(g.gift){if(g.ok){$("#cpnIn").value="";renderStore();cpMsg(`🎁 Gift code added! Your ${(g.info&&g.info.title)||"Free Gift Set"} is reserved.`,true)}else cpMsg(g.err||"That gift code cannot be used.",false);return}}
-  if(SBH.on){const r=await SBH.checkCoupon(code,S.size,($("#coPhone")||{}).value||"",S.editId).catch(ex=>({ok:false,err:ex.message}));if(!r.ok){cpMsg(r.err,false);return}}
+  if(SBH.on){const r=await withPass("coupon",()=>SBH.checkCoupon(code,S.size,($("#coPhone")||{}).value||"",S.editId)).catch(ex=>({ok:false,err:ex.message}));if(!r.ok){cpMsg(r.err,false);return}}
   const q0=quote({...S,coupon:code},DB,{withDelivery:S.step===2});
   if(q0.couponErr){cpMsg(q0.couponErr,false);return}
   S.coupon=code;$("#cpnIn").value="";renderStore();
@@ -1317,7 +1318,7 @@ async function bsRates(){
   const who=bsWho();if(!who){BSD.err="Type your WhatsApp number first, then we can show courier prices.";bsDraw();return}
   const my=++BSD.t;BSD.busy=true;BSD.err="";bsDraw();
   try{
-    const r=await SBH.fn("biteship",{action:"rates",phone:who.phone,email:who.email,size:S.size,dest:{lat:BSD.lat,lng:BSD.lng,postal:BSD.area?BSD.area.postal:"",areaId:BSD.area?BSD.area.id:"",areaName:BSD.area?BSD.area.name:""}});
+    const r=await SBH.fn("biteship",{action:"rates",pass:await tsPass("courier"),phone:who.phone,email:who.email,size:S.size,dest:{lat:BSD.lat,lng:BSD.lng,postal:BSD.area?BSD.area.postal:"",areaId:BSD.area?BSD.area.id:"",areaName:BSD.area?BSD.area.name:""}});
     if(my!==BSD.t)return;BSD.opts=r.options||[];BSD.err=BSD.opts.length?"":(r.error||"No courier is available for this address.");
     if(S.ship&&!BSD.opts.some(x=>x.sig===S.ship.sig)){S.ship=null}
   }catch(e){if(my!==BSD.t)return;BSD.opts=[];BSD.err=e.message==="BANNED"?"Courier prices are not available for this order.":e.message;if(e.message==="BANNED")banShow()}
@@ -1327,7 +1328,7 @@ async function bsGeocode(){
   const addr=$("#coAddr").value.trim(),areaTxt=BSD.area?BSD.area.name:$("#bsArea").value.trim();if(!addr&&!areaTxt){BSD.err="Type your address (and your area) first.";bsDraw();return}
   const who=bsWho();if(!who){BSD.err="Type your WhatsApp number first, then we can find your address.";bsDraw();return}
   BSD.busy=true;BSD.err="";bsDraw();
-  try{const r=await SBH.fn("biteship",{action:"geocode",phone:who.phone,email:who.email,address:addr,area:areaTxt});BSD.busy=false;BSD.tried=true;
+  try{const r=await SBH.fn("biteship",{action:"geocode",pass:await tsPass("courier"),phone:who.phone,email:who.email,address:addr,area:areaTxt});BSD.busy=false;BSD.tried=true;
     if(r.found){BSD.lat=r.lat;BSD.lng=r.lng;BSD.label=(r.approx?"Near: ":"")+r.label+(r.approx?" (approximate, please check on the map)":"");S.ship=null;BSD.opts=[];await bsRates();return}
     BSD.err="We couldn't find that address on the map. Pick your area from the list, check the spelling, or use your current location.";
   }catch(e){BSD.busy=false;BSD.err=e.message==="BANNED"?"Courier prices are not available for this order.":e.message;if(e.message==="BANNED")banShow()}
@@ -1483,6 +1484,7 @@ $("#times").addEventListener("click",e=>{const b=e.target.closest("[data-time]")
 $("#extras").addEventListener("click",e=>{const b=e.target.closest("[data-addon]");if(!b)return;const id=b.dataset.addon;
   S.addons=S.addons.includes(id)?S.addons.filter(x=>x!==id):[...S.addons,id];renderStore();if(!RM&&S.addons.includes(id))bump(b.querySelector(".tick"))});
 $("#giftNote").addEventListener("input",e=>{S.note=e.target.value;saveCart()});
+$("#coPhone").addEventListener("change",()=>{if(normPhone($("#coPhone").value).length>=9&&tsOn("whatsapp"))tsPass("whatsapp").catch(()=>{})});
 $("#coForm").addEventListener("input",saveCust);$("#coForm").addEventListener("change",saveCust);
 $("#panelCta").addEventListener("click",e=>cta(e.currentTarget.dataset.go));
 $("#barCta").addEventListener("click",e=>cta(e.currentTarget.dataset.go));
@@ -1516,12 +1518,12 @@ $("#coForm").addEventListener("submit",e=>{
   if(SBH.on){
     const btn=f.querySelector("button[type=submit]");if(btn)btn.disabled=true;
     const pNote=S.mode==="delivery"&&placeOn("dnoteOn")?String(S.dnote||"").trim():"",pImg=S.mode==="delivery"&&placeOn("dphotoOn")?S.dphoto:"";
-    SBH.place({notify,sdLate:S.mode!=="pickup"&&S.speed==="sameday"&&!samedayOpen()?true:undefined,shuffled:!!S.shuf,size:S.size,items:fields.items,mode:S.mode,speed:S.speed,day:S.day,time:S.time,note:S.note,addons:[...S.addons],coupon:fields.coupon,preCode:!ed&&PG.code?PG.code:undefined,expectTotal:q.total,customer:cust,ship:q.ship||undefined},ed).then(o=>{
+    tsPass("whatsapp").then(pp=>{window.__tsPass=pp||undefined;return SBH.place({notify,sdLate:S.mode!=="pickup"&&S.speed==="sameday"&&!samedayOpen()?true:undefined,shuffled:!!S.shuf,size:S.size,items:fields.items,mode:S.mode,speed:S.speed,day:S.day,time:S.time,note:S.note,addons:[...S.addons],coupon:fields.coupon,preCode:!ed&&PG.code?PG.code:undefined,expectTotal:q.total,customer:cust,ship:q.ship||undefined},ed)}).then(o=>{
       if(o&&o.preGift)pgForget(true);else if(o&&o._preErr)setTimeout(()=>toast("Your gift code was not added: "+o._preErr),900);
       if(pNote||pImg)SBH.placeInfo(o.id,pNote,pImg).catch(err=>toast("Order placed, but the driver note or photo didn't save: "+err.message));
       addMine(o.id);S.editId=null;saveCart();renderDone(o,!!ed);
       S=fresh();$("#coForm").reset();saveCart();sanitizeCart();renderStoreStatic();renderStore();renderEditBar();renderBag();
-    }).catch(err=>{if(err.message==="BANNED"){$("#coErr").hidden=true;banShow()}else{$("#coErr").textContent=err.message;$("#coErr").hidden=false}SBH.loadShop(true)}).finally(()=>{if(btn)btn.disabled=false});
+    }).catch(err=>{if(err.message==="BANNED"){$("#coErr").hidden=true;banShow()}else{$("#coErr").textContent=err.message;$("#coErr").hidden=false}SBH.loadShop(true)}).finally(()=>{window.__tsPass=undefined;if(btn)btn.disabled=false});
     return}
   let o;
   if(ed){releaseHold(ed);Object.assign(ed,fields,{editedAt:Date.now()});o=ed;takeHold(o)}
@@ -1810,6 +1812,20 @@ function renderBag(){
   renderBell();
 }
 const MO={id:null,cform:false,rate:{}};
+/* Cloudflare Turnstile: a quick check before the actions bots like to abuse. It returns a 10-minute pass the server checks. */
+const TS={pass:{},pend:{},loading:null};
+const tsCfg=()=>DB.settings.turnstile||{};
+const tsOn=a=>!!(SBH.on&&tsCfg().on&&tsCfg().siteKey&&(tsCfg().where||{})[a]);
+function tsLoad(){if(window.turnstile)return Promise.resolve();return TS.loading||(TS.loading=new Promise((res,rej)=>{const s=document.createElement("script");s.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";s.async=true;s.onload=()=>res();s.onerror=()=>{TS.loading=null;rej(new Error("The security check could not load. Please check your connection and try again."))};document.head.appendChild(s)}))}
+function tsWidget(){return new Promise((res,rej)=>{let box=$("#tsBox");if(!box){box=document.createElement("div");box.id="tsBox";box.className="tsbox";document.body.appendChild(box)}
+  box.innerHTML=`<div class="tscard" role="dialog" aria-modal="true"><h3>Quick security check</h3><p>Please confirm you are not a robot.</p><div id="tsW"></div><button class="ghost" type="button" data-tscancel>Cancel</button></div>`;box.hidden=false;
+  const done=(f,v)=>{box.hidden=true;box.innerHTML="";f(v)};
+  box.querySelector("[data-tscancel]").onclick=()=>done(rej,new Error("Security check cancelled."));
+  try{window.turnstile.render("#tsW",{sitekey:String(tsCfg().siteKey),callback:t=>done(res,t),"error-callback":()=>done(rej,new Error("The security check failed. Please try again.")),"timeout-callback":()=>done(rej,new Error("The security check timed out. Please try again."))})}catch(e){done(rej,new Error("The security check could not start."))}})}
+function tsPass(a){if(!tsOn(a))return Promise.resolve("");const c=TS.pass[a];if(c&&c.exp-Date.now()>60e3)return Promise.resolve(c.p);
+  return TS.pend[a]||(TS.pend[a]=(async()=>{try{await tsLoad();const t=await tsWidget(),r=await SBH.tsVerify(t,a),p=String(r.pass||"");TS.pass[a]={p,exp:+(p.split(".")[0].split("|")[1])||Date.now()+9*60e3};return p}finally{delete TS.pend[a]}})())}
+// run a database call with the pass in a request header
+async function withPass(a,fn){const p=await tsPass(a);window.__tsPass=p||undefined;try{return await fn()}finally{window.__tsPass=undefined}}
 /* DOKU online payment: the customer chooses auto confirmation (DOKU) or manual confirmation by the store */
 const DKS={sel:{},done:null,busy:false};
 const dkOn=()=>!!(SBH.on&&DB.settings.doku&&DB.settings.doku.on);
@@ -1825,7 +1841,7 @@ function dkRefresh(id){const o=DB.orders.find(x=>x.id===id);if(!o)return;
   if(!$("#moSheet").hidden)renderMO()}
 document.addEventListener("click",async e=>{const sb=e.target.closest("[data-dksel]"),gb=e.target.closest("[data-dkgrp]");if(!sb&&!gb)return;const id=(e.target.closest("[data-dko]")||{dataset:{}}).dataset.dko;if(!id)return;
   if(sb){DKS.sel[id]=sb.dataset.dksel;dkRefresh(id);return}
-  if(DKS.busy)return;DKS.busy=true;gb.disabled=true;try{const r=await SBH.dokuCreate(id,gb.dataset.dkgrp);if(r&&r.url){location.href=r.url;return}toast("Couldn't open the payment page.")}catch(er){toast(er.message||"Couldn't open the payment page.")}finally{DKS.busy=false;gb.disabled=false}});
+  if(DKS.busy)return;DKS.busy=true;gb.disabled=true;try{const r=await SBH.dokuCreate(id,gb.dataset.dkgrp,await tsPass("doku"));if(r&&r.url){location.href=r.url;return}toast("Couldn't open the payment page.")}catch(er){toast(er.message||"Couldn't open the payment page.")}finally{DKS.busy=false;gb.disabled=false}});
 // back from DOKU: ask DOKU once whether it was paid (the notification may take a few seconds)
 function dkReturn(){const c=new URLSearchParams(location.search).get("paid");if(!c)return;const o=DB.orders.find(x=>x.code===c);try{history.replaceState(null,"",location.pathname)}catch(e){}if(!o)return;
   const chk=async n=>{try{const r=await SBH.dokuStatus(o.id);if(r&&r.paid){await SBH.loadShop(true);toast("Payment received. Thank you!");openMO(o.id);return}}catch(e){}if(n>0)setTimeout(()=>chk(n-1),4000);else{toast("We are waiting for your payment to be confirmed.");openMO(o.id)}};chk(3)}
@@ -2067,7 +2083,7 @@ $("#moSheet").addEventListener("submit",async e=>{
     const btn=e.target.querySelector("button[type=submit]");btn.disabled=true;btn.textContent="Sending...";
     try{
       const img=await processProof(f),prev={proof:o.proof,status:o.status,rejected:o.rejected};
-      if(SBH.on){await SBH.proof(o.id,name,img);renderBag();renderMO();if(!ppShow(o))toast("Proof sent. We'll confirm your payment soon.");return}
+      if(SBH.on){await withPass("proof",()=>SBH.proof(o.id,name,img));renderBag();renderMO();if(!ppShow(o))toast("Proof sent. We'll confirm your payment soon.");return}
       o.proof={name,img,at:Date.now()};o.status="review";delete o.rejected;if(!o.giftsAt){o.gifts=giftDrawLocal(o);o.giftsAt=Date.now()}logMsg(o,chanList(o.notify||"both"),"review",msgText(o,"review"),"system");
       if(!saveDB()){o.proof=prev.proof;o.status=prev.status;if(prev.rejected)o.rejected=prev.rejected;delete o.giftsAt;o.gifts=[];bad("Not enough storage space to save the image. Try a smaller screenshot.");btn.disabled=false;btn.textContent="I've paid, send proof";return}
       renderBag();renderMO();if(!ppShow(o))toast("Proof sent. We'll confirm your payment soon.");
@@ -4121,12 +4137,27 @@ function viewDoku(){const D=DB.settings.doku,st=DKA.st;if(SBH.on&&st===null&&!DK
     <div class="stack" style="gap:8px">${(D.methods||[]).map((m,i)=>`<div class="pmcard slotrow"><label class="chk"><input type="checkbox" data-dkm="${i}.on" ${m.on!==false?"checked":""}> <b>${esc(m.name||m.k)}</b></label>
       <label class="af slotlim">Fee paid by<select class="in" data-dkm="${i}.payer"><option value="owner" ${m.payer==="owner"?"selected":""}>You</option><option value="customer" ${m.payer!=="owner"?"selected":""}>Customer</option></select></label>
       ${m.payer!=="owner"?`<label class="af slotlim">Percent<div class="money-in"><input class="in" type="number" min="0" max="20" step="0.01" data-dkm="${i}.pct" value="${+m.pct||0}"><span style="padding-right:8px">%</span></div></label><label class="af slotlim">Plus fixed<div class="money-in"><input class="in" type="number" min="0" step="100" data-dkm="${i}.fixed" value="${+m.fixed||0}"></div></label>`:""}</div>`).join("")}</div>`}
-am.addEventListener("input",e=>{const el=e.target,k=el.dataset.dkm;if(!k)return;const [i,f]=k.split("."),m=DB.settings.doku.methods[+i];if(!m||el.type==="checkbox"||el.tagName==="SELECT")return;m[f]=Math.max(0,+el.value||0);saveSoon()});
-am.addEventListener("change",e=>{const el=e.target;
+$("#amain").addEventListener("input",e=>{const el=e.target,k=el.dataset.dkm;if(!k)return;const [i,f]=k.split("."),m=DB.settings.doku.methods[+i];if(!m||el.type==="checkbox"||el.tagName==="SELECT")return;m[f]=Math.max(0,+el.value||0);saveSoon()});
+$("#amain").addEventListener("change",e=>{const el=e.target;
   if(el.dataset.dk==="on"){DB.settings.doku.on=el.checked;saveDB();toast("Saved");renderAdmin();return}
   if(el.dataset.dkm){const [i,f]=el.dataset.dkm.split("."),m=DB.settings.doku.methods[+i];if(!m)return;if(f==="on")m.on=el.checked;else if(f==="payer"){m.payer=el.value;saveDB();toast("Saved");renderAdmin();return}else m[f]=Math.max(0,+el.value||0);saveDB();toast("Saved")}});
-am.addEventListener("click",async e=>{if(!e.target.closest("[data-dksave]"))return;const g=k=>(document.querySelector(`[data-dkk="${k}"]`)||{}).value||"";
+$("#amain").addEventListener("click",async e=>{if(!e.target.closest("[data-dksave]"))return;const g=k=>(document.querySelector(`[data-dkk="${k}"]`)||{}).value||"";
   DKA.busy=true;try{DKA.st=await SBH.dokuSave({clientId:g("clientId"),secret:g("secret"),env:g("env")});toast("DOKU keys saved")}catch(er){toast(er.message||"Couldn't save the keys.")}DKA.busy=false;renderAdmin()});
+/* --- Cloudflare Turnstile (owner) --- */
+const TSA={st:null,loading:false,busy:false};
+async function tsLoadSt(){if(TSA.loading||!SBH.on)return;TSA.loading=true;try{TSA.st=await SBH.tsGet()}catch(e){TSA.st={err:e.message}}TSA.loading=false;if(A.tab==="settings")renderAdmin()}
+function viewTs(){const T=DB.settings.turnstile,st=TSA.st;if(SBH.on&&st===null&&!TSA.loading)tsLoadSt();
+  const W=[["whatsapp","WhatsApp number / placing the order"],["courier","Courier price check"],["doku","Checkout with DOKU"],["proof","Uploading a payment proof"],["coupon","Coupon input"]];
+  return `<h3 style="margin:18px 0 4px;font-size:16px">Security check (Cloudflare Turnstile)</h3><p class="sub" style="margin-top:0">A quick "I am not a robot" check that blocks bots. Customers see it once when they do one of the actions below, then it stays valid for 10 minutes. Create a free Turnstile widget in your Cloudflare account to get the two keys. Goes live when you press Save &amp; publish.</p>
+    <label class="chk"><input type="checkbox" data-tsk="on" ${T.on?"checked":""}> <b>Security check is ${T.on?"ON":"OFF"}</b></label>
+    <label class="af" style="margin-top:8px">Site key (public)<input class="in" data-tsk="siteKey" maxlength="80" value="${esc(T.siteKey||"")}" placeholder="0x4AAAAAAA..."></label>
+    <label class="af" style="margin-top:8px">Secret key<input class="in" type="password" data-tssec maxlength="200" autocomplete="new-password" placeholder="${st&&st.hasKey?"Saved (type a new one to replace it)":"Paste your secret key"}"></label>
+    <div class="colin" style="gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn btn-blue btn-sm" type="button" data-tssave ${TSA.busy?"disabled":""}>Save secret key</button><span class="note" style="margin:0">${!SBH.on?"The secret key can only be saved on the live site.":st&&st.err?esc(st.err):st&&st.hasKey?"✓ Secret key saved":"No secret key saved yet."} The check only runs when the switch, the site key and the secret key are all set.</span></div>
+    <div class="af" style="margin-top:10px">Where the check runs<div style="display:grid;gap:6px;margin-top:6px">${W.map(([k,l])=>`<label class="chk"><input type="checkbox" data-tsw="${k}" ${(T.where||{})[k]!==false?"checked":""}> ${l}</label>`).join("")}</div></div>`}
+$("#amain").addEventListener("input",e=>{if(e.target.dataset.tsk==="siteKey"){DB.settings.turnstile.siteKey=e.target.value.trim();saveSoon()}});
+$("#amain").addEventListener("change",e=>{const el=e.target;if(el.dataset.tsk==="on"){DB.settings.turnstile.on=el.checked;saveDB();toast("Saved");renderAdmin()}
+  else if(el.dataset.tsw){DB.settings.turnstile.where=Object.assign({},DB.settings.turnstile.where,{[el.dataset.tsw]:el.checked});saveDB();toast("Saved")}});
+$("#amain").addEventListener("click",async e=>{if(!e.target.closest("[data-tssave]"))return;const v=(document.querySelector("[data-tssec]")||{}).value||"";TSA.busy=true;try{TSA.st=await SBH.tsSave({secret:v});toast("Secret key saved")}catch(er){toast(er.message||"Couldn't save the key.")}TSA.busy=false;renderAdmin()});
 function viewSettings(){
   const s=DB.settings,th=DB.thanks,pp=DB.proofpop,al=DB.alerts;
   const hc=(l,k,d)=>`<label class="af">${l}<input type="color" data-k="settings::${k}" value="${HEX_OK.test(s[k]||"")?s[k]:d}" style="width:100%;height:42px"></label>`;
@@ -4192,6 +4223,7 @@ function viewSettings(){
         <label class="af">Timer size<select class="in" data-k="settings::payCdSize">${[["M","Medium"],["L","Large"],["XL","Extra large"]].map(([v,l])=>`<option value="${v}" ${s.payCdSize===v?"selected":""}>${l}</option>`).join("")}</select></label>
         <label class="chk" style="padding-bottom:12px"><input type="checkbox" data-k="settings::payCdFx" ${s.payCdFx!==false?"checked":""}> Lively (pulsing)</label></div>
       ${viewDoku()}
+      ${viewTs()}
       <h3 style="margin:18px 0 4px;font-size:16px">Payment methods</h3><p class="sub" style="margin-top:0">Add as many as you need (bank, e-wallet, QRIS). Customers see the ones that are switched on. If you add a picture such as a QR code, customers can tap it to save it.</p>
       <div class="stack" style="gap:12px">${DB.payMethods.map(m=>`<div class="pmcard">
         <div class="pmtop"><span class="sw" title="Show to customers"><input type="checkbox" data-pmon="${m.id}" ${m.on?"checked":""} aria-label="Show ${esc(m.name||"method")} to customers"><span></span></span><input class="in" data-pm="${m.id}|name" maxlength="40" value="${esc(m.name)}" placeholder="Method name, e.g. Bank transfer" aria-label="Method name"><button class="danger" type="button" data-pmdel="${m.id}">Delete</button></div>

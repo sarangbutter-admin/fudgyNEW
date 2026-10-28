@@ -32,6 +32,7 @@
   function headers(token, extra) {
     var h = { "apikey": KEY, "Content-Type": "application/json" };
     // legacy anon keys are JWTs and may be sent as a bearer; new publishable keys must not be
+    if (window.__tsPass) h["x-ts-pass"] = window.__tsPass;   // Cloudflare Turnstile pass for the protected database calls
     if (token) h["Authorization"] = "Bearer " + token;
     else if (/^eyJ/.test(KEY)) h["Authorization"] = "Bearer " + KEY;
     if (extra) for (var k in extra) h[k] = extra[k];

@@ -158,6 +158,7 @@ function slotChange(list,i,el){const x=list[i];if(!x)return false;const row=el.c
   const nl=slotMk(f,t);if(list.some((y,j)=>j!==i&&y.t===nl)){toast("That time slot already exists.");renderAdmin();return false}x.t=nl;return true}
 const SLOT_PRESETS=Array.from({length:23},(_,h)=>String(h).padStart(2,"0")+" to "+String(h+1).padStart(2,"0"));
 function migrate(db){
+  if(db.settings&&!db.settings.turnstile)db.settings.turnstile={on:false,siteKey:"",where:{whatsapp:true,courier:true,doku:true,proof:true,coupon:true}};
   if(db.settings&&!db.settings.doku)db.settings.doku={on:false,methods:[{k:"va",name:"Virtual account (bank)",on:true,payer:"owner",pct:0,fixed:0},{k:"qris",name:"QRIS",on:true,payer:"owner",pct:0,fixed:0},{k:"ewallet",name:"E-wallet (OVO, DANA, ShopeePay)",on:true,payer:"customer",pct:0,fixed:0},{k:"card",name:"Credit card",on:false,payer:"customer",pct:0,fixed:0},{k:"retail",name:"Alfamart / Indomaret",on:false,payer:"customer",pct:0,fixed:0},{k:"paylater",name:"PayLater",on:false,payer:"customer",pct:0,fixed:0}]};
   if(db.settings){const D={samedayOn:false,samedayLeadH:3,samedayCutoff:15,samedayFee:8,samedayPayMin:60,minPayMin:30,rejPayMin:120,payCdColor:"#C8102E",payCdSize:"L",payCdFx:true,pickupOn:true,pickupLeadH:24,schedOn:true,schedLeadH:24,samedayMsg:"Sorry Sameday closed Today.\nyour order will be send tomorrow.",sdSlotOn:false,sdSlots:[{t:"16 to 17",on:true,limit:0},{t:"17 to 18",on:true,limit:0},{t:"18 to 19",on:true,limit:0}],samedayOk:"OK",samedayGo:"Continue with Sameday anyway",schedMaxDays:7,courierNoteOn:true,courierNote:"We need at least 3 hours of lead time. Once we have requested a courier, any delay or failed delivery is beyond our responsibility.",coWarnOn:true,coWarnEmoji:"⚠️",coWarnTitle:"Wait! Check your details",coWarnText:"Please make sure your name, WhatsApp number and address are correct before you place your order. We use them to send you updates and deliver your box.",coWarnOk:"Yes, my details are correct",coWarnBack:"Go back"};for(const k in D)if(db.settings[k]===undefined)db.settings[k]=D[k];
     if(!Array.isArray(db.settings.slots)){const hs=(db.settings.times||[]).map(slotStartMin).filter(m=>m!==null).map(m=>Math.floor(m/60));if(!hs.length)hs.push(10);db.settings.slots=SLOT_PRESETS.map((t,h)=>({t,on:true,limit:0})).filter((x,h)=>hs.includes(h))}
@@ -827,7 +828,7 @@ async function applyCoupon(code){
   code=cpNorm(code);if(!code){cpMsg("Type your coupon code first.",false);return}
   if(PG.code!==code.toUpperCase()){const g=await pgCheck(code,($("#coPhone")||{}).value||"");
     if(g.gift){if(g.ok){$("#cpnIn").value="";renderStore();cpMsg(`🎁 Gift code added! Your ${(g.info&&g.info.title)||"Free Gift Set"} is reserved.`,true)}else cpMsg(g.err||"That gift code cannot be used.",false);return}}
-  if(SBH.on){const r=await SBH.checkCoupon(code,S.size,($("#coPhone")||{}).value||"",S.editId).catch(ex=>({ok:false,err:ex.message}));if(!r.ok){cpMsg(r.err,false);return}}
+  if(SBH.on){const r=await withPass("coupon",()=>SBH.checkCoupon(code,S.size,($("#coPhone")||{}).value||"",S.editId)).catch(ex=>({ok:false,err:ex.message}));if(!r.ok){cpMsg(r.err,false);return}}
   const q0=quote({...S,coupon:code},DB,{withDelivery:S.step===2});
   if(q0.couponErr){cpMsg(q0.couponErr,false);return}
   S.coupon=code;$("#cpnIn").value="";renderStore();
@@ -1303,7 +1304,7 @@ async function bsRates(){
   const who=bsWho();if(!who){BSD.err="Type your WhatsApp number first, then we can show courier prices.";bsDraw();return}
   const my=++BSD.t;BSD.busy=true;BSD.err="";bsDraw();
   try{
-    const r=await SBH.fn("biteship",{action:"rates",phone:who.phone,email:who.email,size:S.size,dest:{lat:BSD.lat,lng:BSD.lng,postal:BSD.area?BSD.area.postal:"",areaId:BSD.area?BSD.area.id:"",areaName:BSD.area?BSD.area.name:""}});
+    const r=await SBH.fn("biteship",{action:"rates",pass:await tsPass("courier"),phone:who.phone,email:who.email,size:S.size,dest:{lat:BSD.lat,lng:BSD.lng,postal:BSD.area?BSD.area.postal:"",areaId:BSD.area?BSD.area.id:"",areaName:BSD.area?BSD.area.name:""}});
     if(my!==BSD.t)return;BSD.opts=r.options||[];BSD.err=BSD.opts.length?"":(r.error||"No courier is available for this address.");
     if(S.ship&&!BSD.opts.some(x=>x.sig===S.ship.sig)){S.ship=null}
   }catch(e){if(my!==BSD.t)return;BSD.opts=[];BSD.err=e.message==="BANNED"?"Courier prices are not available for this order.":e.message;if(e.message==="BANNED")banShow()}
@@ -1313,7 +1314,7 @@ async function bsGeocode(){
   const addr=$("#coAddr").value.trim(),areaTxt=BSD.area?BSD.area.name:$("#bsArea").value.trim();if(!addr&&!areaTxt){BSD.err="Type your address (and your area) first.";bsDraw();return}
   const who=bsWho();if(!who){BSD.err="Type your WhatsApp number first, then we can find your address.";bsDraw();return}
   BSD.busy=true;BSD.err="";bsDraw();
-  try{const r=await SBH.fn("biteship",{action:"geocode",phone:who.phone,email:who.email,address:addr,area:areaTxt});BSD.busy=false;BSD.tried=true;
+  try{const r=await SBH.fn("biteship",{action:"geocode",pass:await tsPass("courier"),phone:who.phone,email:who.email,address:addr,area:areaTxt});BSD.busy=false;BSD.tried=true;
     if(r.found){BSD.lat=r.lat;BSD.lng=r.lng;BSD.label=(r.approx?"Near: ":"")+r.label+(r.approx?" (approximate, please check on the map)":"");S.ship=null;BSD.opts=[];await bsRates();return}
     BSD.err="We couldn't find that address on the map. Pick your area from the list, check the spelling, or use your current location.";
   }catch(e){BSD.busy=false;BSD.err=e.message==="BANNED"?"Courier prices are not available for this order.":e.message;if(e.message==="BANNED")banShow()}
@@ -1468,6 +1469,7 @@ $("#times").addEventListener("click",e=>{const b=e.target.closest("[data-time]")
 $("#extras").addEventListener("click",e=>{const b=e.target.closest("[data-addon]");if(!b)return;const id=b.dataset.addon;
   S.addons=S.addons.includes(id)?S.addons.filter(x=>x!==id):[...S.addons,id];renderStore();if(!RM&&S.addons.includes(id))bump(b.querySelector(".tick"))});
 $("#giftNote").addEventListener("input",e=>{S.note=e.target.value;saveCart()});
+$("#coPhone").addEventListener("change",()=>{if(normPhone($("#coPhone").value).length>=9&&tsOn("whatsapp"))tsPass("whatsapp").catch(()=>{})});
 $("#coForm").addEventListener("input",saveCust);$("#coForm").addEventListener("change",saveCust);
 $("#panelCta").addEventListener("click",e=>cta(e.currentTarget.dataset.go));
 $("#barCta").addEventListener("click",e=>cta(e.currentTarget.dataset.go));
@@ -1501,12 +1503,12 @@ $("#coForm").addEventListener("submit",e=>{
   if(SBH.on){
     const btn=f.querySelector("button[type=submit]");if(btn)btn.disabled=true;
     const pNote=S.mode==="delivery"&&placeOn("dnoteOn")?String(S.dnote||"").trim():"",pImg=S.mode==="delivery"&&placeOn("dphotoOn")?S.dphoto:"";
-    SBH.place({notify,sdLate:S.mode!=="pickup"&&S.speed==="sameday"&&!samedayOpen()?true:undefined,shuffled:!!S.shuf,size:S.size,items:fields.items,mode:S.mode,speed:S.speed,day:S.day,time:S.time,note:S.note,addons:[...S.addons],coupon:fields.coupon,preCode:!ed&&PG.code?PG.code:undefined,expectTotal:q.total,customer:cust,ship:q.ship||undefined},ed).then(o=>{
+    tsPass("whatsapp").then(pp=>{window.__tsPass=pp||undefined;return SBH.place({notify,sdLate:S.mode!=="pickup"&&S.speed==="sameday"&&!samedayOpen()?true:undefined,shuffled:!!S.shuf,size:S.size,items:fields.items,mode:S.mode,speed:S.speed,day:S.day,time:S.time,note:S.note,addons:[...S.addons],coupon:fields.coupon,preCode:!ed&&PG.code?PG.code:undefined,expectTotal:q.total,customer:cust,ship:q.ship||undefined},ed)}).then(o=>{
       if(o&&o.preGift)pgForget(true);else if(o&&o._preErr)setTimeout(()=>toast("Your gift code was not added: "+o._preErr),900);
       if(pNote||pImg)SBH.placeInfo(o.id,pNote,pImg).catch(err=>toast("Order placed, but the driver note or photo didn't save: "+err.message));
       addMine(o.id);S.editId=null;saveCart();renderDone(o,!!ed);
       S=fresh();$("#coForm").reset();saveCart();sanitizeCart();renderStoreStatic();renderStore();renderEditBar();renderBag();
-    }).catch(err=>{if(err.message==="BANNED"){$("#coErr").hidden=true;banShow()}else{$("#coErr").textContent=err.message;$("#coErr").hidden=false}SBH.loadShop(true)}).finally(()=>{if(btn)btn.disabled=false});
+    }).catch(err=>{if(err.message==="BANNED"){$("#coErr").hidden=true;banShow()}else{$("#coErr").textContent=err.message;$("#coErr").hidden=false}SBH.loadShop(true)}).finally(()=>{window.__tsPass=undefined;if(btn)btn.disabled=false});
     return}
   let o;
   if(ed){releaseHold(ed);Object.assign(ed,fields,{editedAt:Date.now()});o=ed;takeHold(o)}
@@ -1793,6 +1795,20 @@ function renderBag(){
   renderBell();
 }
 const MO={id:null,cform:false,rate:{}};
+/* Cloudflare Turnstile: a quick check before the actions bots like to abuse. It returns a 10-minute pass the server checks. */
+const TS={pass:{},pend:{},loading:null};
+const tsCfg=()=>DB.settings.turnstile||{};
+const tsOn=a=>!!(SBH.on&&tsCfg().on&&tsCfg().siteKey&&(tsCfg().where||{})[a]);
+function tsLoad(){if(window.turnstile)return Promise.resolve();return TS.loading||(TS.loading=new Promise((res,rej)=>{const s=document.createElement("script");s.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";s.async=true;s.onload=()=>res();s.onerror=()=>{TS.loading=null;rej(new Error("The security check could not load. Please check your connection and try again."))};document.head.appendChild(s)}))}
+function tsWidget(){return new Promise((res,rej)=>{let box=$("#tsBox");if(!box){box=document.createElement("div");box.id="tsBox";box.className="tsbox";document.body.appendChild(box)}
+  box.innerHTML=`<div class="tscard" role="dialog" aria-modal="true"><h3>Quick security check</h3><p>Please confirm you are not a robot.</p><div id="tsW"></div><button class="ghost" type="button" data-tscancel>Cancel</button></div>`;box.hidden=false;
+  const done=(f,v)=>{box.hidden=true;box.innerHTML="";f(v)};
+  box.querySelector("[data-tscancel]").onclick=()=>done(rej,new Error("Security check cancelled."));
+  try{window.turnstile.render("#tsW",{sitekey:String(tsCfg().siteKey),callback:t=>done(res,t),"error-callback":()=>done(rej,new Error("The security check failed. Please try again.")),"timeout-callback":()=>done(rej,new Error("The security check timed out. Please try again."))})}catch(e){done(rej,new Error("The security check could not start."))}})}
+function tsPass(a){if(!tsOn(a))return Promise.resolve("");const c=TS.pass[a];if(c&&c.exp-Date.now()>60e3)return Promise.resolve(c.p);
+  return TS.pend[a]||(TS.pend[a]=(async()=>{try{await tsLoad();const t=await tsWidget(),r=await SBH.tsVerify(t,a),p=String(r.pass||"");TS.pass[a]={p,exp:+(p.split(".")[0].split("|")[1])||Date.now()+9*60e3};return p}finally{delete TS.pend[a]}})())}
+// run a database call with the pass in a request header
+async function withPass(a,fn){const p=await tsPass(a);window.__tsPass=p||undefined;try{return await fn()}finally{window.__tsPass=undefined}}
 /* DOKU online payment: the customer chooses auto confirmation (DOKU) or manual confirmation by the store */
 const DKS={sel:{},done:null,busy:false};
 const dkOn=()=>!!(SBH.on&&DB.settings.doku&&DB.settings.doku.on);
@@ -1808,7 +1824,7 @@ function dkRefresh(id){const o=DB.orders.find(x=>x.id===id);if(!o)return;
   if(!$("#moSheet").hidden)renderMO()}
 document.addEventListener("click",async e=>{const sb=e.target.closest("[data-dksel]"),gb=e.target.closest("[data-dkgrp]");if(!sb&&!gb)return;const id=(e.target.closest("[data-dko]")||{dataset:{}}).dataset.dko;if(!id)return;
   if(sb){DKS.sel[id]=sb.dataset.dksel;dkRefresh(id);return}
-  if(DKS.busy)return;DKS.busy=true;gb.disabled=true;try{const r=await SBH.dokuCreate(id,gb.dataset.dkgrp);if(r&&r.url){location.href=r.url;return}toast("Couldn't open the payment page.")}catch(er){toast(er.message||"Couldn't open the payment page.")}finally{DKS.busy=false;gb.disabled=false}});
+  if(DKS.busy)return;DKS.busy=true;gb.disabled=true;try{const r=await SBH.dokuCreate(id,gb.dataset.dkgrp,await tsPass("doku"));if(r&&r.url){location.href=r.url;return}toast("Couldn't open the payment page.")}catch(er){toast(er.message||"Couldn't open the payment page.")}finally{DKS.busy=false;gb.disabled=false}});
 // back from DOKU: ask DOKU once whether it was paid (the notification may take a few seconds)
 function dkReturn(){const c=new URLSearchParams(location.search).get("paid");if(!c)return;const o=DB.orders.find(x=>x.code===c);try{history.replaceState(null,"",location.pathname)}catch(e){}if(!o)return;
   const chk=async n=>{try{const r=await SBH.dokuStatus(o.id);if(r&&r.paid){await SBH.loadShop(true);toast("Payment received. Thank you!");openMO(o.id);return}}catch(e){}if(n>0)setTimeout(()=>chk(n-1),4000);else{toast("We are waiting for your payment to be confirmed.");openMO(o.id)}};chk(3)}
@@ -2049,7 +2065,7 @@ $("#moSheet").addEventListener("submit",async e=>{
     const btn=e.target.querySelector("button[type=submit]");btn.disabled=true;btn.textContent="Sending...";
     try{
       const img=await processProof(f),prev={proof:o.proof,status:o.status,rejected:o.rejected};
-      if(SBH.on){await SBH.proof(o.id,name,img);renderBag();renderMO();if(!ppShow(o))toast("Proof sent. We'll confirm your payment soon.");return}
+      if(SBH.on){await withPass("proof",()=>SBH.proof(o.id,name,img));renderBag();renderMO();if(!ppShow(o))toast("Proof sent. We'll confirm your payment soon.");return}
       o.proof={name,img,at:Date.now()};o.status="review";delete o.rejected;if(!o.giftsAt){o.gifts=giftDrawLocal(o);o.giftsAt=Date.now()}logMsg(o,chanList(o.notify||"both"),"review",msgText(o,"review"),"system");
       if(!saveDB()){o.proof=prev.proof;o.status=prev.status;if(prev.rejected)o.rejected=prev.rejected;delete o.giftsAt;o.gifts=[];bad("Not enough storage space to save the image. Try a smaller screenshot.");btn.disabled=false;btn.textContent="I've paid, send proof";return}
       renderBag();renderMO();if(!ppShow(o))toast("Proof sent. We'll confirm your payment soon.");
@@ -2810,7 +2826,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 03:05 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 03:13 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

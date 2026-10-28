@@ -1,7 +1,7 @@
 // Delidome: optional Biteship courier integration.
 // Deploy:  supabase functions deploy biteship
 // The API key is saved by the owner in Shop settings -> Courier delivery (stored in a private table, never sent to the website).
-import { admin, applyUpdate, bookOrder, boxOf, bs, bsErr, cacheGet, cacheSet, cors, driverOf, findProofs, hmacHex, INSTANT, ipOf, json, kv, limited, settings, sha, teamRole } from "../_shared/common.ts";
+import { tsGate, admin, applyUpdate, bookOrder, boxOf, bs, bsErr, cacheGet, cacheSet, cors, driverOf, findProofs, hmacHex, INSTANT, ipOf, json, kv, limited, settings, sha, teamRole } from "../_shared/common.ts";
 
 const num = (v: unknown, d = 0) => (Number.isFinite(+(v as number)) ? +(v as number) : d);
 const clean = (s: unknown, n: number) => String(s ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n);
@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
 
   try {
     /* ---------- public (shop checkout) ---------- */
+    if (action === "geocode" || action === "rates") { const tg = await tsGate(db, "courier", body.pass); if (tg) return json({ error: tg }, 403); }
     if (action === "areas" || action === "geocode" || action === "rates") {
       const { set, cfg, key, sec } = await load(db);
       // the owner's Security tab: limits and daily caps (missing = default, 0 = no limit), and an emergency stop
