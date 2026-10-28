@@ -125,6 +125,7 @@
   H.rvClaim = async function (id, choice) { var d = await K.rpc("rv_claim", { p_id: id, p_token: tk(id), p_choice: choice || "" }); return d; };
   H.rvStatus = function () { return K.rpc("admin_rv_status", {}, true); };
   H.dokuCreate = async function (id, group, pass) { var d = await K.fn("doku", { action: "create", id: id, token: tk(id), group: group, pass: pass || "" }); if (d && d.error) throw new Error(d.error); return d; };
+  H.changePassword = function (o, n) { return K.changePassword(o, n); };
   H.tsVerify = async function (token, action) { var d = await K.fn("turnstile", { action: action, token: token }); if (!d || d.error || !d.pass) throw new Error((d && d.error) || "The security check failed. Please try again."); return d; };
   H.tsGet = function () { return K.rpc("admin_ts_get", {}, true); };
   H.tsSave = function (p) { return K.rpc("admin_ts_save", { p: p }, true); };

@@ -2318,7 +2318,7 @@ const preGiftHTML=(o,cust)=>o.preGift&&cust&&o.preGift.mode==="surprise"&&o.preG
 const A={sel:new Set(),lbl:null,lblPrev:"sample",rvPid:null,tab:"dashboard",nf:{type:"news",title:"",text:"",pid:"",code:"",until:""},dd:"today",vr:"today",dsig:"",filter:"all",od:"all",q:"",pq:"",pcat:"all",modal:null,np:null,bakeDay:null,openOrder:null,
   draft:{kind:"discount",name:"Flash sale",type:"percent",value:20,appliesTo:"all",fdAll:true,fdSizes:[],fdCustom:false,startMode:"now",startAt:"",durH:1,durM:0,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#000096",fx:"shine",view:"teaser"}};
 // the page the team is on survives a refresh (and coming back later in the same browser)
-{const KEY="delidome-admin-tab",TABS="dashboard orders complaints customers products badges sales coupons boxes notify announcer hero landing marquee revrew delivery labels settings security affiliates prelaunch log team".split(" ");
+{const KEY="delidome-admin-tab",TABS="dashboard orders complaints customers products badges sales coupons boxes notify announcer hero landing marquee revrew delivery labels settings security affiliates afcoupons prelaunch log team".split(" ");
   let cur="dashboard";try{const v=localStorage.getItem(KEY);if(TABS.includes(v))cur=v}catch(e){}
   Object.defineProperty(A,"tab",{enumerable:true,get:()=>cur,set:v=>{cur=v;if(TABS.includes(v))try{localStorage.setItem(KEY,v)}catch(e){}}})}
 function toast(msg){if(typeof toastHook==="function")msg=toastHook(msg);const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,Math.max(1600,msg.length*45))}
@@ -2344,7 +2344,7 @@ function renderAdmin(){try{applyBgx();applySnow();applyAdminBrand();lpFavicon(DB
   $("#cSales").textContent=nLive?nLive+" live":"";$("#cSales").hidden=!nLive;
   const lowN=DB.products.filter(isLow).length;
   $("#cProducts").textContent=lowN?lowN+" low":DB.products.filter(p=>p.status==="available").length;$("#cProducts").classList.toggle("live",!!lowN);
-  $("#amain").innerHTML=({notify:viewNotify,prelaunch:viewPrelaunch,revrew:viewRevrew,dashboard:viewDashboard,orders:viewOrders,sales:viewSales,products:viewProducts,complaints:viewComplaints,boxes:viewBoxes,marquee:viewMarquee,announcer:viewAnnouncer,coupons:viewCoupons,hero:viewHero,labels:viewLabels,landing:viewLanding,settings:viewSettings,delivery:viewDelivery,customers:viewCustomers,team:viewTeam,badges:viewBadges,log:viewLog,security:viewSecurity,affiliates:viewAffiliates})[A.tab]();
+  $("#amain").innerHTML=({afcoupons:viewAfCoupons,notify:viewNotify,prelaunch:viewPrelaunch,revrew:viewRevrew,dashboard:viewDashboard,orders:viewOrders,sales:viewSales,products:viewProducts,complaints:viewComplaints,boxes:viewBoxes,marquee:viewMarquee,announcer:viewAnnouncer,coupons:viewCoupons,hero:viewHero,labels:viewLabels,landing:viewLanding,settings:viewSettings,delivery:viewDelivery,customers:viewCustomers,team:viewTeam,badges:viewBadges,log:viewLog,security:viewSecurity,affiliates:viewAffiliates})[A.tab]();
   if(A.tab==="log"&&LG.list===null)loadLog();
   if(A.tab==="customers"&&(CU.list===null||CU.stale))loadCustomers();
   if(A.tab==="team"&&TM.list===null)loadTeam();
@@ -6340,11 +6340,23 @@ function afPayoutBanner(L){const c=AF.cfg||{min:20000,day:4},pv=L.filter(x=>x.pa
   if(new Date().getDay()===c.day){const ready=L.filter(x=>x.status!=="disabled"&&(+x.tot.approved||0)>=c.min);
     h+=ready.length?`<div class="afpayday"><b>💸 It's payout day (${AF_DAYS[c.day]}).</b> Ready to pay: ${ready.map(x=>`<button class="linkbtn" type="button" data-afview="${x.id}">${esc(x.name||x.username)} ${money(x.tot.approved)}</button> <small>${x.pay&&x.pay.status==="verified"?"✓ account verified":"⚠️ account not verified"}</small>`).join(" · ")}</div>`:`<div class="afpayday">💸 It's payout day (${AF_DAYS[c.day]}). Nobody has reached the minimum of ${money(c.min)} yet.</div>`}
   return h}
+/* --- affiliator: my coupon and my password --- */
+const AFM={cpn:null,msg:"",pwMsg:"",busy:false};
+async function afCpnLoad(){try{AFM.cpn=await SBH.rpc("aff_coupon_info",{})}catch(e){AFM.cpn={ok:false}}affRender()}
+function afCpnText(c){const d=c.type==="freedelivery"?"free delivery":c.type==="amount"?money(+c.value)+" off":(+c.value)+"% off";return d+(+c.minSpend>0?" on orders from "+money(+c.minSpend):"")+(c.stack?", also on flash sales":", not on flash sales")+(c.endsAt?", until "+esc(String(c.endsAt).replace("T"," ")):"")}
+function afMyHTML(){const c=AFM.cpn;if(!c||!c.ok)return "";const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,"");
+  return `<section class="panel"><h2 style="margin:0 0 6px">🎟️ My coupon</h2>${!c.ready?`<p class="sub">Your coupon is not ready yet. The owner sets the discount first, then you can choose its name here.</p>`
+    :`<p class="sub" style="margin:0 0 8px">${c.coupon?`Your code <b>${esc(c.coupon)}</b>`:"You do not have a coupon name yet."} Customers who type it get <b>${afCpnText(c)}</b>. You earn <b>${+c.rate}%</b> of the order. Your link is remembered for 30 days, so orders from customers who came through it also count.</p>
+    ${c.canName?`<div class="colin" style="flex-wrap:wrap;gap:8px"><input class="in" id="afCpIn" maxlength="20" placeholder="Choose a name, like ALPHA001" value="${esc(c.coupon||"")}" style="flex:1;min-width:180px;text-transform:uppercase"><button class="btn btn-blue btn-sm" type="button" data-afcpsave ${AFM.busy?"disabled":""}>${c.coupon?"Change name":"Save"}</button></div><p class="note" style="margin:6px 0 0">3 to 20 letters or numbers. You can change it once an hour.</p>`:`<p class="note" style="margin:0">The owner sets your coupon name.</p>`}
+    ${AFM.msg?`<p class="note" style="margin:6px 0 0"><b>${esc(AFM.msg)}</b></p>`:""}`}</section>
+  <section class="panel"><h2 style="margin:0 0 6px">🔑 Change my password</h2><div class="grid2"><label class="af">Current password<input class="in" id="afPwOld" type="password" autocomplete="current-password" maxlength="72"></label><label class="af">New password (8+ characters)<input class="in" id="afPwNew" type="password" autocomplete="new-password" maxlength="72"></label></div>
+    <div class="colin" style="margin-top:8px;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost-blue btn-sm" type="button" data-afpwsave ${AFM.busy?"disabled":""}>Change password</button>${AFM.pwMsg?`<span class="note" style="margin:0"><b>${esc(AFM.pwMsg)}</b></span>`:""}</div></section>`}
 function afDashHTML(r,owner){
   const a=r.aff,t=r.tot,mx=Math.max(1,...r.series.map(x=>Math.max(x.views,x.orders))),gl={day:"Daily",week:"Weekly",month:"Monthly"};
   const lbl=b=>AF.group==="month"?new Date(b+"-01T00:00:00").toLocaleDateString("en-US",{month:"long",year:"numeric"}):AF.group==="week"?"Week of "+fmtDay(b):fmtDay(b);
   const prods=(AF.prods||[]).filter(p=>p.status!=="hidden");
   return `${a.status==="paused"?`<div class="afwarn">⏸️ ${owner?"This affiliator is paused":"Your account is paused"}: links and the coupon don't earn commission right now.</div>`:""}
+  ${owner?"":afMyHTML()}
   <section class="panel"><div class="afhead"><div><h2 style="margin:0">${esc(a.name||a.username)} ${afChip(AF_STATUS,a.status)}</h2>
     <p class="sub" style="margin:4px 0 0">Code <b>${esc(a.code)}</b> · ${+a.rate}% commission${a.coupon?` · Coupon <b>${esc(a.coupon)}</b>`:""}${owner&&a.phone?` · ${esc(a.phone)}`:""}</p></div></div>
     ${afPeriodHTML()}${afKpis(t,!owner,r.cfg)}
@@ -6379,6 +6391,31 @@ function afAnnHTML(L){const F=AF.annf||(AF.annf={to:"all",title:"",body:""}),A=A
     <label class="af" style="margin-top:8px">Message<textarea class="in" data-anf="body" rows="3" maxlength="500">${esc(F.body)}</textarea></label>
     <div class="colin" style="margin-top:8px"><button class="btn btn-blue btn-sm" type="button" data-afannsend>Send announcement</button></div>
     ${A.length?`<div class="afannl">${A.map(x=>`<div class="afann${x.hidden?" off":""}"><span><small>${fmtAgo(x.at)} · ${x.aff?"to "+esc(x.aname||""):"to everyone"}${x.hidden?" · removed":""}</small><b>${esc(x.title)}</b><span>${esc(x.body)}</span></span>${x.hidden?"":`<button class="ghost sm" type="button" data-afannhide="${x.id}">Remove</button>`}</div>`).join("")}</div>`:""}</section>`}
+/* --- Affiliate coupons (owner): the coupon rule and commission of each affiliator --- */
+const AFC={list:null,loading:false,err:"",ed:{},busy:""};
+async function afcLoad(){if(AFC.loading||!SBH.on)return;AFC.loading=true;try{AFC.list=await SBH.rpc("admin_aff_coupons",{});AFC.err=""}catch(e){AFC.err=e.message;AFC.list=[]}AFC.loading=false;if(A.tab==="afcoupons")renderAdmin()}
+const afcVal=(a,k)=>{const e=AFC.ed[a.id];if(e&&k in e)return e[k];const r=a.crule||{};if(k==="rate")return a.rate;if(k==="coupon")return a.coupon||"";return r[k]};
+function viewAfCoupons(){if(!SBH.on)return head("Affiliate coupons","Each affiliator gets their own coupon. You set the discount and the commission here.")+MOCK+`<section class="panel"><p class="note">This page works on the live site.</p></section>`;
+  if(AFC.list===null&&!AFC.loading)afcLoad();const L=AFC.list||[];
+  const inp=(a,l,k,o={})=>`<label class="af">${l}<input class="in" data-afc="${a.id}|${k}" ${o.num?`type="number" min="0" step="${o.step||1}"`:o.dt?`type="datetime-local"`:""} maxlength="${o.max||40}" value="${esc(afcVal(a,k)??"")}"${o.ph?` placeholder="${esc(o.ph)}"`:""}></label>`;
+  const sw=(a,l,k,d)=>`<label class="chk"><input type="checkbox" data-afc="${a.id}|${k}" ${(afcVal(a,k)??d)!==false&&(afcVal(a,k)??d)!=="false"?"checked":""}> ${l}</label>`;
+  return head("Affiliate coupons","Each affiliator can have their own coupon (like ALPHA001). You set the discount customers get and the commission the affiliator earns. Orders that use the coupon, or come from their link in the last 30 days, are credited to them.")+`<div class="stack">
+  ${AFC.err?`<section class="panel"><p class="err">${esc(AFC.err)}</p></section>`:""}
+  ${L.length?L.map(a=>{const ty=afcVal(a,"type")||"percent";return `<section class="panel"><div class="afhead"><div><h2 style="margin:0">${esc(a.name||a.username)} <span class="note" style="margin:0">@${esc(a.username)} · link code ${esc(a.code)}${a.status!=="active"?" · "+esc(a.status):""}</span></h2><p class="sub" style="margin:4px 0 0">${a.coupon?`Coupon <b>${esc(a.coupon)}</b> · used by ${+a.uses||0} order${+a.uses===1?"":"s"}`:"No coupon name yet. The affiliator can choose one in their dashboard, or you can type it here."}</p></div></div>
+    <div class="grid2" style="margin-top:10px">${inp(a,"Coupon name (3 to 20 letters or numbers)","coupon",{max:20,ph:"ALPHA001"})}${inp(a,"Commission (% of the order, without delivery)","rate",{num:1,step:"0.5"})}</div>
+    <div class="grid2" style="margin-top:8px"><label class="af">Discount for the customer<select class="in" data-afc="${a.id}|type">${[["percent","Percent off the box"],["amount","Amount off the box"],["freedelivery","Free delivery"]].map(([v,l])=>`<option value="${v}" ${ty===v?"selected":""}>${l}</option>`).join("")}</select></label>
+      ${ty==="freedelivery"?"<span></span>":inp(a,ty==="percent"?"Percent (%)":"Amount","value",{num:1,step:"0.5"})}</div>
+    <div class="grid2" style="margin-top:8px">${inp(a,"Minimum order (0 = none)","minSpend",{num:1})}${inp(a,"Total uses (0 = unlimited)","maxUses",{num:1})}${inp(a,"Starts (optional)","startsAt",{dt:1})}${inp(a,"Ends (optional)","endsAt",{dt:1})}</div>
+    <div class="stack" style="gap:6px;margin-top:8px">${sw(a,"Coupon is on","on",true)}${sw(a,"One use per customer (checked by WhatsApp number)","onePerPhone",true)}${sw(a,"Can be used together with a flash sale","stack",false)}${sw(a,"The affiliator may choose and change the coupon name","canName",true)}</div>
+    <div class="colin" style="margin-top:10px"><button class="btn btn-blue btn-sm" type="button" data-afcsave="${a.id}" ${AFC.busy===a.id?"disabled":""}>Save</button></div></section>`}).join(""):`<section class="panel"><p class="note">${AFC.loading?"Loading…":"No affiliators yet. Add one in the Affiliates menu first."}</p></section>`}</div>`}
+$("#amain").addEventListener("input",e=>{const k=e.target.dataset.afc;if(!k||e.target.type==="checkbox"||e.target.tagName==="SELECT")return;const [id,f]=k.split("|");(AFC.ed[id]=AFC.ed[id]||{})[f]=e.target.value});
+$("#amain").addEventListener("change",e=>{const el=e.target,k=el.dataset.afc;if(!k)return;const [id,f]=k.split("|");(AFC.ed[id]=AFC.ed[id]||{})[f]=el.type==="checkbox"?el.checked:el.value;if(f==="type")renderAdmin()});
+$("#amain").addEventListener("click",async e=>{const b=e.target.closest("[data-afcsave]");if(!b)return;const id=b.dataset.afcsave,a=(AFC.list||[]).find(x=>x.id===id);if(!a)return;
+  const g=k=>afcVal(a,k),bool=(k,d)=>{const v=g(k);return v===undefined||v===null||v===""?d:(v===true||v==="true")};
+  AFC.busy=id;renderAdmin();
+  try{await SBH.rpc("admin_aff_crule",{p_id:id,p:{coupon:g("coupon")||"",rate:g("rate"),type:g("type")||"percent",value:g("value")??"",minSpend:g("minSpend")||0,maxUses:g("maxUses")||0,startsAt:g("startsAt")||"",endsAt:g("endsAt")||"",on:bool("on",true),onePerPhone:bool("onePerPhone",true),stack:bool("stack",false),canName:bool("canName",true)}});
+    delete AFC.ed[id];toast("Saved");AFC.list=null}catch(er){toast(er.message||"Couldn't save.")}
+  AFC.busy="";renderAdmin()});
 function viewAffiliates(){
   const h=head("Affiliates","People who share your shop and earn commission on the orders they bring. Only owners can see this.");
   if(!SBH.on)return h+MOCK+`<section class="panel"><div class="empty">Affiliates work once the site is connected to Supabase.</div></section>`;
@@ -6509,14 +6546,17 @@ function afBellClick(e){const tb=e.target.closest("[data-afntab]");if(tb){AFN.ta
   else if(AFN.open&&!e.target.closest(".afpop")){AFN.open=false;afBellDraw()}}
 function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
-    v.addEventListener("click",e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut()});
+    v.addEventListener("click",async e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut();
+      if(e.target.closest("[data-afcpsave]")){AFM.busy=true;AFM.msg="";affRender();try{AFM.cpn=await SBH.rpc("aff_coupon_save",{p_code:(document.getElementById("afCpIn")||{}).value||""});AFM.msg="Saved. Your coupon is "+AFM.cpn.coupon+"."}catch(er){AFM.msg=er.message||"Couldn't save."}AFM.busy=false;affRender()}
+      if(e.target.closest("[data-afpwsave]")){const o=(document.getElementById("afPwOld")||{}).value||"",n=(document.getElementById("afPwNew")||{}).value||"";AFM.pwMsg="";
+        if(n.length<8){AFM.pwMsg="New password: at least 8 characters.";affRender();return}AFM.busy=true;affRender();try{await SBH.changePassword(o,n);AFM.pwMsg="Password changed."}catch(er){AFM.pwMsg=er.message||"Couldn't change it."}AFM.busy=false;affRender()}});
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
   v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build __BUILD__</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
-const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
+const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;afCpnLoad();AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
 /* --- Pre-launch (owner) --- */
 const PRA={list:null,loading:false,err:""};
 const preDT=ms=>{if(!(+ms>0))return "";const d=new Date(+ms),p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};

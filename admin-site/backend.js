@@ -116,6 +116,15 @@
     saveSess();
     return sess.email;
   }
+  // the signed-in person changes their own password (the old one is checked first)
+  async function changePassword(oldPw, newPw) {
+    if (!sess || !sess.email) throw new Error("Please sign in again.");
+    var em = sess.email;
+    try { await login(em, oldPw); } catch (e) { throw new Error("Your current password isn't right."); }
+    var tk = await token(), r = await fetch(URL_ + "/auth/v1/user", { method: "PUT", headers: headers(tk), body: JSON.stringify({ password: newPw }) });
+    var j = await r.json().catch(function () { return {}; });
+    if (!r.ok) throw new Error(/same|different/i.test(j.msg || j.message || "") ? "Please choose a different password." : (j.msg || j.message || j.error_description || "Couldn't change the password."));
+  }
   function logout() {
     var s = sess; sess = null; saveSess();
     if (s && s.access_token) { try { fetch(URL_ + "/auth/v1/logout", { method: "POST", headers: headers(s.access_token) }).catch(function () {}); } catch (e) {} }
@@ -160,6 +169,7 @@
     rpc: rpc,
     fn: fn,
     login: login,
+    changePassword: changePassword,
     logout: logout,
     upload: upload,
     signedIn: function () { return !!sess; },

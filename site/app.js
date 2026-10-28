@@ -2770,6 +2770,7 @@ function afDashHTML(r,owner){
   const lbl=b=>AF.group==="month"?new Date(b+"-01T00:00:00").toLocaleDateString("en-US",{month:"long",year:"numeric"}):AF.group==="week"?"Week of "+fmtDay(b):fmtDay(b);
   const prods=(AF.prods||[]).filter(p=>p.status!=="hidden");
   return `${a.status==="paused"?`<div class="afwarn">⏸️ ${owner?"This affiliator is paused":"Your account is paused"}: links and the coupon don't earn commission right now.</div>`:""}
+  ${owner?"":afMyHTML()}
   <section class="panel"><div class="afhead"><div><h2 style="margin:0">${esc(a.name||a.username)} ${afChip(AF_STATUS,a.status)}</h2>
     <p class="sub" style="margin:4px 0 0">Code <b>${esc(a.code)}</b> · ${+a.rate}% commission${a.coupon?` · Coupon <b>${esc(a.coupon)}</b>`:""}${owner&&a.phone?` · ${esc(a.phone)}`:""}</p></div></div>
     ${afPeriodHTML()}${afKpis(t,!owner,r.cfg)}
@@ -2822,14 +2823,17 @@ function afBellClick(e){const tb=e.target.closest("[data-afntab]");if(tb){AFN.ta
   else if(AFN.open&&!e.target.closest(".afpop")){AFN.open=false;afBellDraw()}}
 function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
-    v.addEventListener("click",e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut()});
+    v.addEventListener("click",async e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut();
+      if(e.target.closest("[data-afcpsave]")){AFM.busy=true;AFM.msg="";affRender();try{AFM.cpn=await SBH.rpc("aff_coupon_save",{p_code:(document.getElementById("afCpIn")||{}).value||""});AFM.msg="Saved. Your coupon is "+AFM.cpn.coupon+"."}catch(er){AFM.msg=er.message||"Couldn't save."}AFM.busy=false;affRender()}
+      if(e.target.closest("[data-afpwsave]")){const o=(document.getElementById("afPwOld")||{}).value||"",n=(document.getElementById("afPwNew")||{}).value||"";AFM.pwMsg="";
+        if(n.length<8){AFM.pwMsg="New password: at least 8 characters.";affRender();return}AFM.busy=true;affRender();try{await SBH.changePassword(o,n);AFM.pwMsg="Password changed."}catch(er){AFM.pwMsg=er.message||"Couldn't change it."}AFM.busy=false;affRender()}});
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 03:15 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 17:25 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
-const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
+const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;afCpnLoad();AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
 const sig = (now=Date.now()) => DB.sales.map(s=>saleStatus(s,now)).join();
 let view=null;
 function route(){
