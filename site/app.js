@@ -327,14 +327,20 @@ function quote(c,db=DB,{at=Date.now(),withDelivery=true}={}){
   const cp=c.coupon?couponCheck(c.coupon,c,db,{base,saleDisc:discount,phone:c.phone,excl:c.editId}):null;
   const couponDisc=cp&&cp.ok?cp.discount:0;
   const fdSale=at&&c.mode==="delivery"?freeDelSale(c.size,at,db):null;
-  const shipQ=withDelivery?bsShip(c,at||Date.now(),db):null,noFee=!!fdSale||!!(cp&&cp.ok&&cp.freeDel);
+  const shipQ=withDelivery?bsShip(c,at||Date.now(),db):null,cpFree=!!(cp&&cp.ok&&cp.freeDel);
+  const noFee=cpFree||!!(fdSale&&fdSale.kind!=="amount"&&fdSale.scope!=="store");   // a free promo for every courier: no need to pick a courier to know the price
   const feePending=withDelivery&&c.mode==="delivery"&&!noFee&&!shipQ&&bsPending(c,db);
-  const fee=withDelivery&&c.mode==="delivery"&&!noFee?(shipQ?+shipQ.price:feePending?0:(c.speed==="sameday"?(db.settings.samedayFee??db.settings.deliveryFee):storeFee(c.size,db))):0;
-  return {ship:shipQ,feePending,base,sale,fdSale,discount,surcharge,addons,fee,coupon:cp&&cp.ok?cp.coupon:null,couponDisc,couponErr:cp&&!cp.ok?cp.err:"",total:r2(base-discount-couponDisc+surcharge+addons+fee)};
+  const feeRaw=withDelivery&&c.mode==="delivery"?(shipQ?+shipQ.price:feePending?0:(c.speed==="sameday"?(db.settings.samedayFee??db.settings.deliveryFee):storeFee(c.size,db))):0;
+  const fee=cpFree||feePending?(cpFree?0:feeRaw):fdApply(fdSale,feeRaw,shipQ?"bite":"store"),feeWas=fee<feeRaw?feeRaw:0;
+  return {ship:shipQ,feePending,feeWas,base,sale,fdSale,discount,surcharge,addons,fee,coupon:cp&&cp.ok?cp.coupon:null,couponDisc,couponErr:cp&&!cp.ok?cp.err:"",total:r2(base-discount-couponDisc+surcharge+addons+fee)};
 }
-const saleOffText = s => isFD(s)?"Free delivery":isGift(s)?"Free gifts":s.type==="percent"?`${s.value}% off`:`${money(s.value)} off`;
+const saleOffText = s => isFD(s)?(s.kind==="amount"?`${money(s.amount)} off delivery`:"Free delivery")+(s.scope==="store"?` (${scName()})`:""):isGift(s)?"Free gifts":s.type==="percent"?`${s.value}% off`:`${money(s.value)} off`;
 function giftAppliesText(s){const ps=[...new Set(s.rules.map(r=>+r.from===+r.to&&DB.sizes.some(z=>z.n===+r.from)?`box of ${r.from}`:`custom boxes of ${r.from} to ${r.to}`))];
   return ps.length>1?ps.slice(0,-1).join(", ")+" and "+ps[ps.length-1]:ps[0]}
+const fdx=D=>({scope:D.dscope==="store"?"store":"all",kind:D.dkind==="amount"?"amount":"free",amount:D.dkind==="amount"?Math.max(0,Math.round(+D.damount||0)):0});
+/* a delivery promo takes the delivery price down: free or an amount off. src "bite" = a Biteship courier, "store" = the Store Courier / sameday. A "store only" promo leaves Biteship prices alone. */
+const fdApply=(s,fee,src)=>!s||(s.scope==="store"&&src==="bite")?fee:s.kind==="amount"?Math.max(0,r2(fee-(+s.amount||0))):0;
+const fdPriceHTML=(s,fee,src)=>{const n=fdApply(s,fee,src);return n<fee?`<s class="fdwas">${money(fee)}</s> <b class="fdnow">${n>0?money(n):"FREE"}</b>`:money(fee)};
 function fdListText(s){const a=(s.sizes||[]).slice().sort((x,y)=>x-y).map(n=>`box of ${n}`);if(s.custom)a.push("custom boxes");return a.length>1?a.slice(0,-1).join(", ")+" and "+a[a.length-1]:(a[0]||"no box")}
 const saleAppliesText = s => isGift(s)&&giftHasRules(s)?giftAppliesText(s):s.appliesTo==="all"?"every box":s.appliesTo==="list"?fdListText(s):`the box of ${s.appliesTo}`;
 /* --- cookie drawing --- */
@@ -391,7 +397,7 @@ function crumbColors(p){
 }
 /* ================= SHOP ================= */
 loadDB();
-const fresh = () => ({size:6, box:[], auto:[], step:1, mode:"pickup", speed:"scheduled", day:null, time:null, note:"", addons:[], coupon:"", ship:null, bsSkip:false, dnote:"", dphoto:""});
+const fresh = () => ({size:6, box:[], auto:[], step:1, mode:"pickup", speed:"scheduled", day:null, time:null, note:"", addons:[], extrasDone:false, extraTip:false, courierTip:false, coupon:"", ship:null, bsSkip:false, dnote:"", dphoto:""});
 let S = fresh(), hadCart=false;
 try{const s=JSON.parse(localStorage.getItem(CART_KEY)||"null");if(s&&Array.isArray(s.box)){S={...S,...s,step:s.step===2?2:1};hadCart=true;
   }}catch(e){}
@@ -584,7 +590,7 @@ function renderStoreStatic(){
   $("#addr").textContent = set.address;
   const act=DB.addons.filter(a=>a.active);
   $("#extrasBlock").hidden=!act.length;
-  $("#extras").innerHTML=act.map(a=>`<button class="extra" type="button" data-addon="${a.id}" aria-pressed="false"><span class="tick">✓</span>${lvAddon(a,46)}<span><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></span><span class="pr">${addonPr(a)}</span></button>`).join("");
+  $("#extras").innerHTML=act.map(a=>`<button class="extra" type="button" data-addon="${a.id}" aria-pressed="false"><span class="tick">✓</span>${lvAddon(a,46)}<span><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></span><span class="pr">${addonPr(a)}</span></button>`).join("")+(act.length?`<button class="extra noextra" type="button" data-noextra aria-pressed="${!!S.extrasDone&&!S.addons.length}"><span class="tick">✓</span><span><b>No extras, thanks</b><small>I do not want any extra</small></span><span class="pr"></span></button>`+(S.addons.length?`<button class="btn btn-blue btn-sm" type="button" data-extradone style="grid-column:1/-1;justify-self:start">Done, continue →</button>`:""):"");
   heroFloats($("#dome"),DB.page.hero);
 }
 function ctaState(){
@@ -594,6 +600,9 @@ function ctaState(){
   if(bsPending(S))return {label:`Checkout (${money(total())})`,dis:false,go:"needcourier"};
   return {label:`Checkout (${money(total())})`,dis:false,go:"checkout"};
 }
+/* guide: after the time is chosen, scroll to the extras and blink an arm tip until they choose an extra or "No extras"; then guide them to the courier */
+function guideExtras(){const blk=$("#extrasBlock");if(!blk||blk.hidden||S.extrasDone||!(S.day&&S.time))return;S.extraTip=true;renderStore();setTimeout(()=>scrollToEl(blk),80)}
+function guideCourier(){S.extraTip=false;if(S.mode!=="delivery"){renderStore();return}S.courierTip=!!(bsOn()&&bsPending(S));renderStore();setTimeout(()=>scrollToEl($("#bsRow")||$("#coName")),120)}
 function renderStore(){
   if(preGate())return;
   pgInit();
@@ -624,10 +633,13 @@ function renderStore(){
   $("#tab2").disabled=!(full()&&S.closed);
   renderLid();
   document.querySelectorAll("[data-opt]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.opt===optOf(S)));
-  {const k=optOf(S),st=DB.settings;const fdp=k!=="pickup"?freeDelSale(S.size):null;$("#modeHint").textContent=(fdp?`🚚 Free delivery promo is on: ${fdp.name}. `:"")+(k==="sameday"?`Sameday shipment adds ${money(st.samedayFee??st.deliveryFee)}. Order before ${fmtHour(st.samedayCutoff)} and we ship about ${fmtLead(optLead("sameday"))} after your payment is confirmed. We deliver within ${st.deliveryKm} km of the shop.`:k==="scheduled"?schedText(S):"Free pickup at the front counter. Pick a day and time.");}
+  {const k=optOf(S),st=DB.settings;const fdp=k!=="pickup"?freeDelSale(S.size):null;$("#modeHint").textContent=(fdp?`🚚 ${fdp.name}: ${saleOffText(fdp)}. `:"")+(k==="sameday"?`Sameday shipment adds ${money(st.samedayFee??st.deliveryFee)}. Order before ${fmtHour(st.samedayCutoff)} and we ship about ${fmtLead(optLead("sameday"))} after your payment is confirmed. We deliver within ${st.deliveryKm} km of the shop.`:k==="scheduled"?schedText(S):"Free pickup at the front counter. Pick a day and time.");}
   document.querySelectorAll(".day").forEach(b=>b.setAttribute("aria-pressed",b.dataset.day===S.day));
   document.querySelectorAll("[data-time]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.time===S.time));
   document.querySelectorAll("[data-addon]").forEach(b=>b.setAttribute("aria-pressed",S.addons.includes(b.dataset.addon)));
+  {const t=document.querySelector("[data-noextra]");if(t)t.setAttribute("aria-pressed",String(!!S.extrasDone&&!S.addons.length));
+   let tip=$("#exTip");if(!tip){tip=document.createElement("div");tip.id="exTip";tip.className="armtip";tip.hidden=true;$("#extras").parentNode.insertBefore(tip,$("#extras"))}
+   const on=!!S.extraTip&&!S.extrasDone&&!$("#extrasBlock").hidden;tip.hidden=!on;if(on)tip.innerHTML=`<span aria-hidden="true">👇</span><span>Add something extra, or tap <b>No extras, thanks</b> to continue.</span>`}
   $("#giftNote").value=S.note;
   // box panel
   const cols=S.size<=4?2:S.size<=9?3:4;
@@ -644,10 +656,10 @@ function renderStore(){
   if(q.surcharge>0)L+=`<div><dt>Premium flavors</dt><dd>+${money(q.surcharge)}</dd></div>`;
   if(S.step===2){
     S.addons.forEach(id=>{const a=DB.addons.find(x=>x.id===id);if(a)L+=`<div><dt class="withlv">${lvAddon(a,18,true)}${esc(a.name)}</dt><dd>${addonPr(a)}</dd></div>`});
-    L+=`<div><dt>${OPT_NAME[optOf(S)]}</dt><dd>${q.feePending?"Choose a courier":q.fee?money(q.fee):fbHTML("Del")}</dd></div>`;
+    L+=`<div><dt>${OPT_NAME[optOf(S)]}</dt><dd>${q.feePending?"Choose a courier":q.feeWas?`<s class="fdwas">${money(q.feeWas)}</s> ${q.fee?`<b class="fdnow">${money(q.fee)}</b>`:fbHTML("Del")}`:q.fee?money(q.fee):fbHTML("Del")}</dd></div>`;
     if(S.day)L+=`<div><dt>When</dt><dd>${S.mode!=="pickup"&&S.speed==="sameday"?(samedayOpen()?"Today (sameday)"+(S.time&&S.time!=="Same day"?", "+esc(S.time):""):"Sameday (after the cut-off)"):fmtDay(S.day)+(S.time?", "+esc(S.time):"")}</dd></div>`;
     if(bsOn()&&S.mode==="delivery"){const sh=bsShip(S);
-      L+=`<div class="bscour${q.feePending?" need":""}" id="bsRow"><dt>Courier</dt><dd><button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?esc(scName())+" · Change":"🛵 Choose courier"}</button></dd></div>`}
+      L+=(S.courierTip&&q.feePending&&!BSD.busy?`<div class="armtip" id="csTip"><span aria-hidden="true">👉</span><span>Now choose your <b>courier</b>.</span></div>`:"")+`<div class="bscour${q.feePending?" need":""}" id="bsRow"><dt>Courier</dt><dd><button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?esc(scName())+" · Change":"🛵 Choose courier"}</button></dd></div>`}
   }
   $("#lines").innerHTML=L;
   renderCoupon(q);renderGiftBox();
@@ -1133,6 +1145,7 @@ function bsNudge(){
   toast("Please choose a courier first");
 }
 function bsPopOpen(){
+  S.courierTip=false;
   const body=$("#bsPopBody");body.appendChild($("#addrFields"));body.appendChild($("#bsBox"));
   $("#addrFields").hidden=false;$("#coAddr").required=false;prefillCust();placeFieldsShow();bsBoxOpen();
   $("#bsPhone").value=$("#coPhone").value;
@@ -1142,7 +1155,7 @@ function bsPopOpen(){
 // checkout form: one line with the chosen courier and a Change button (the full courier box lives in the pop-up)
 function bsSumDraw(){
   const el=$("#bsSum");if(!el)return;const on=bsOn()&&S.mode==="delivery";el.hidden=!on;if(!on)return;const sh=bsShip(S);
-  el.innerHTML=`<span class="flbl" style="font-weight:600;font-size:14px">Courier</span><div class="bssumrow${sh||S.bsSkip?"":" need"}"><span>${sh?`<b>${esc(sh.courierName||sh.courier)}</b> ${esc(sh.serviceName||sh.service)}${sh.eta?` <small>${esc(sh.eta)}</small>`:""}`:S.bsSkip?esc(scName()):"No courier chosen yet"}</span>${sh?`<span class="num">${money(sh.price)}</span>`:""}<button type="button" class="ghost" data-bscourier>${sh||S.bsSkip?"Change":"🛵 Choose courier"}</button></div>`;
+  el.innerHTML=`<span class="flbl" style="font-weight:600;font-size:14px">Courier</span><div class="bssumrow${sh||S.bsSkip?"":" need"}${BSD.busy?" busy":""}"><span>${BSD.busy?`<span class="bsmoto sm" aria-hidden="true">🛵</span> <b>${BSD.phase==="map"?"Finding your address…":"Looking for couriers…"}</b>`:sh?`<b>${esc(sh.courierName||sh.courier)}</b> ${esc(sh.serviceName||sh.service)}${sh.eta?` <small>${esc(sh.eta)}</small>`:""}`:S.bsSkip?esc(scName()):"<b>⚠ Choose your courier</b>"}</span>${sh?`<span class="num">${money(sh.price)}</span>`:""}<button type="button" class="ghost" data-bscourier>${sh||S.bsSkip?"Change":"🛵 Choose courier"}</button></div>`;
 }
 /* guided tour for the courier pop-up: shows once, can be skipped, replay with the "?" button */
 /* guided tour of the shop for a new visitor: starts when they tap the main button, follows them through the box, the day and time, and checkout. It can be skipped and replayed with "How does it work?". */
@@ -1228,7 +1241,7 @@ function loadLoc(){const c=loadCust();if(BSD.area||BSD.lat)return;
   if(c.dnote&&!S.dnote)S.dnote=c.dnote}
 function prefillCust(){const c=loadCust();if(c.dnote&&!S.dnote)S.dnote=c.dnote;[["#coName","name"],["#coPhone","phone"],["#coEmail","email"],["#coAddr","address"]].forEach(([q,k])=>{if(c[k]&&!$(q).value)$(q).value=c[k]});const r=c.notify&&document.querySelector(`input[name="coNotify"][value="${c.notify}"]`);if(r)r.checked=true}
 /* --- checkout: optional courier prices (only when the owner switched Biteship on) --- */
-const BSD={area:null,lat:"",lng:"",label:"",opts:[],busy:false,tried:false,err:"",t:0};
+const BSD={area:null,lat:"",lng:"",label:"",opts:[],busy:false,tried:false,err:"",t:0,phase:""};
 function bsBoxOpen(){
   const on=bsOn()&&SBH.on&&S.mode==="delivery";$("#bsBox").hidden=!on;if(!on)return;loadLoc();
   if(BSD.opts.length&&BSD.opts[0].size!==S.size){BSD.opts=[]}
@@ -1284,26 +1297,41 @@ async function bsMapShow(){
   }
   setTimeout(()=>bsMapObj&&bsMapObj.invalidateSize(),120);
 }
+/* the kind of a Biteship service, for the badge: Car, Instant (bike, minutes) or Sameday */
+const BS_KINDS={car:{t:"Car",ic:"🚗",cls:"bsb-car"},instant:{t:"Instant",ic:"⚡",cls:"bsb-inst"},sameday:{t:"Sameday",ic:"🌤️",cls:"bsb-same"}};
+function bsKind(x){const t=String([x.type,x.serviceName,x.service,x.courierName,x.courier].join(" ")).toLowerCase();
+  if(/car|mobil|truck|van\b|pickup/.test(t))return "car";if(/same[ _-]?day/.test(t))return "sameday";if(/instant|gojek|grab|lalamove|borzo|deliveree|bike|motor|ojek/.test(t))return "instant";return ""}
+// the "looking for couriers" animation: a little scooter riding along a road
+function bsBusyHTML(){const t=BSD.phase==="map"?"Finding your address on the map…":"Looking for couriers…",s=BSD.phase==="map"?"We are placing the pin. This takes a few seconds.":"Checking prices for your address. Please wait a moment.";
+  return `<div class="bsbusy" role="status" aria-live="polite"><div class="bsroad"><span class="bsmoto" aria-hidden="true">🛵</span><i class="bsdash"></i></div><b>${t}</b><small>${s}</small></div>`}
 function bsDraw(){
   const o=$("#bsOpts"),er=$("#bsErr"),pl=$("#bsPlace");if(BSD.area||BSD.lat)saveLoc();
   // the map only opens with "Pick on the map" and closes with Done (or once a courier is chosen), so a scroll can't move the pin by accident
   if(BSD.mapOpen)bsMapShow();else{$("#bsMap").hidden=true;$("#bsMapHint").hidden=true;$("#bsMapDone").hidden=true}
   $("#bsPick").textContent=BSD.mapOpen?"✓ Done with the map":"🗺️ Pick on the map";
   pl.hidden=!BSD.label;pl.innerHTML=BSD.label?`📍 ${esc(BSD.label)} · <a href="https://www.openstreetmap.org/?mlat=${esc(BSD.lat)}&mlon=${esc(BSD.lng)}#map=17/${esc(BSD.lat)}/${esc(BSD.lng)}" target="_blank" rel="noopener">Check on the map</a>`:"";
-  if(BSD.busy){o.innerHTML=`<p class="note">Looking for couriers…</p>`}
-  else{o.innerHTML=BSD.opts.map((x,i)=>`<button type="button" class="bsopt" data-bsopt="${i}" aria-pressed="${S.ship&&S.ship.sig===x.sig}"><span><b>${esc(x.courierName||x.courier)}</b> ${esc(x.serviceName||x.service)}${x.eta?`<small>${esc(x.eta)}</small>`:""}</span><span class="num">${money(x.price)}</span></button>`).join("")
-    +bsStoreOpt()}
+  if(BSD.busy){o.innerHTML=bsBusyHTML()}
+  else{const fd=S.mode==="delivery"?freeDelSale(S.size):null,fee0=storeFee(S.size),promoStore=!!(fd&&fdApply(fd,fee0,"store")<fee0),store=bsStoreOpt();
+    // cheapest first (the index stays the position in BSD.opts so the click handler still finds the courier)
+    const rows=BSD.opts.map((x,i)=>({x,i})).sort((a,b)=>fdApply(fd,a.x.price,"bite")-fdApply(fd,b.x.price,"bite")||a.x.price-b.x.price);
+    o.innerHTML=(promoStore?store:"")+rows.map(({x,i})=>{const sel=!!(S.ship&&S.ship.sig===x.sig&&!S.bsSkip),k=bsKind(x),b=BS_KINDS[k];
+      return `<button type="button" class="bsopt${sel?" sel":""}${b?" bsk-"+k:""}" data-bsopt="${i}" aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(x.courierName||x.courier)}</b> ${esc(x.serviceName||x.service)}${b?` <em class="bsbadge ${b.cls}"><i aria-hidden="true">${b.ic}</i>${b.t}</em>`:""}${x.eta?`<small>${esc(x.eta)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,x.price,"bite")}</span></button>`}).join("")
+      +(promoStore?"":store)}
   const msg=BSD.err&&!BSD.busy?BSD.err:"";er.hidden=!msg;er.textContent=msg;
 }
 // "Store Courier" in the courier list: always, or only when courier prices can't load (the owner chooses). Free while a free-delivery promo covers this box.
-function bsStoreOpt(){if(!bsFallback()||BSD.busy)return "";const fb=(DB.settings.scShow||"always")==="fallback";if(fb&&BSD.opts.length&&!BSD.err)return S.bsSkip?bsStoreBtn():"";
+function bsStoreOpt(){if(!bsFallback()||BSD.busy)return "";
+  if(!bsWho())return "";                                   // no WhatsApp number yet: the Store Courier is not offered
+  if(!(BSD.opts.length||BSD.err||BSD.tried))return "";     // the customer has to find the address on the map (or try the Biteship couriers) first
+  const fd=S.mode==="delivery"?freeDelSale(S.size):null,fee=storeFee(S.size),promo=!!(fd&&fdApply(fd,fee,"store")<fee),fb=(DB.settings.scShow||"always")==="fallback";
+  if(fb&&!promo&&BSD.opts.length&&!BSD.err)return S.bsSkip?bsStoreBtn():"";   // "only when prices can't load", unless a delivery promo makes it the better deal
   return bsStoreBtn()}
-function bsStoreBtn(){const t=DB.settings,fee=storeFee(S.size),free=!!freeDelSale(S.size);
-  return `<button type="button" class="bsopt bsstore" data-bsskip aria-pressed="${!!S.bsSkip}"><span><b>${esc(scName())}</b>${t.scNote?`<small>${esc(t.scNote)}</small>`:""}</span><span class="num">${free?"Free":money(fee)}</span></button>`}
+function bsStoreBtn(){const t=DB.settings,fee=storeFee(S.size),fd=freeDelSale(S.size),sel=!!S.bsSkip,promo=fd&&fdApply(fd,fee,"store")<fee;
+  return `<button type="button" class="bsopt bsstore${sel?" sel":""}${promo?" promo":""}" data-bsskip aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(scName())}</b>${promo?`<em class="bspromo">${fd.kind==="amount"?esc(money(fd.amount))+" OFF":"FREE DELIVERY"}</em>`:""}${t.scNote?`<small>${esc(t.scNote)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,fee,"store")}</span></button>`}
 async function bsRates(){
   if(!(BSD.area||BSD.lat)||BSD.busy)return;
   const who=bsWho();if(!who){BSD.err="Type your WhatsApp number first, then we can show courier prices.";bsDraw();return}
-  const my=++BSD.t;BSD.busy=true;BSD.err="";bsDraw();
+  const my=++BSD.t;BSD.busy=true;BSD.phase="rates";BSD.err="";bsDraw();bsSumDraw();
   try{
     const r=await SBH.fn("biteship",{action:"rates",pass:await tsPass("courier"),phone:who.phone,email:who.email,size:S.size,dest:{lat:BSD.lat,lng:BSD.lng,postal:BSD.area?BSD.area.postal:"",areaId:BSD.area?BSD.area.id:"",areaName:BSD.area?BSD.area.name:""}});
     if(my!==BSD.t)return;BSD.opts=r.options||[];BSD.err=BSD.opts.length?"":(r.error||"No courier is available for this address.");
@@ -1314,7 +1342,7 @@ async function bsRates(){
 async function bsGeocode(){
   const addr=$("#coAddr").value.trim(),areaTxt=BSD.area?BSD.area.name:$("#bsArea").value.trim();if(!addr&&!areaTxt){BSD.err="Type your address (and your area) first.";bsDraw();return}
   const who=bsWho();if(!who){BSD.err="Type your WhatsApp number first, then we can find your address.";bsDraw();return}
-  BSD.busy=true;BSD.err="";bsDraw();
+  BSD.busy=true;BSD.phase="map";BSD.err="";bsDraw();bsSumDraw();
   try{const r=await SBH.fn("biteship",{action:"geocode",pass:await tsPass("courier"),phone:who.phone,email:who.email,address:addr,area:areaTxt});BSD.busy=false;BSD.tried=true;
     if(r.found){BSD.lat=r.lat;BSD.lng=r.lng;BSD.label=(r.approx?"Near: ":"")+r.label+(r.approx?" (approximate, please check on the map)":"");S.ship=null;BSD.opts=[];await bsRates();return}
     BSD.err="We couldn't find that address on the map. Pick your area from the list, check the spelling, or use your current location.";
@@ -1341,7 +1369,7 @@ $("#bsGeo").addEventListener("click",()=>{
   navigator.geolocation.getCurrentPosition(p=>{BSD.busy=false;BSD.lat=p.coords.latitude.toFixed(5);BSD.lng=p.coords.longitude.toFixed(5);BSD.label="Your current location";S.ship=null;BSD.opts=[];bsRates()},
     ()=>{BSD.busy=false;BSD.err="We couldn't get your location. Allow location access, or search your area instead.";bsDraw()},{timeout:12000,maximumAge:60000})});
 $("#bsOpts").addEventListener("click",e=>{
-  const b=e.target.closest("[data-bsopt]");if(b){const x=BSD.opts[+b.dataset.bsopt];if(x){S.ship=x;S.bsSkip=false;BSD.mapOpen=false;bsDraw();renderCoSummary();renderStore();$("#coErr").hidden=true}return}
+  const b=e.target.closest("[data-bsopt]");if(b){const x=BSD.opts[+b.dataset.bsopt];if(x){S.ship=x;S.bsSkip=false;S.courierTip=false;BSD.mapOpen=false;bsDraw();renderCoSummary();renderStore();$("#coErr").hidden=true}return}
   if(e.target.closest("[data-bsskip]")){S.ship=null;S.bsSkip=true;bsDraw();renderCoSummary();renderStore()}});
 function renderCoSummary(){
   const q=quote(S),counts=countItems(S.box);
@@ -1352,7 +1380,7 @@ function renderCoSummary(){
     (PG.info?`<div class="sl"><span>🎁 ${(()=>{const nm=(PG.info.items||[]).map(g=>g&&g.name).filter(Boolean).join(", ");return nm&&PG.info.mode!=="surprise"?"Free reward: <b>"+esc(nm)+"</b>":esc(PG.info.title||"Free Gift Set")})()} · ${esc(PG.code)}</span><span class="num">${fbHTML("Gift")}</span></div>`:"")+
     (q.coupon&&q.couponDisc>0?`<div class="sl"><span>Coupon ${esc(q.coupon.code)}</span><span class="num">−${money(q.couponDisc)}</span></div>`:"")+
     S.addons.map(id=>{const a=DB.addons.find(x=>x.id===id);return a?`<div><span class="withlv">${lvAddon(a,22,true)}${esc(a.name)}</span><span class="num">${addonPr(a)}</span></div>`:""}).join("")+
-    `<div><span>${OPT_NAME[optOf(S)]}</span><span class="num">${q.feePending?"Choose a courier below":q.fee?money(q.fee):fbHTML("Del")}</span></div>`+
+    `<div><span>${OPT_NAME[optOf(S)]}</span><span class="num">${q.feePending?"Choose a courier below":q.feeWas?`<s class="fdwas">${money(q.feeWas)}</s> ${q.fee?`<b class="fdnow">${money(q.fee)}</b>`:fbHTML("Del")}`:q.fee?money(q.fee):fbHTML("Del")}</span></div>`+
     `<div><span>When</span><span>${esc(whenTxt(S))}</span></div>`+
     (S.note?`<div><span>Note</span><span style="text-align:right">${esc(S.note)}</span></div>`:"")+
     `<div class="t"><span>Total</span><span class="num">${money(q.total)}</span></div>`;
@@ -1491,8 +1519,11 @@ $("#sdSheet").addEventListener("click",e=>{
 });
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSdPop()});
 setInterval(()=>{try{if(S.speed==="sameday"&&S.mode!=="pickup"){sdWatch();if(S.time&&sdSlotsOn()&&sdTooSoon(S.time)){fixWhen();renderStore()}}}catch(e){}},20000);
-$("#times").addEventListener("click",e=>{const b=e.target.closest("[data-time]");if(b){S.time=b.dataset.time;renderStore()}});
-$("#extras").addEventListener("click",e=>{const b=e.target.closest("[data-addon]");if(!b)return;const id=b.dataset.addon;
+$("#times").addEventListener("click",e=>{const b=e.target.closest("[data-time]");if(b){S.time=b.dataset.time;renderStore();guideExtras()}});
+$("#extras").addEventListener("click",e=>{
+  if(e.target.closest("[data-noextra]")){S.addons=[];S.extrasDone=true;S.extraTip=false;renderStore();guideCourier();return}
+  if(e.target.closest("[data-extradone]")){S.extrasDone=true;S.extraTip=false;renderStore();guideCourier();return}
+  const b=e.target.closest("[data-addon]");if(!b)return;const id=b.dataset.addon;S.extrasDone=true;
   S.addons=S.addons.includes(id)?S.addons.filter(x=>x!==id):[...S.addons,id];renderStore();if(!RM&&S.addons.includes(id))bump(b.querySelector(".tick"))});
 $("#giftNote").addEventListener("input",e=>{S.note=e.target.value;saveCart()});
 $("#coPhone").addEventListener("change",()=>{if(normPhone($("#coPhone").value).length>=9&&tsOn("whatsapp"))tsPass("whatsapp").catch(()=>{})});
@@ -1510,6 +1541,7 @@ $("#moSheet").addEventListener("input",e=>{if(e.target.id==="moMail"){const v=e.
 $("#coPhone").addEventListener("input",e=>{const v=e.target.value.replace(/\D/g,"");if(v!==e.target.value)e.target.value=v});
 $("#coForm").addEventListener("submit",e=>{
   e.preventDefault();
+  if(!$("#extrasBlock").hidden&&!S.extrasDone&&!S.editId){S.extraTip=true;renderStore();scrollToEl($("#extrasBlock"));toast("Please choose an extra, or No extras");return}
   if(!/^\d{8,15}$/.test($("#coPhone").value)){$("#coErr").textContent="WhatsApp number: use numbers only, 8 to 15 digits.";$("#coErr").hidden=false;nudge($("#coPhone"));return}
   const f=e.currentTarget;
   if(!f.checkValidity()){const bad=f.querySelector(":invalid");$("#coErr").textContent=`Please check "${bad.labels[0].textContent}".`;$("#coErr").hidden=false;nudge(bad);return}
@@ -2858,7 +2890,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 18:04 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 18:42 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;afCpnLoad();AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
