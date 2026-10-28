@@ -138,7 +138,7 @@ function defaultProofPop(){return {on:true,emoji:"🙏",img:"",cookies:[],fx:tru
 function defaultAlerts(){return {on:true,sound:true,vol:70,repeat:false,stay:true,custom:"",customName:"",
   ev:{order:{on:true,snd:"register"},proof:{on:true,snd:"chime"},paid:{on:false,snd:"bell"},complaint:{on:true,snd:"alarm"},courier:{on:true,snd:"alarm"}}}}
 function defaultRev(){return {on:false,days:7,minBox:6,mode:"random",daily:20,validDays:7,redeemDays:30,claimMin:6,claimMode:"auto",
-  upg:{icon:"🎁",one:"You have 1 reward waiting! Upgrade to a box of {min} or more to claim it.",many:"You have {n} rewards waiting! Upgrade to a box of {min} or more to claim one.",man:"You have {n} reward code(s) saved. Type one in the coupon box to claim it.",chg:"You have {n} rewards. Only one can be used per order.",pickTitle:"Choose the reward for this order",useBtn:"Use my reward",changeBtn:"Change",bg:"#FFF4D6",ink:"#0B0B45"},
+  upg:{icon:"🎁",one:"You have 1 reward waiting! Upgrade to a box of {min} or more to claim it.",many:"You have {n} rewards waiting! Upgrade to a box of {min} or more to claim one.",man:"You have {n} reward code(s) saved. Type one in the coupon box to claim it.",chg:"You have {n} rewards. Only one can be used per order.",pickTitle:"Choose the reward for this order",exp:"{n} of your rewards expired and can't be used any more.",useBtn:"Use my reward",changeBtn:"Change",bg:"#FFF4D6",ink:"#0B0B45"},
   bn:{card:true,star:true,icon:"⭐",starImg:"",starFx:"blink",starSpeed:100,waitIcon:"📦",waitImg:"",waitFx:"shake",waitSpeed:100,title:"How was your order {code}?",sub:"Rate your cookies and open a blind box 🎁",bg:"#FFF4D6",ink:"#0B0B45",line:"#FFD166",fx:"shine",tipOn:true,tip:"Rate your order and open a blind box!",cd:true,cdText:"Review ends in {time}",cdHot:24,cdTip:"Last chance! Review ends in {time}"},
   win:{icon:"🎉",img:"",fx:"confetti",title:"You won a surprise!",text:"{reward}",btn:"Great!",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
   sad:{icon:"🥺",img:"",fx:"rain",title:"Thank you for rating",text:"We're sorry it wasn't perfect this time. We'd love to make it right, so please order again soon.",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
@@ -544,8 +544,8 @@ function renderMenu(){
     const out=isOut(p),img=true,badge=p.surcharge>0?`<span class="xtra">+${money(p.surcharge)}</span>`:"",
       low=!out&&p.track&&p.stock<=DB.settings.lowStockAt?`<span class="stk">Only ${p.stock} left</span>`:"";
     return `<div class="card${out?" out":""}${img?"":" noimg"}" data-id="${p.id}" style="--i:${i}">
-      ${img?`<div class="pwrap">${plateHTML(p)}${badge}${low}${rvFree(p)}${bd.length?`<div class="bdgs">${bd.map(badgeHTML).join("")}</div>`:""}</div>`:""}
-      <h4>${esc(p.name)}${img?"":badge}</h4>${(()=>{const r=ratingOf(p);return `<button class="rate${r.n?"":" none"}" type="button" data-reviews="${p.id}" aria-label="${r.n?`${r.avg.toFixed(1)} out of 5 stars, ${r.n} reviews. Read or write a review for ${esc(p.name)}`:`No reviews yet for ${esc(p.name)}`}">${r.n?`<span class="stars">★</span> ${r.avg.toFixed(1)} <span class="cnt">(${r.n})</span>`:"No reviews yet"}</button>`})()}<p>${esc(p.desc)}</p>
+      ${img?`<div class="pwrap">${plateHTML(p)}${badge}${low}${bd.length?`<div class="bdgs">${bd.map(badgeHTML).join("")}</div>`:""}</div>`:""}
+      <h4>${esc(p.name)}${img?"":badge}</h4>${rvFree(p)}${(()=>{const r=ratingOf(p);return `<button class="rate${r.n?"":" none"}" type="button" data-reviews="${p.id}" aria-label="${r.n?`${r.avg.toFixed(1)} out of 5 stars, ${r.n} reviews. Read or write a review for ${esc(p.name)}`:`No reviews yet for ${esc(p.name)}`}">${r.n?`<span class="stars">★</span> ${r.avg.toFixed(1)} <span class="cnt">(${r.n})</span>`:"No reviews yet"}</button>`})()}<p>${esc(p.desc)}</p>
       ${out?`<span class="sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:`<div class="stepper"><button type="button" data-act="dec" aria-label="Remove one ${esc(p.name)}">−</button><output aria-live="polite">0</output><button type="button" data-act="inc" aria-label="Add one ${esc(p.name)}">+</button></div>`}
     </div>`}).join("");
   if(!prods.length)$("#menuGrid").innerHTML=`<p class="tierempty">No ${shopTier==="prem"?"premium":"no-extra-cost"} flavors here. <button class="linkbtn" type="button" data-tierall>Show all flavors</button></p>`;
@@ -1685,7 +1685,7 @@ function rvTick(){if(!DB||!DB.revrew)return;const now=Date.now(),hot=(+DB.revrew
   if(!(Math.floor(now/1000)%60))rvSlotTip()}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-rvgo]");if(!b)return;e.preventDefault();const t=$("#rvTip");if(t)t.hidden=true;try{closeBell()}catch(x){}const og=DB.orders.find(x=>x.id===b.dataset.rvgo);if(og&&og.rv){rvReveal(og,og.rv);return}openMO(b.dataset.rvgo);setTimeout(()=>{const r=$("#moCard .rstars");r&&r.scrollIntoView({block:"center"})},120)});
 const rvFill=(t,d)=>String(t||"").replace(/\{reward\}/g,(d&&d.item&&d.item.name)||"").replace(/\{code\}/g,(d&&d.code)||"");
-const rvFree=p=>PG.info&&PG.code&&(PG.info.items||[]).some(g=>g&&g.pid===p.id)?`<span class="rvfree">🎁 FREE reward</span>`:"";
+const rvFree=p=>PG.info&&PG.code&&(PG.info.items||[]).some(g=>g&&g.pid===p.id)?`<span class="rvfree">🎁 your free reward</span>`:"";
 function rvPop(html){const p=$("#rvPop");if(p.parentNode!==document.body)document.body.appendChild(p);p.innerHTML=html;p.hidden=false;document.body.style.overflow="hidden"}
 function rvClose(){const p=$("#rvPop");p.hidden=true;p.innerHTML="";if(!$("#moSheet").hidden){try{renderMO()}catch(e){}}if($("#moSheet").hidden&&$("#sheet").hidden)document.body.style.overflow=""}
 function rvReveal(o,rv){const b=bbCfg();rvPop(`<div class="rvbox rvt-win" style="--rpbg:#fff;--rpink:#0B0B45;--rpacc:#000096"><div class="rvin gmagic">${bbBoxHTML("rvBbBox")}<h2>${esc(bbName())}</h2><p>${esc(b.tip)}</p></div></div>`);RVR.o=o;RVR.rv=rv}
@@ -2183,12 +2183,12 @@ addEventListener("keydown",e=>{if(e.key==="Escape"){const ov=document.getElement
    It shows as a gift panel in the box and a line in checkout; the server attaches it to the order right after it is placed. */
 const PG_KEY="delidome-pregift-v1",PG={code:null,info:null,exp:null,checked:false};
 /* review rewards the customer holds (saved on this phone): one can be used per order, and only on a box of the minimum size or more */
-const RVW_KEY="delidome-rvcodes",RVW={list:[],checked:false,pick:"",off:false},isRvCode=c=>/^RV-/i.test(c||"");
+const RVW_KEY="delidome-rvcodes",RVW={list:[],checked:false,pick:"",off:false,expired:0},isRvCode=c=>/^RV-/i.test(c||"");
 const rvwSaved=()=>{try{return JSON.parse(localStorage.getItem(RVW_KEY)||"[]").filter(x=>typeof x==="string").slice(0,20)}catch(e){return []}};
 const rvwSave=()=>{try{localStorage.setItem(RVW_KEY,JSON.stringify(RVW.list.map(x=>x.code)))}catch(e){}};
 const rvwMin=()=>Math.max(1,Math.round(+(DB.revrew||{}).claimMin)||6);
 async function rvwInit(){if(RVW.checked||!SBH.on)return;RVW.checked=true;const out=[];
-  for(const c of rvwSaved()){try{const r=await SBH.preGift(c,"");if(r&&r.ok)out.push({code:r.code,info:r.info,exp:r.exp||null})}catch(e){}}
+  for(const c of rvwSaved()){try{const r=await SBH.preGift(c,"");if(r&&r.ok)out.push({code:r.code,info:r.info,exp:r.exp||null});else if(r&&/expired/i.test(r.err||""))RVW.expired++}catch(e){}}
   RVW.list=out;rvwSave();renderStore()}
 async function rvwAdd(code){if(!SBH.on||!code||RVW.list.some(x=>x.code===code))return;try{const r=await SBH.preGift(code,"");if(r&&r.ok){RVW.list.push({code:r.code,info:r.info,exp:r.exp||null});rvwSave();RVW.off=false;renderStore()}}catch(e){}}
 const rvwUsed=c=>{RVW.list=RVW.list.filter(x=>x.code!==c);if(RVW.pick===c)RVW.pick="";rvwSave()};
@@ -2199,7 +2199,9 @@ function rvwSync(){const ok=(S.size||0)>=rvwMin();
   if(!PG.code&&ok&&(DB.revrew||{}).claimMode!=="manual"&&!RVW.off){
     const pk=RVW.list.find(x=>x.code===RVW.pick);if(pk)rvwApply(pk);else if(RVW.list.length===1)rvwApply(RVW.list[0])}}
 const rvwArt=g=>{const p=g&&g.pid&&prod(g.pid);return p?`<span class="gplate">${plateHTML(p)}</span>`:""};
-function rvwNoticeHTML(){const R=DB.revrew;if(!R||!RVW.list.length)return "";const U=R.upg||{},n=RVW.list.length,min=rvwMin(),ok=(S.size||0)>=min,man=R.claimMode==="manual",
+function rvwNoticeHTML(){const R=DB.revrew;if(!R)return "";const U0=R.upg||{},xp=RVW.expired>0?`<div class="rvu" style="--ub:#FDECEC;--ui:#8A1020"><span aria-hidden="true">⌛</span><p>${esc(String(U0.exp||"{n} of your rewards expired and can't be used any more.").replace(/\{n\}/g,RVW.expired))}</p><button type="button" data-rvwxp>OK</button></div>`:"";
+  return xp+rvwNoticeMain()}
+function rvwNoticeMain(){const R=DB.revrew;if(!RVW.list.length)return "";const U=R.upg||{},n=RVW.list.length,min=rvwMin(),ok=(S.size||0)>=min,man=R.claimMode==="manual",
     fill=t=>esc(String(t||"").replace(/\{n\}/g,n).replace(/\{min\}/g,min)),st=`style="--ub:${hexOk(U.bg,"#FFF4D6")};--ui:${hexOk(U.ink,"#0B0B45")}"`,ic=`<span aria-hidden="true">${esc(String(U.icon||"🎁").slice(0,4))}</span>`;
   if(!ok)return `<div class="rvu" ${st}>${ic}<p>${fill(n===1?U.one:U.many)}</p></div>`;
   if(man)return PG.code?"":`<div class="rvu" ${st}>${ic}<p>${fill(U.man)}</p></div>`;
@@ -2207,7 +2209,7 @@ function rvwNoticeHTML(){const R=DB.revrew;if(!R||!RVW.list.length)return "";con
   if(PG.code)return "";
   if(n===1)return `<div class="rvu" ${st}>${ic}<p>${fill(U.one.replace(/Upgrade.*$/,"").trim()||U.one)}</p><button type="button" data-rvwpick="${esc(RVW.list[0].code)}">${esc(U.useBtn||"Use my reward")}</button></div>`;
   return `<div class="rvu rvpick" ${st}>${ic}<p><b>${fill(U.pickTitle)}</b></p><div class="rvpk">${RVW.list.map(x=>{const g=((x.info||{}).items||[])[0]||{};return `<button type="button" data-rvwpick="${esc(x.code)}">${rvwArt(g)||(g.img?`<img src="${esc(imgOk(g.img))}" alt="">`:`<i aria-hidden="true">${esc(String(g.icon||"🎁").slice(0,4))}</i>`)}<b>${esc(g.name||"Reward")}</b></button>`}).join("")}</div></div>`}
-document.addEventListener("click",e=>{const pk=e.target.closest("[data-rvwpick]");if(pk){RVW.pick=pk.dataset.rvwpick;RVW.off=false;PG.code=null;PG.info=null;PG.exp=null;renderStore();return}
+document.addEventListener("click",e=>{if(e.target.closest("[data-rvwxp]")){RVW.expired=0;renderStore();return}const pk=e.target.closest("[data-rvwpick]");if(pk){RVW.pick=pk.dataset.rvwpick;RVW.off=false;PG.code=null;PG.info=null;PG.exp=null;renderStore();return}
   if(e.target.closest("[data-rvwchange]")){RVW.pick="";RVW.off=false;PG.code=null;PG.info=null;PG.exp=null;renderStore();setTimeout(renderMenu,0)}});
 const pgSaved=()=>{try{return localStorage.getItem(PG_KEY)||""}catch(e){return ""}};
 function pgInit(){rvwInit();if(PG.checked)return;PG.checked=true;const c=pgSaved()||(PRE.me&&PRE.me.code)||"";if(c)pgCheck(c,"",true)}
@@ -2763,7 +2765,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 00:46 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 00:53 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
