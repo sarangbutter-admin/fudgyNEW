@@ -1312,7 +1312,7 @@ async function bsMapShow(){
   setTimeout(()=>bsMapObj&&bsMapObj.invalidateSize(),120);
 }
 /* the kind of a Biteship service, for the badge: Car, Instant (bike, minutes) or Sameday */
-const BS_KINDS={car:{t:"Car",ic:"🚗",cls:"bsb-car"},instant:{t:"Instant",ic:"⚡",cls:"bsb-inst"},sameday:{t:"Sameday",ic:"🌤️",cls:"bsb-same"}};
+const BS_KINDS={car:{t:"Car",ic:"🚗",cls:"bsb-car"},instant:{t:"Instant",ic:"🏍️",cls:"bsb-inst"},sameday:{t:"Sameday",ic:"🏍️",cls:"bsb-same"}};
 function bsKind(x){const t=String([x.type,x.serviceName,x.service,x.courierName,x.courier].join(" ")).toLowerCase();
   if(/car|mobil|truck|van\b|pickup/.test(t))return "car";if(/same[ _-]?day/.test(t))return "sameday";if(/instant|gojek|grab|lalamove|borzo|deliveree|bike|motor|ojek/.test(t))return "instant";return ""}
 // the "looking for couriers" animation: a little scooter riding along a road
@@ -2907,7 +2907,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 19:19 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 20:02 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;afCpnLoad();AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

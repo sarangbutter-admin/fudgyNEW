@@ -1596,8 +1596,8 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 @keyframes bschkpop{from{transform:scale(0)}to{transform:scale(1)}}
 .bsbadge{display:inline-flex;align-items:center;gap:3px;font-style:normal;font-weight:800;font-size:11px;line-height:1;padding:3px 8px 3px 6px;border-radius:99px;margin-left:4px;vertical-align:middle}
 .bsbadge i{font-style:normal;display:inline-block}
-.bsb-inst{background:#FFE9B8;color:#9A4B00}.bsb-inst i{animation:bsflash .9s ease-in-out infinite}
-.bsb-same{background:#D7EEFF;color:#075985}.bsb-same i{animation:bsfloat 2s ease-in-out infinite}
+.bsb-inst{background:#000096;color:#FFD400}.bsb-inst i{animation:bsflash .9s ease-in-out infinite}
+.bsb-same{background:#0E9F4B;color:#fff}.bsb-same i{animation:bsfloat 2s ease-in-out infinite}
 .bsb-car{background:#D8F5E0;color:#0A6B34}.bsb-car i{animation:bsdrive 1.6s ease-in-out infinite}
 @keyframes bsflash{50%{transform:scale(1.35) rotate(-12deg);filter:drop-shadow(0 0 4px #FFB000)}}@keyframes bsfloat{50%{transform:translateY(-3px)}}@keyframes bsdrive{0%,100%{transform:translateX(-2px)}50%{transform:translateX(3px)}}
 .bsstore.promo{border-color:#0A6B34!important;background:#F1FBF4}.bspromo{display:inline-block;font-style:normal;font-weight:800;font-size:11px;background:#0A6B34;color:#fff;border-radius:99px;padding:3px 8px;margin-left:6px;vertical-align:middle;animation:bsfloat 1.4s ease-in-out infinite}

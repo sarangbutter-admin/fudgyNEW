@@ -1326,7 +1326,7 @@ async function bsMapShow(){
   setTimeout(()=>bsMapObj&&bsMapObj.invalidateSize(),120);
 }
 /* the kind of a Biteship service, for the badge: Car, Instant (bike, minutes) or Sameday */
-const BS_KINDS={car:{t:"Car",ic:"🚗",cls:"bsb-car"},instant:{t:"Instant",ic:"⚡",cls:"bsb-inst"},sameday:{t:"Sameday",ic:"🌤️",cls:"bsb-same"}};
+const BS_KINDS={car:{t:"Car",ic:"🚗",cls:"bsb-car"},instant:{t:"Instant",ic:"🏍️",cls:"bsb-inst"},sameday:{t:"Sameday",ic:"🏍️",cls:"bsb-same"}};
 function bsKind(x){const t=String([x.type,x.serviceName,x.service,x.courierName,x.courier].join(" ")).toLowerCase();
   if(/car|mobil|truck|van\b|pickup/.test(t))return "car";if(/same[ _-]?day/.test(t))return "sameday";if(/instant|gojek|grab|lalamove|borzo|deliveree|bike|motor|ojek/.test(t))return "instant";return ""}
 // the "looking for couriers" animation: a little scooter riding along a road
