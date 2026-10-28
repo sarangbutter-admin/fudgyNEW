@@ -134,7 +134,7 @@ window.DD_ID = {
 Object.assign(window.DD_ID, {
 /* ---- shop page ---- */
 "COOKIES": "KUE", "No reviews yet": "Belum ada ulasan", "How would you like it?": "Mau diterima bagaimana?", "Free pickup at the front counter. Pick a day and time.": "Ambil gratis di meja depan. Pilih hari dan jam.",
-"Gift note or anything we should know (optional)": "Catatan hadiah atau hal lain yang perlu kami tahu (opsional)", "✓ Box completed": "✓ Kotak lengkap", "My box": "Kotakku", "(optional)": "(opsional)", "FREE": "GRATIS", "Selected": "Dipilih",
+"Gift note or anything we should know (optional)": "Catatan hadiah atau hal lain yang perlu kami tahu (opsional)", "Gift note": "Catatan hadiah", "✓ Box completed": "✓ Kotak lengkap", "My box": "Kotakku", "(optional)": "(opsional)", "FREE": "GRATIS", "Selected": "Dipilih",
 "Drag the pin (or tap the map) to your exact door. Prices update by themselves.": "Geser pin (atau ketuk peta) ke depan pintumu. Harga diperbarui otomatis.", "Fewer cookies": "Kurangi kue", "Number of cookies": "Jumlah kue", "More cookies": "Tambah kue",
 "8pm the day before. We bake every box fresh in the morning, so we need the evening to plan the bake.": "Jam 8 malam sehari sebelumnya. Kami memanggang setiap kotak segar di pagi hari, jadi kami butuh waktu malam untuk merencanakan pemanggangan.",
 "Numbers only": "Hanya angka", "Street, number, area, city": "Jalan, nomor, area, kota", "e.g. Green gate next to Indomaret, house no. 6, ring the bell": "mis. Pagar hijau di sebelah Indomaret, rumah no. 6, bunyikan bel", "Happy birthday, Sari! Love, Dimas": "Selamat ulang tahun, Sari! Salam sayang, Dimas",
