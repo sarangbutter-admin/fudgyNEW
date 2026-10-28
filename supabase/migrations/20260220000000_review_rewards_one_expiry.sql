@@ -42,3 +42,7 @@ do $$ declare d text; begin
     execute d;
   end if;
 end $$;
+
+-- migration 51b: a coupon reward is still skipped when its end date is closer than the "Coupon must stay valid at least (days)" rule (revrew.validDays, default 7).
+-- Cookies and gifts have no such rule. Re-run the coupon branch of rv_item_ok:
+--   if en is not null and en < need then return false; end if;   with need = now + validDays days
