@@ -404,7 +404,7 @@ function crumbColors(p){
 
 /* ================= SHOP ================= */
 loadDB();
-const fresh = () => ({size:6, box:[], auto:[], step:1, mode:"pickup", speed:"scheduled", day:null, time:null, note:"", addons:[], extrasDone:false, extraTip:false, courierTip:false, coupon:"", ship:null, bsSkip:false, dnote:"", dphoto:""});
+const fresh = () => ({size:6, box:[], auto:[], step:1, mode:"pickup", speed:"scheduled", day:null, time:null, note:"", addons:[], extrasDone:false, extraTip:false, noteTip:false, courierTip:false, coupon:"", ship:null, bsSkip:false, dnote:"", dphoto:""});
 let S = fresh(), hadCart=false;
 try{const s=JSON.parse(localStorage.getItem(CART_KEY)||"null");if(s&&Array.isArray(s.box)){S={...S,...s,step:s.step===2?2:1};hadCart=true;
   }}catch(e){}
@@ -599,7 +599,7 @@ function renderStoreStatic(){
   $("#addr").textContent = set.address;
   const act=DB.addons.filter(a=>a.active);
   $("#extrasBlock").hidden=!act.length;
-  $("#extras").innerHTML=act.map(a=>`<button class="extra" type="button" data-addon="${a.id}" aria-pressed="false"><span class="tick">✓</span>${lvAddon(a,46)}<span><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></span><span class="pr">${addonPr(a)}</span></button>`).join("")+(act.length?`<button class="extra noextra" type="button" data-noextra aria-pressed="${!!S.extrasDone&&!S.addons.length}"><span class="tick">✓</span><span><b>No extras, thanks</b><small>I do not want any extra</small></span><span class="pr"></span></button>`+(S.addons.length?`<button class="btn btn-blue btn-sm" type="button" data-extradone style="grid-column:1/-1;justify-self:start">Done, continue →</button>`:""):"");
+  $("#extras").innerHTML=act.map(a=>`<button class="extra" type="button" data-addon="${a.id}" aria-pressed="false"><span class="tick">✓</span>${lvAddon(a,46)}<span><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></span><span class="pr">${addonPr(a)}</span></button>`).join("")+(act.length?`<button class="extra noextra" type="button" data-noextra aria-pressed="${!!S.extrasDone&&!S.addons.length}"><span class="tick">✓</span><span><b>No extras, thanks</b><small>I do not want any extra</small></span><span class="pr"></span></button>`:"");
   heroFloats($("#dome"),DB.page.hero);
 }
 
@@ -612,7 +612,10 @@ function ctaState(){
 }
 /* guide: after the time is chosen, scroll to the extras and blink an arm tip until they choose an extra or "No extras"; then guide them to the courier */
 function guideExtras(){const blk=$("#extrasBlock");if(!blk||blk.hidden||S.extrasDone||!(S.day&&S.time))return;S.extraTip=true;renderStore();setTimeout(()=>scrollToEl(blk),80)}
-function guideCourier(){S.extraTip=false;if(S.mode!=="delivery"){renderStore();return}S.courierTip=!!(bsOn()&&bsPending(S));renderStore();setTimeout(()=>scrollToEl($("#bsRow")||$("#coName")),120)}
+function guideCourier(){S.extraTip=false;S.noteTip=false;if(S.mode!=="delivery"){renderStore();return}S.courierTip=!!(bsOn()&&bsPending(S));renderStore();bsSumDraw();
+  setTimeout(()=>{const s=$("#bsSum");scrollToEl(S.courierTip&&s&&!s.hidden?s:($("#bsRow")||$("#coName")))},120)}
+// extras chosen (not "No extras"): a tip at the gift note box. It is optional: they can type or skip, then the courier is next.
+function guideNote(){S.extraTip=false;S.noteTip=true;renderStore();setTimeout(()=>scrollToEl($("#giftNote").closest(".block")),80)}
 function renderStore(){
   if(preGate())return;
   pgInit();
@@ -648,8 +651,11 @@ function renderStore(){
   document.querySelectorAll("[data-time]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.time===S.time));
   document.querySelectorAll("[data-addon]").forEach(b=>b.setAttribute("aria-pressed",S.addons.includes(b.dataset.addon)));
   {const t=document.querySelector("[data-noextra]");if(t)t.setAttribute("aria-pressed",String(!!S.extrasDone&&!S.addons.length));
+   {let dn=$("#extraDone");if(S.addons.length){if(!dn){dn=document.createElement("button");dn.id="extraDone";dn.type="button";dn.className="btn btn-blue btn-sm";dn.dataset.extradone="1";dn.style.cssText="grid-column:1/-1;justify-self:start";dn.textContent="Done, continue →";$("#extras").appendChild(dn)}}else if(dn)dn.remove()}
    let tip=$("#exTip");if(!tip){tip=document.createElement("div");tip.id="exTip";tip.className="armtip";tip.hidden=true;$("#extras").parentNode.insertBefore(tip,$("#extras"))}
-   const on=!!S.extraTip&&!S.extrasDone&&!$("#extrasBlock").hidden;tip.hidden=!on;if(on)tip.innerHTML=`<span aria-hidden="true">👇</span><span>Add something extra, or tap <b>No extras, thanks</b> to continue.</span>`}
+   const on=!!S.extraTip&&!S.extrasDone&&!$("#extrasBlock").hidden;tip.hidden=!on;if(on)tip.innerHTML=`<span aria-hidden="true">👇</span><span>Add something extra, or tap <b>No extras, thanks</b> to continue.</span>`;
+   let nt=$("#gnTip");if(!nt){nt=document.createElement("div");nt.id="gnTip";nt.className="armtip";nt.hidden=true;const lb=document.querySelector('label[for="giftNote"]');lb.parentNode.insertBefore(nt,lb)}
+   nt.hidden=!S.noteTip;if(S.noteTip)nt.innerHTML=`<span aria-hidden="true">✍️</span><span>Want to add a <b>gift note</b>? Type it below, or <button class="ghost sm" type="button" data-noteskip style="margin-left:4px">Skip</button></span>`}
   $("#giftNote").value=S.note;
   // box panel
   const cols=S.size<=4?2:S.size<=9?3:4;
@@ -669,7 +675,7 @@ function renderStore(){
     L+=`<div><dt>${OPT_NAME[optOf(S)]}</dt><dd>${q.feePending?"Choose a courier":q.feeWas?`<s class="fdwas">${money(q.feeWas)}</s> ${q.fee?`<b class="fdnow">${money(q.fee)}</b>`:fbHTML("Del")}`:q.fee?money(q.fee):fbHTML("Del")}</dd></div>`;
     if(S.day)L+=`<div><dt>When</dt><dd>${S.mode!=="pickup"&&S.speed==="sameday"?(samedayOpen()?"Today (sameday)"+(S.time&&S.time!=="Same day"?", "+esc(S.time):""):"Sameday (after the cut-off)"):fmtDay(S.day)+(S.time?", "+esc(S.time):"")}</dd></div>`;
     if(bsOn()&&S.mode==="delivery"){const sh=bsShip(S);
-      L+=(S.courierTip&&q.feePending&&!BSD.busy?`<div class="armtip" id="csTip"><span aria-hidden="true">👉</span><span>Now choose your <b>courier</b>.</span></div>`:"")+`<div class="bscour${q.feePending?" need":""}" id="bsRow"><dt>Courier</dt><dd><button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?esc(scName())+" · Change":"🛵 Choose courier"}</button></dd></div>`}
+      L+=`<div class="bscour${q.feePending?" need":""}" id="bsRow"><dt>Courier</dt><dd><button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?esc(scName())+" · Change":"🛵 Choose courier"}</button></dd></div>`}
   }
   $("#lines").innerHTML=L;
   renderCoupon(q);renderGiftBox();
@@ -1168,7 +1174,7 @@ function bsPopOpen(){
 // checkout form: one line with the chosen courier and a Change button (the full courier box lives in the pop-up)
 function bsSumDraw(){
   const el=$("#bsSum");if(!el)return;const on=bsOn()&&S.mode==="delivery";el.hidden=!on;if(!on)return;const sh=bsShip(S);
-  el.innerHTML=`<span class="flbl" style="font-weight:600;font-size:14px">Courier</span><div class="bssumrow${sh||S.bsSkip?"":" need"}${BSD.busy?" busy":""}"><span>${BSD.busy?`<span class="bsmoto sm" aria-hidden="true">🛵</span> <b>${BSD.phase==="map"?"Finding your address…":"Looking for couriers…"}</b>`:sh?`<b>${esc(sh.courierName||sh.courier)}</b> ${esc(sh.serviceName||sh.service)}${sh.eta?` <small>${esc(sh.eta)}</small>`:""}`:S.bsSkip?esc(scName()):"<b>⚠ Choose your courier</b>"}</span>${sh?`<span class="num">${money(sh.price)}</span>`:""}<button type="button" class="ghost" data-bscourier>${sh||S.bsSkip?"Change":"🛵 Choose courier"}</button></div>`;
+  el.innerHTML=(S.courierTip&&!sh&&!S.bsSkip&&!BSD.busy?`<div class="armtip" id="csTip"><span aria-hidden="true">👇</span><span>Now tap <b>Choose courier</b> to see the prices.</span></div>`:"")+`<span class="flbl" style="font-weight:600;font-size:14px">Courier</span><div class="bssumrow${sh||S.bsSkip?"":" need"}${BSD.busy?" busy":""}"><span>${BSD.busy?`<span class="bsmoto sm" aria-hidden="true">🛵</span> <b>${BSD.phase==="map"?"Finding your address…":"Looking for couriers…"}</b>`:sh?`<b>${esc(sh.courierName||sh.courier)}</b> ${esc(sh.serviceName||sh.service)}${sh.eta?` <small>${esc(sh.eta)}</small>`:""}`:S.bsSkip?esc(scName()):"<b>⚠ Choose your courier</b>"}</span>${sh?`<span class="num">${money(sh.price)}</span>`:""}<button type="button" class="ghost" data-bscourier>${sh||S.bsSkip?"Change":"🛵 Choose courier"}</button></div>`;
 }
 /* guided tour for the courier pop-up: shows once, can be skipped, replay with the "?" button */
 /* guided tour of the shop for a new visitor: starts when they tap the main button, follows them through the box, the day and time, and checkout. It can be skipped and replayed with "How does it work?". */
@@ -1537,10 +1543,13 @@ setInterval(()=>{try{if(S.speed==="sameday"&&S.mode!=="pickup"){sdWatch();if(S.t
 $("#times").addEventListener("click",e=>{const b=e.target.closest("[data-time]");if(b){S.time=b.dataset.time;renderStore();guideExtras()}});
 $("#extras").addEventListener("click",e=>{
   if(e.target.closest("[data-noextra]")){S.addons=[];S.extrasDone=true;S.extraTip=false;renderStore();guideCourier();return}
-  if(e.target.closest("[data-extradone]")){S.extrasDone=true;S.extraTip=false;renderStore();guideCourier();return}
+  if(e.target.closest("[data-extradone]")){S.extrasDone=true;S.extraTip=false;S.addons.length?guideNote():(renderStore(),guideCourier());return}
   const b=e.target.closest("[data-addon]");if(!b)return;const id=b.dataset.addon;S.extrasDone=true;
   S.addons=S.addons.includes(id)?S.addons.filter(x=>x!==id):[...S.addons,id];renderStore();if(!RM&&S.addons.includes(id))bump(b.querySelector(".tick"))});
 $("#giftNote").addEventListener("input",e=>{S.note=e.target.value;saveCart()});
+$("#giftNote").addEventListener("change",()=>{if(S.noteTip)guideCourier()});
+$("#giftNote").addEventListener("blur",()=>{if(S.noteTip&&S.note.trim())guideCourier()});
+document.addEventListener("click",e=>{if(e.target.closest("[data-noteskip]"))guideCourier()});
 $("#coPhone").addEventListener("change",()=>{if(normPhone($("#coPhone").value).length>=9&&tsOn("whatsapp"))tsPass("whatsapp").catch(()=>{})});
 $("#coForm").addEventListener("input",saveCust);$("#coForm").addEventListener("change",saveCust);
 $("#panelCta").addEventListener("click",e=>cta(e.currentTarget.dataset.go));
