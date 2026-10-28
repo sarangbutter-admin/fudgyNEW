@@ -6333,7 +6333,7 @@ function secAlertsPanel(){
    Affiliator: signs in on the shop at /#partner and gets only their own dashboard (window.affStart).
    Commission per order: On progress -> On hold (24 h window or an unresolved complaint) -> Needs approval (the owner approves or voids)
    -> Waiting payout -> Paid out (with a proof picture). Voided orders show their reason. */
-const AF={list:null,orders:null,loading:false,err:"",range:"30d",from:"",to:"",group:"day",sel:null,rep:null,repLoading:false,form:null,ferr:"",prods:null,sf:"all",afs:"all",act:null,proof:"",busy:false,cfg:null,pf:null,perr:""};
+const AF={list:null,orders:null,loading:false,err:"",range:"30d",from:"",to:"",group:"day",sel:null,rep:null,repLoading:false,form:null,ferr:"",prods:null,sf:"all",afs:"all",act:null,proof:"",busy:false,cfg:null,pf:null,perr:"",tab:"dash"};
 const AF_SRC={ig:"Instagram",tt:"TikTok",wa:"WhatsApp",fb:"Facebook",ads:"Ads",x:"X / Twitter",yt:"YouTube",google:"Google",direct:"Direct / unknown",coupon:"Coupon code",web:"Website"};
 const AF_ST={progress:["On progress","#1B4DB3","#E4EDFF"],hold:["On hold","#8A5A00","#FFF4D6"],review:["Needs approval","#B42318","#FDE8E6"],approved:["Waiting payout","#0A6B34","#E3F6EA"],paid:["Paid out","#000096","#E5E8FF"],voided:["VOIDED","#B42318","#FDE2E2"],cancelled:["Cancelled","#5A5F86","#EEF0F7"],waiting:["Waiting for payment","#5A5F86","#EEF0F7"]};
 const AF_STATUS={active:["Active","#0A6B34","#E3F6EA"],paused:["Paused","#8A5A00","#FFF4D6"],disabled:["Switched off","#9B1C1C","#FDE2E2"]};
@@ -6427,6 +6427,32 @@ function afPayoutBanner(L){const c=AF.cfg||{min:20000,day:4},pv=L.filter(x=>x.pa
   return h}
 /* --- affiliator: my coupon and my password --- */
 const AFM={cpn:null,msg:"",pwMsg:"",busy:false};
+/* --- affiliator FAQ: the owner edits it in Affiliates, affiliators read it in their FAQ tab. {rate} {min} {day} are filled in --- */
+const AF_FAQ_DEFAULT=[
+  {q:"How do I earn commission?",a:"You earn commission on every order that comes from your share link or your coupon code.\n\n• Link: the customer opened the shop with your link before ordering.\n• Coupon: the customer used your coupon code. The coupon always wins, even if they clicked someone else's link.\n• Your own orders (from your registered WhatsApp number) never count.\n• While your account is paused, links and the coupon don't earn commission."},
+  {q:"How is my commission calculated?",a:"Your commission is {rate}% of what the customer really paid for the cookies.\n\n• The delivery fee is never included.\n• Every discount (coupon, flash sale) is taken off first.\n• Extras such as gift wrap or a greeting card are included.\n\nIn short: commission = (amount the customer paid − delivery fee) × your %."},
+  {q:"Can you show me an example?",a:"Example with 10% commission:\n\nCookies (normal price): Rp 85.000\nDelivery fee: Rp 15.000\nTotal before discounts: Rp 100.000\nFlash sale: − Rp 5.000\nCoupon: − Rp 5.000\nThe customer pays: Rp 90.000\n\nCommission is counted on: Rp 90.000 − Rp 15.000 delivery = Rp 75.000\nYour commission: Rp 75.000 × 10% = Rp 7.500"},
+  {q:"When does my commission become ready to pay?",a:"Each order moves through these steps:\n\n1. Waiting for payment: the customer hasn't paid yet. No commission yet.\n2. On progress: paid, the cookies are being baked and sent.\n3. On hold: the order is delivered or picked up. A 7-day window starts now.\n4. Needs approval: the 7 days have passed with no problem, and the shop checks the order.\n5. Waiting payout: approved. It will be in your next payout.\n6. Paid out: the money has been sent to you.\n\nThe 7 days start from the day the order is DELIVERED (or picked up), not the day it was ordered. Example: ordered on 1 November, delivered on 3 November, so the window ends on 10 November."},
+  {q:"What if an order is cancelled, refunded or has a complaint?",a:"• Cancelled or never paid: no commission.\n• Full refund, or the courier returned or lost the box: the commission is cancelled (VOIDED).\n• Partial refund: the commission is counted again on what the customer kept. Example: Rp 75.000 − Rp 20.000 refund = Rp 55.000 × 10% = Rp 5.500.\n• Complaint: the commission stays On hold until the complaint is solved. A complaint inside the 7 days puts it on hold again.\n\nThis is why we wait 7 days after delivery: complaints and refunds can only happen after the customer receives the cookies."},
+  {q:"When and how do I get paid?",a:"Approved commission is paid every {day}, once your balance reaches at least {min}.\n\n• We transfer it to the bank or e-wallet account you saved on your dashboard. Please make sure the name matches.\n• You will see each payout and its transfer proof under Payouts.\n• If your balance is below the minimum, it simply carries over to the next payout day."}];
+const AFQ={items:null,draft:null,busy:false,loaded:false,open:false};
+async function afFaqLoad(){try{const r=SBH.on?await SBH.rpc("aff_faq",{}):null;AFQ.items=r&&Array.isArray(r.items)&&r.items.length?r.items:null;AFQ.loaded=true}catch(e){}}
+const afFaqList=()=>AFQ.items||AF_FAQ_DEFAULT;
+function afFaqFill(s,r){const c=(r&&r.cfg)||AF.cfg||{min:20000,day:4};
+  return String(s||"").replace(/\{rate\}/g,r&&r.aff?String(+r.aff.rate):"your").replace(/\{min\}/g,money(+c.min||0)).replace(/\{day\}/g,AF_DAYS[+c.day]||"week")}
+function afFaqHTML(r){const L=afFaqList();return `<section class="panel"><h2>FAQ</h2><p class="sub">How you earn and how your commission is counted.</p>
+  <div class="faq affaq">${L.map((f,i)=>`<details ${i===0?"open":""}><summary>${esc(afFaqFill(f.q,r))}</summary><p>${esc(afFaqFill(f.a,r))}</p></details>`).join("")}</div></section>`}
+const afTabsHTML=()=>`<div class="chips aftabs" role="tablist">${[["dash","📊 Dashboard"],["faq","❓ FAQ"]].map(([k,l])=>`<button class="fchip" type="button" role="tab" data-aftab="${k}" aria-selected="${AF.tab===k}" aria-pressed="${AF.tab===k}">${l}</button>`).join("")}</div>`;
+/* owner: edit the affiliator FAQ */
+function afFaqEdHTML(){if(!AFQ.loaded)return "";const D=AFQ.draft||(AFQ.draft=afFaqList().map(f=>({q:f.q,a:f.a})));
+  return `<details class="panel lpsec" id="afFaqEd"${AFQ.open?" open":""}><summary>❓ FAQ for affiliators</summary><div style="padding:0 20px 18px;display:grid;gap:10px">
+    <p class="note" style="margin:0">Affiliators read this in the FAQ tab of their dashboard. In a question or answer, <b>{rate}</b> becomes their commission %, <b>{min}</b> your minimum payout (${esc(money(+(AF.cfg||{min:20000}).min||0))}) and <b>{day}</b> your payout day. Start a line with • for a bullet.</p>
+    ${D.map((f,i)=>`<div class="lpblock"><label class="af">Question ${i+1}<input class="in" data-afq="${i}|q" maxlength="200" value="${esc(f.q)}"></label><label class="af">Answer<textarea class="in" rows="6" data-afq="${i}|a" maxlength="3000">${esc(f.a)}</textarea></label>
+      <div class="colin" style="gap:8px;flex-wrap:wrap">${i?`<button class="ghost sm" type="button" data-afqup="${i}">↑ Move up</button>`:""}<button class="danger" type="button" data-afqdel="${i}">Delete question</button></div></div>`).join("")}
+    <div class="colin" style="gap:8px;flex-wrap:wrap">${D.length<30?`<button class="ghost" type="button" data-afqadd>+ Add question</button>`:""}<button class="ghost" type="button" data-afqreset>Restore the default text</button><button class="btn btn-blue btn-sm" type="button" data-afqsave ${AFQ.busy?"disabled":""}>${AFQ.busy?"Saving…":"Save FAQ"}</button></div></div></details>`}
+async function afFaqSave(){AFQ.busy=true;renderAdmin();const items=(AFQ.draft||[]).map(f=>({q:String(f.q||"").trim(),a:String(f.a||"").trim()})).filter(f=>f.q);
+  try{if(SBH.on){const r=await SBH.rpc("admin_aff_faq_save",{p:{items}});AFQ.items=r&&r.items&&r.items.length?r.items:null}else AFQ.items=items.length?items:null;
+    AFQ.draft=null;toast("FAQ saved. Affiliators see it now")}catch(er){toast(er.message||"Couldn't save the FAQ.")}AFQ.busy=false;const y=scrollY;renderAdmin();scrollTo(0,y)}
 async function afCpnLoad(){try{AFM.cpn=await SBH.rpc("aff_coupon_info",{})}catch(e){AFM.cpn={ok:false}}affRender()}
 function afCpnText(c){const d=c.type==="freedelivery"?"free delivery":c.type==="amount"?money(+c.value)+" off":(+c.value)+"% off";return d+(+c.minSpend>0?" on orders from "+money(+c.minSpend):"")+(c.stack?", also on flash sales":", not on flash sales")+(c.endsAt?", until "+esc(String(c.endsAt).replace("T"," ")):"")}
 function afMyHTML(){const c=AFM.cpn;if(!c||!c.ok)return "";const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,"");
@@ -6460,7 +6486,7 @@ function afDashHTML(r,owner){
     <div class="colin" style="margin-top:8px"><input class="in" id="afLinkOut" readonly value="${esc(afLink(a.code,"","ig",""))}"><button class="btn btn-blue btn-sm" type="button" data-afcopy>Copy</button></div></section>
   <section class="panel"><h2>Payouts</h2>${r.payouts.length?r.payouts.map(p=>`<div class="afrow" style="grid-template-columns:1fr auto"><span>${fmtDT(p.at)} · ${p.n} order${p.n===1?"":"s"}${p.note?` · ${esc(p.note)}`:""}${/^https:\/\//.test(p.proof||"")?` · <a class="afproof" href="${esc(p.proof)}" target="_blank" rel="noopener">🧾 proof</a>`:""}</span><b>${money(p.amount)}</b></div>`).join(""):`<p class="note">No payouts yet.</p>`}</section>`}
 async function affLoadList(){if(!SBH.on)return;AF.loading=true;AF.err="";const [f,t]=afRange();
-  try{const [l,o,c,an]=await Promise.all([SBH.rpc("admin_aff_list",{p_from:f,p_to:t}),SBH.rpc("admin_aff_orders",{p_from:f,p_to:t}),SBH.rpc("admin_aff_cfg",{p:{}}),SBH.rpc("admin_aff_announcements",{}).catch(()=>AF.ann||[])]);AF.list=l;AF.orders=o;AF.cfg=c;AF.ann=an}catch(e){AF.err=e.message;AF.list=AF.list||[];AF.orders=AF.orders||[]}
+  try{const [l,o,c,an]=await Promise.all([SBH.rpc("admin_aff_list",{p_from:f,p_to:t}),SBH.rpc("admin_aff_orders",{p_from:f,p_to:t}),SBH.rpc("admin_aff_cfg",{p:{}}),SBH.rpc("admin_aff_announcements",{}).catch(()=>AF.ann||[]),AFQ.loaded?null:afFaqLoad()]);AF.list=l;AF.orders=o;AF.cfg=c;AF.ann=an}catch(e){AF.err=e.message;AF.list=AF.list||[];AF.orders=AF.orders||[]}
   AF.loading=false;if(A.tab==="affiliates"){const y=scrollY;renderAdmin();scrollTo(0,y)}}
 async function affLoadRep(id,mine){const [f,t]=afRange();AF.repLoading=true;
   try{const [rep,inf]=await Promise.all([SBH.rpc("aff_report",{p_id:id,p_from:f,p_to:t,p_group:AF.group}),SBH.rpc("aff_pay_info",{p_id:id})]);rep.pay=inf.pay;rep.cfg=inf.cfg;AF.rep=rep;if(!AF.act)AF.err=""}catch(e){AF.err=e.message}
@@ -6579,6 +6605,7 @@ function viewAffiliates(){
     ${(()=>{const m={};L.forEach(x=>(x.sources||[]).forEach(r=>{const o=m[r.src]||(m[r.src]={src:r.src,views:0,orders:0,sales:0,who:{}});o.views+=+r.views||0;o.orders+=+r.orders||0;o.sales+=+r.sales||0;if((+r.views||0)+(+r.orders||0)>0)o.who[x.code]=(o.who[x.code]||0)+(+r.views||0)+(+r.orders||0)}));
       const rows=Object.values(m).sort((a,b)=>b.views-a.views||b.orders-a.orders),tv=rows.reduce((a,r)=>a+r.views,0)||1;
       return `<section class="panel"><h2>Where visitors came from (all affiliators)</h2>${rows.length?`<div class="aftable"><div class="afrow afth afsrc"><span>Source</span><span>Views</span><span>Orders</span><span>Sales</span><span>Top affiliators</span></div>${rows.map(r=>`<div class="afrow afsrc"><span>${esc(AF_SRC[r.src]||r.src)}<i class="afbar" style="width:${Math.round(r.views/tv*100)}%"></i></span><span>${r.views} <small>${Math.round(r.views/tv*100)}%</small></span><span>${r.orders}</span><span>${money(r.sales)}</span><span>${Object.entries(r.who).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([c])=>esc(c)).join(", ")}</span></div>`).join("")}</div>`:`<p class="note">No visits from affiliate links in this period yet.</p>`}</section>`})()}
+    ${afFaqEdHTML()}
     ${afAppsHTML()}
     ${SBH.on?afResetHTML():""}
     ${afAnnHTML(L)}
@@ -6619,7 +6646,12 @@ async function afGo(){const x=AF.act;if(!x||AF.busy)return;AF.err="";AF.busy=tru
     else{if(!AF.proof)throw new Error("Upload the payout proof picture first.");const r=await SBH.rpc("admin_aff_pay",{p_ids:x.ids,p_note:x.note||"",p_proof:AF.proof});toast(`Marked ${money(r.amount)} as paid`)}
     AF.act=null;AF.proof="";AF.busy=false;afRefresh()}
   catch(er){AF.err=er.message||"Couldn't save.";AF.busy=false;renderAdmin()}}
-am.addEventListener("click",async e=>{if(A.tab!=="affiliates")return;const b=e.target.closest("button");if(!b)return;const d=b.dataset;
+am.addEventListener("click",async e=>{if(A.tab!=="affiliates")return;const fs=e.target.closest("#afFaqEd>summary");if(fs){AFQ.open=!fs.parentNode.open;return}const b=e.target.closest("button");if(!b)return;const d=b.dataset;
+  if(d.afqadd!==undefined||d.afqdel||d.afqup||d.afqreset!==undefined){const D=AFQ.draft||[],y=scrollY;
+    if(d.afqadd!==undefined)D.push({q:"",a:""});else if(d.afqdel)D.splice(+d.afqdel,1);else if(d.afqup){const i=+d.afqup;D.splice(i-1,0,D.splice(i,1)[0])}
+    else{AFQ.draft=AF_FAQ_DEFAULT.map(f=>({q:f.q,a:f.a}));toast("Default text is back. Press Save FAQ to keep it")}
+    AFQ.open=true;renderAdmin();scrollTo(0,y);return}
+  if(d.afqsave!==undefined){AFQ.open=true;afFaqSave();return}
   afClick(e,am,false);
   if(d.afcopyurl!==undefined){const i=document.getElementById("afLoginUrl");try{navigator.clipboard.writeText(i.value).then(()=>toast("Address copied"),()=>i.select())}catch(x){i.select()}return}
   if(d.afnew!==undefined){AF.form={rate:10,status:"active"};AF.ferr="";renderAdmin();showNew("#afForm")}
@@ -6648,7 +6680,7 @@ am.addEventListener("click",async e=>{if(A.tab!=="affiliates")return;const b=e.t
   else if(d.afannhide){try{await SBH.rpc("admin_aff_announce_hide",{p_id:+d.afannhide});AF.ann=await SBH.rpc("admin_aff_announcements",{});toast("Removed. Affiliators no longer see it")}catch(er){toast(er.message)}const y=scrollY;renderAdmin();scrollTo(0,y)}
   else if(d.afnogo!==undefined){AF.act=null;AF.proof="";AF.err="";renderAdmin()}
   else if(d.afgo!==undefined)afGo()});
-am.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.anf;if(k&&AF.annf)AF.annf[k]=e.target.value});
+am.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.anf;if(k&&AF.annf)AF.annf[k]=e.target.value;const q=e.target.dataset&&e.target.dataset.afq;if(q&&AFQ.draft){const [i,f]=q.split("|");if(AFQ.draft[+i])AFQ.draft[+i][f]=e.target.value}});
 am.addEventListener("change",async e=>{if(A.tab==="customers"&&CU.bmd){const el=e.target;
   if(el.dataset.bm&&el.type==="checkbox"){CU.bmd[el.dataset.bm]=el.checked;renderAdmin();return}
   if(el.id==="bmImg"||el.id==="bmItems"){const fs=[...(el.files||[])];el.value="";if(!fs.length)return;CU.bmBusy=true;renderAdmin();
@@ -6679,7 +6711,7 @@ function afBellClick(e){const tb=e.target.closest("[data-afntab]");if(tb){AFN.ta
   else if(AFN.open&&!e.target.closest(".afpop")){AFN.open=false;afBellDraw()}}
 function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
-    v.addEventListener("click",async e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);if(e.target.closest("[data-afout]"))SBH.signOut();
+    v.addEventListener("click",async e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);const tb=e.target.closest("[data-aftab]");if(tb){AF.tab=tb.dataset.aftab;affRender();scrollTo(0,0);return}if(e.target.closest("[data-afout]"))SBH.signOut();
       if(e.target.closest("[data-afcpsave]")){AFM.busy=true;AFM.msg="";affRender();try{AFM.cpn=await SBH.rpc("aff_coupon_save",{p_code:(document.getElementById("afCpIn")||{}).value||""});AFM.msg="Saved. Your coupon is "+AFM.cpn.coupon+"."}catch(er){AFM.msg=er.message||"Couldn't save."}AFM.busy=false;affRender()}
       if(e.target.closest("[data-afpwsave]")){const o=(document.getElementById("afPwOld")||{}).value||"",n=(document.getElementById("afPwNew")||{}).value||"";AFM.pwMsg="";
         if(n.length<8){AFM.pwMsg="New password: at least 8 characters.";affRender();return}AFM.busy=true;affRender();try{await SBH.changePassword(o,n);AFM.pwMsg="Password changed."}catch(er){AFM.pwMsg=er.message||"Couldn't change it."}AFM.busy=false;affRender()}});
@@ -6687,9 +6719,9 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
   v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build __BUILD__</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
-  <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
+  <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
-const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;afCpnLoad();AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
+const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
 /* --- Pre-launch (owner) --- */
 const PRA={list:null,loading:false,err:""};
 const preDT=ms=>{if(!(+ms>0))return "";const d=new Date(+ms),p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};

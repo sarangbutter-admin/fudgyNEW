@@ -1910,3 +1910,6 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .bscour .armtip{position:absolute;right:0;bottom:calc(100% + 10px);z-index:6;margin:0;width:max-content;max-width:min(260px,calc(100vw - 48px));font-size:13px;padding:8px 12px;white-space:normal}
 .bscour .armtip{text-align:left;background:#FFD166;color:#0B0B45;font-weight:800}.bscour .armtip::after{left:auto;right:34px;background:#FFD166}
 @keyframes armblinky{50%{box-shadow:0 0 0 5px rgba(255,255,255,.85)}}.bscour .armtip{animation:armblinky 1s ease-in-out infinite}
+/* affiliator dashboard tabs + FAQ */
+.aftabs{margin:0}
+.affaq details p{white-space:pre-line;max-width:none;color:var(--ink)}
