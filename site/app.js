@@ -139,6 +139,7 @@ function defaultAlerts(){return {on:true,sound:true,vol:70,repeat:false,stay:tru
   ev:{order:{on:true,snd:"register"},proof:{on:true,snd:"chime"},paid:{on:false,snd:"bell"},complaint:{on:true,snd:"alarm"},courier:{on:true,snd:"alarm"}}}}
 function defaultRev(){return {on:false,days:7,minBox:6,mode:"random",daily:20,validDays:7,redeemDays:30,claimMin:6,claimMode:"auto",
   upg:{icon:"🎁",one:"You have 1 reward waiting! Upgrade to a box of {min} or more to claim it.",many:"You have {n} rewards waiting! Upgrade to a box of {min} or more to claim one.",man:"You have {n} reward code(s) saved. Type one in the coupon box to claim it.",chg:"You have {n} rewards. Only one can be used per order.",pickTitle:"Choose the reward for this order",exp:"{n} of your rewards expired and can't be used any more.",useBtn:"Use my reward",changeBtn:"Change",bg:"#FFF4D6",ink:"#0B0B45"},
+  rem:{on:true,hot:24,text:"Unclaimed reward: {name}",cd:"Expires in {time}",tip:"Last chance! Your reward {name} expires in {time}"},
   bn:{card:true,star:true,icon:"⭐",starImg:"",starFx:"blink",starSpeed:100,waitIcon:"📦",waitImg:"",waitFx:"shake",waitSpeed:100,title:"How was your order {code}?",sub:"Rate your cookies and open a blind box 🎁",bg:"#FFF4D6",ink:"#0B0B45",line:"#FFD166",fx:"shine",tipOn:true,tip:"Rate your order and open a blind box!",cd:true,cdText:"Review ends in {time}",cdHot:24,cdTip:"Last chance! Review ends in {time}"},
   win:{icon:"🎉",img:"",fx:"confetti",title:"You won a surprise!",text:"{reward}",btn:"Great!",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
   sad:{icon:"🥺",img:"",fx:"rain",title:"Thank you for rating",text:"We're sorry it wasn't perfect this time. We'd love to make it right, so please order again soon.",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
@@ -1680,18 +1681,40 @@ function rvSlotTip(){const l=rvOrders().filter(rvHot),o=l[0],b=DB.revrew.bn||{},
   if(seen[k])return;seen[k]=1;for(const x in seen)if(x.split("|")[1]!==new Date().toDateString())delete seen[x];try{localStorage.setItem("delidome-rvtip2",JSON.stringify(seen))}catch(e){}
   t.innerHTML="<b>⏰ "+esc(String(b.tipTitle||"Review time"))+"</b><span>"+esc(String(b.cdTip||"Last chance! Review ends in {time}").replace(/\{time\}/g,rvTime(rvEnd(o)-Date.now())))+"</span>";t.hidden=false;setTimeout(()=>{t.hidden=true},9000)}
 function rvTick(){if(!DB||!DB.revrew)return;const now=Date.now(),hot=(+DB.revrew.bn.cdHot||24)*36e5,tx=String(DB.revrew.bn.cdText||"Review ends in {time}");let any=false;
-  document.querySelectorAll("[data-rvend]").forEach(e=>{const l=+e.dataset.rvend-now;any=true;if(l<=0){rvRender();return}e.textContent="⏰ "+tx.replace(/\{time\}/g,rvTime(l));e.classList.toggle("rvhot",l<=hot)});
+  document.querySelectorAll("[data-rvend]").forEach(e=>{const l=+e.dataset.rvend-now,own=e.dataset.rvtx;any=true;if(l<=0){rvRender();renderBell();return}e.textContent="⏰ "+(own||tx).replace(/\{time\}/g,rvTime(l));e.classList.toggle("rvhot",l<=(own?(+((DB.revrew.rem||{}).hot)||24)*36e5:hot))});
   const o=rvOrders()[0],h=!!(o&&!o.rv&&rvOn()&&DB.revrew.bn.cd!==false&&rvEnd(o)-now<=hot);const st=$("#rvStar"),cd=$("#rvCard");if(st)st.classList.toggle("rvhot",h);if(cd)cd.classList.toggle("rvhot",h);
-  if(!(Math.floor(now/1000)%60))rvSlotTip()}
+  if(!(Math.floor(now/1000)%60)){rvSlotTip();rvRemTip()}}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-rvgo]");if(!b)return;e.preventDefault();const t=$("#rvTip");if(t)t.hidden=true;try{closeBell()}catch(x){}const og=DB.orders.find(x=>x.id===b.dataset.rvgo);if(og&&og.rv){rvReveal(og,og.rv);return}openMO(b.dataset.rvgo);setTimeout(()=>{const r=$("#moCard .rstars");r&&r.scrollIntoView({block:"center"})},120)});
 const rvFill=(t,d)=>String(t||"").replace(/\{reward\}/g,(d&&d.item&&d.item.name)||"").replace(/\{code\}/g,(d&&d.code)||"");
 const rvFree=p=>PG.info&&PG.code&&(PG.info.items||[]).some(g=>g&&g.pid===p.id)?`<span class="rvfree">🎁 your free reward</span>`:"";
+/* reminders for every reward the customer holds and has not claimed: a bell line each day, and 3 times a day (morning, afternoon, night) with a blinking countdown in the last hours */
+const RVC_KEY="delidome-rvcoup";let RVC=[];try{RVC=JSON.parse(localStorage.getItem(RVC_KEY)||"[]").filter(x=>x&&typeof x.code==="string").slice(0,20)}catch(e){}
+const rvcSave=()=>{try{localStorage.setItem(RVC_KEY,JSON.stringify(RVC))}catch(e){}};
+function rvcAdd(rv){if(!rv||rv.kind!=="coupon"||!rv.code||RVC.some(x=>x.code===rv.code))return;RVC.push({code:rv.code,name:(rv.item&&rv.item.name)||rv.code,exp:rv.exp||null,at:Date.now()});rvcSave()}
+function rvRemList(){const rm=(DB.revrew||{}).rem||{};if(!DB.revrew||rm.on===false)return [];const now=Date.now();
+  const used=new Set(mineOrders().filter(o=>o.status!=="cancelled").map(o=>String(o.coupon||"").toUpperCase()));
+  const g=RVW.list.map(x=>({code:x.code,name:((x.info||{}).items||[]).map(i=>i&&i.name).filter(Boolean).join(", ")||"Reward",exp:x.exp,kind:"gift"}));
+  const c=RVC.filter(x=>!used.has(String(x.code).toUpperCase())).map(x=>({code:x.code,name:x.name,exp:x.exp,kind:"coupon"}));
+  return g.concat(c).filter(x=>!x.exp||x.exp>now)}
+const rvRemHot=x=>!!x.exp&&x.exp-Date.now()<=(+((DB.revrew.rem||{}).hot)||24)*36e5;
+function rvRemAt(x){const d=new Date(),h=d.getHours();if(!rvRemHot(x)){d.setHours(0,0,0,0);return d.getTime()}d.setHours(h<12?6:h<17?12:17,0,0,0);return Math.min(d.getTime(),Date.now())}
+const rvRemFill=(t,x)=>String(t||"").replace(/\{name\}/g,x.name).replace(/\{time\}/g,x.exp?rvTime(x.exp-Date.now()):"");
+function rvRemCd(x){const rm=DB.revrew.rem||{};return x.exp?`<span class="rvcd${rvRemHot(x)?" rvhot":""}" data-rvend="${x.exp}" data-rvtx="${esc(rm.cd||"Expires in {time}")}">⏰ ${esc(rvRemFill(rm.cd||"Expires in {time}",x))}</span>`:""}
+function rvRemBell(items){if(typeof BELLF!=="undefined"&&BELLF==="deals")return;const rm=DB.revrew.rem||{};rvRemList().forEach(x=>{const at=rvRemAt(x);
+  items.push({at,h:`<button class="bell-it${at>SEENV?" new":""}" type="button" data-rvclaim="${esc(x.code)}" data-rvk="${x.kind}"><span class="bell-ic" aria-hidden="true">${x.kind==="coupon"?"🎟️":"🎁"}</span><span class="bell-tx"><small>${esc(rvRemFill(rm.text||"Unclaimed reward: {name}",x))}</small><b>${rvRemCd(x)||esc(x.name)}</b></span><span class="bell-ch" aria-hidden="true">›</span></button>`})})}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-rvclaim]");if(!b)return;e.preventDefault();try{closeBell()}catch(x){}
+  if(b.dataset.rvk==="coupon"){try{navigator.clipboard.writeText(b.dataset.rvclaim)}catch(x){}toast("Coupon "+b.dataset.rvclaim+" copied. Type it at checkout.")}else toast("Pick a box of "+rvwMin()+" or more to use your reward.");
+  const bd=$("#build");bd&&scrollToEl(bd)});
+function rvRemTip(){const rm=DB.revrew.rem||{},t=$("#rvTip");if(!t||rm.on===false||(DB.revrew.bn||{}).tipOn===false)return;if(!$("#moSheet").hidden||!$("#rvPop").hidden)return;
+  const x=rvRemList().filter(rvRemHot)[0];if(!x)return;const d=new Date(),h=d.getHours(),k=x.code+"|"+d.toDateString()+"|"+(h<12?"m":h<17?"a":"n");let seen={};try{seen=JSON.parse(localStorage.getItem("delidome-rvtip3")||"{}")}catch(e){}
+  if(seen[k])return;for(const y in seen)if(y.split("|")[1]!==d.toDateString())delete seen[y];seen[k]=1;try{localStorage.setItem("delidome-rvtip3",JSON.stringify(seen))}catch(e){}
+  t.innerHTML="<b>⏰ "+esc(String((DB.revrew.bn||{}).tipTitle||"Reward"))+"</b><span>"+esc(rvRemFill(rm.tip||"Last chance! Your reward {name} expires in {time}",x))+"</span>";t.hidden=false;setTimeout(()=>{t.hidden=true},9000)}
 function rvPop(html){const p=$("#rvPop");if(p.parentNode!==document.body)document.body.appendChild(p);p.innerHTML=html;p.hidden=false;document.body.style.overflow="hidden"}
 function rvClose(){const p=$("#rvPop");p.hidden=true;p.innerHTML="";if(!$("#moSheet").hidden){try{renderMO()}catch(e){}}if($("#moSheet").hidden&&$("#sheet").hidden)document.body.style.overflow=""}
 function rvReveal(o,rv){const b=bbCfg();rvPop(`<div class="rvbox rvt-win" style="--rpbg:#fff;--rpink:#0B0B45;--rpacc:#000096"><div class="rvin gmagic">${bbBoxHTML("rvBbBox")}<h2>${esc(bbName())}</h2><p>${esc(b.tip)}</p></div></div>`);RVR.o=o;RVR.rv=rv}
 const RVR={o:null,rv:null};
 document.addEventListener("click",e=>{const x=e.target.closest("#rvBbBox");if(!x||x.dataset.go)return;x.dataset.go="1";x.classList.add("bbopening");setTimeout(()=>{if(RVR.rv)rvOutcome(RVR.rv,RVR.o)},720)});
-function rvOutcome(rv,o,pv){if(!pv&&o)bbMark("rv|"+o.id);const R=DB.revrew,k=rv.st==="win"?"win":rv.st==="sad"?"sad":"none",m=R[k]||{},img=safeMedia(m.img),fx=RV_FX[m.fx]||[];
+function rvOutcome(rv,o,pv){if(!pv&&o)bbMark("rv|"+o.id);if(!pv&&rv.st==="win"&&rv.kind==="coupon")rvcAdd(rv);const R=DB.revrew,k=rv.st==="win"?"win":rv.st==="sad"?"sad":"none",m=R[k]||{},img=safeMedia(m.img),fx=RV_FX[m.fx]||[];
   const it=rv.item||{},iimg=k==="win"?safeMedia(it.img):"",coup=k==="win"&&rv.kind==="coupon";
   const rp=k==="win"&&!coup&&it.pid&&prod(it.pid);
   const art=rp?`<div class="rvplate">${plateHTML(rp)}</div>`:coup?`<div class="rvtk"><span>🎟️</span><b>${esc(it.name||"Coupon")}</b></div>`:iimg?`<img class="rvimg rvdrew" src="${esc(iimg)}" alt="">`:img?`<img class="rvimg" src="${esc(img)}" alt="">`:`<div class="rvic" aria-hidden="true">${esc(String((k==="win"&&it.icon)||m.icon||"🎁").slice(0,4))}</div>`;
@@ -1724,7 +1747,7 @@ function renderBell(){
   applyCdLook();
   try{rateNudge()}catch(e){}
   try{rvRender()}catch(e){}
-  const list=notifs(),n=list.filter(x=>x.m.at>SEEN).length+activeBroadcasts().filter(x=>x.at>SEEN).length+payDue().length+refundsNew().length+rvOrders().length,b=$("#bellCount"),btn=$("#bellBtn");
+  const list=notifs(),n=list.filter(x=>x.m.at>SEEN).length+activeBroadcasts().filter(x=>x.at>SEEN).length+payDue().length+refundsNew().length+rvOrders().length+rvRemList().filter(x=>rvRemAt(x)>SEEN).length,b=$("#bellCount"),btn=$("#bellBtn");
   if(!b)return;b.hidden=!n;b.textContent=n>9?"9+":n;btn.classList.toggle("ring",n>0);
   btn.setAttribute("aria-label",n?`Notifications, ${n} new`:"Notifications");
   if(!$("#bellPop").hidden)drawBell(list);
@@ -1738,6 +1761,7 @@ function drawBell(list){
     items.push({at:Infinity,h:`<button class="bell-it bell-pay" type="button" data-bellgo="${o.id}"><span class="bell-ic" aria-hidden="true">⏰</span><span class="bell-tx"><small>Order #${esc(o.code)} · ${isRej(o)?"payment rejected":"waiting for payment"}</small><b>${isRej(o)?"Payment rejected – please send a new proof":"Pay now or you'll miss your cookies!"}</b>${isRej(o)&&o.rejected.reason?`<span class="bell-rej">Reason: ${esc(o.rejected.reason)}</span>`:""}<span class="bell-cdrow">Time left: <span class="cd" data-exp="${o.expiresAt}">${fmtLeft(o.expiresAt-Date.now())}</span></span></span><span class="bell-ch" aria-hidden="true">›</span></button>`})});
   if(BELLF!=="deals")rvOrders().forEach(o=>{
     items.push({at:Infinity,h:`<button class="bell-it bell-pay" type="button" data-rvgo="${o.id}"><span class="bell-ic" aria-hidden="true">${esc(String((DB.revrew.bn||{}).icon||"⭐").slice(0,2))}</span><span class="bell-tx"><small>Order #${esc(o.code)} · ${o.rv?"blind box":"review"}${rvCd(o)?" · "+rvCd(o):""}</small><b>${o.rv?esc("Your "+bbName()+" is waiting. Tap to open!"):esc(String((DB.revrew.bn||{}).tip||"Rate your order and open a blind box!"))}</b></span><span class="bell-ch" aria-hidden="true">›</span></button>`})});
+  rvRemBell(items);
   if(BELLF!=="deals")refundList().forEach(o=>{
     items.push({at:o.refund.at,h:`<button class="bell-it${o.refund.at>SEENV?" new":""}" type="button" data-bellgo="${o.id}"><span class="bell-ic" aria-hidden="true">💸</span><span class="bell-tx"><small>Order #${esc(o.code)} · ${fmtAgo(o.refund.at)}</small><b>${o.refund.full?"Your order was refunded":"Part of your order was refunded"}: ${money(o.refund.amount)}</b><span>${o.refund.note?esc(o.refund.note)+" · ":""}It can take a few days to show in your account.</span></span><span class="bell-ch" aria-hidden="true">›</span></button>`})});
   if(BELLF!=="deals")list.forEach(x=>{const st=x.m.status,o=x.o,lab=x.m.courier?"Courier update":st==="complaint"?"Complaint update":st?stLabel(st,o.mode):"Update";
@@ -2765,7 +2789,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 00:53 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-28 00:59 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
