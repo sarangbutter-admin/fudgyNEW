@@ -4147,7 +4147,7 @@ $("#amain").addEventListener("click",async e=>{if(!e.target.closest("[data-dksav
 const TSA={st:null,loading:false,busy:false};
 async function tsLoadSt(){if(TSA.loading||!SBH.on)return;TSA.loading=true;try{TSA.st=await SBH.tsGet()}catch(e){TSA.st={err:e.message}}TSA.loading=false;if(A.tab==="settings")renderAdmin()}
 function viewTs(){const T=DB.settings.turnstile,st=TSA.st;if(SBH.on&&st===null&&!TSA.loading)tsLoadSt();
-  const W=[["whatsapp","WhatsApp number / placing the order"],["courier","Courier price check"],["doku","Checkout with DOKU"],["proof","Uploading a payment proof"],["coupon","Coupon input"]];
+  const W=[["whatsapp","WhatsApp number / placing the order"],["courier","Courier price check"],["doku","Checkout with DOKU"],["proof","Uploading a payment proof"],["coupon","Coupon input"],["login","Team, staff and affiliator sign-in"]];
   return `<h3 style="margin:18px 0 4px;font-size:16px">Security check (Cloudflare Turnstile)</h3><p class="sub" style="margin-top:0">A quick "I am not a robot" check that blocks bots. Customers see it once when they do one of the actions below, then it stays valid for 10 minutes. Create a free Turnstile widget in your Cloudflare account to get the two keys. Goes live when you press Save &amp; publish.</p>
     <label class="chk"><input type="checkbox" data-tsk="on" ${T.on?"checked":""}> <b>Security check is ${T.on?"ON":"OFF"}</b></label>
     <label class="af" style="margin-top:8px">Site key (public)<input class="in" data-tsk="siteKey" maxlength="80" value="${esc(T.siteKey||"")}" placeholder="0x4AAAAAAA..."></label>

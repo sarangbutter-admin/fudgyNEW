@@ -209,14 +209,17 @@
     document.body.appendChild(el);
     var err = $q("#adlErr"); if (msg) { err.textContent = msg; err.hidden = false; }
     el.querySelector("a").addEventListener("click", function () { el.remove(); });
+    var tsh = null; tsLoginMount(el.querySelector("form")).then(function (h) { tsh = h; });
     el.querySelector("form").addEventListener("submit", async function (e) {
       e.preventDefault();
       var em = $q("#adlEmail").value.trim(), pw = $q("#adlPass").value, b = $q("#adlGo");
       if (!em || !pw) { err.textContent = "Enter your username and password."; err.hidden = false; return; }
       if (em.indexOf("@") < 0) em = em.toLowerCase() + "@team.delidome.local";
       b.disabled = true; b.textContent = "Signing in…"; err.hidden = true;
-      try { await K.login(em, pw); await go(); }
-      catch (ex) { err.textContent = ex.message; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; }
+      var cap = tsh ? tsh.token() : "";
+      if (tsh && tsh.key && !cap) { err.textContent = tsh.failed ? "The security check could not load. Please reload the page." : "Please complete the security check."; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; return; }
+      try { await K.login(em, pw, cap); await go(); }
+      catch (ex) { err.textContent = ex.message; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; if (tsh) tsh.reset(); }
     });
   };
 
@@ -238,15 +241,53 @@
     var err = $q("#adlErr");
     if (msg) { err.textContent = msg; err.hidden = false; }
     $q("#adlEmail").focus();
+    var tsh = null; tsLoginMount(el.querySelector("form")).then(function (h) { tsh = h; });
     el.querySelector("form").addEventListener("submit", async function (e) {
       e.preventDefault();
       var em = $q("#adlEmail").value.trim(), pw = $q("#adlPass").value, b = $q("#adlGo");
       if (!em || !pw) { err.textContent = "Enter your username (or email) and password."; err.hidden = false; return; }
       if (em.indexOf("@") < 0) em = em.toLowerCase() + "@team.delidome.local";   // staff sign in with a username
       b.disabled = true; b.textContent = "Signing in…"; err.hidden = true;
-      try { await K.login(em, pw); await startAdmin(); }
-      catch (ex) { err.textContent = ex.message; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; }
+      var cap = tsh ? tsh.token() : "";
+      if (tsh && tsh.key && !cap) { err.textContent = tsh.failed ? "The security check could not load. Please reload the page." : "Please complete the security check."; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; return; }
+      try { await K.login(em, pw, cap); await startAdmin(); }
+      catch (ex) { err.textContent = ex.message; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; if (tsh) tsh.reset(); }
     });
+  }
+
+  /* ================= Cloudflare Turnstile on the sign-in forms ================= */
+  // Supabase Auth checks the token itself once "CAPTCHA protection" is switched on in the Supabase dashboard (Authentication -> Attack Protection)
+  var TSL = { key: undefined, loading: null };
+  async function tsLoginKey() {
+    if (TSL.key !== undefined) return TSL.key;
+    try {
+      var pub = await K.rpc("shop_public", {}), st = pub && pub.docs && pub.docs.settings;
+      if (typeof st === "string") st = JSON.parse(st);
+      var T = st && st.turnstile;
+      TSL.key = (T && T.on && T.siteKey && !(T.where && T.where.login === false)) ? String(T.siteKey) : "";
+    } catch (e) { TSL.key = ""; }
+    return TSL.key;
+  }
+  function tsLoginScript() {
+    if (window.turnstile) return Promise.resolve();
+    return TSL.loading || (TSL.loading = new Promise(function (res, rej) {
+      var s = document.createElement("script"); s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"; s.async = true;
+      s.onload = function () { res(); }; s.onerror = function () { TSL.loading = null; rej(new Error("The security check could not load.")); };
+      document.head.appendChild(s);
+    }));
+  }
+  // adds the widget above the sign-in button; returns { key, token(), reset() }
+  async function tsLoginMount(form) {
+    var h = { key: "", token: function () { return ""; }, reset: function () {} }, key = await tsLoginKey();
+    if (!key) return h;
+    try {
+      await tsLoginScript();
+      var box = document.createElement("div"); box.className = "tslogin"; box.style.cssText = "display:flex;justify-content:center;margin:10px 0 2px";
+      var btn = form.querySelector("button[type=submit]"); btn.parentNode.insertBefore(box, btn);
+      var tok = "", id = window.turnstile.render(box, { sitekey: key, callback: function (t) { tok = t; }, "expired-callback": function () { tok = ""; }, "error-callback": function () { tok = ""; } });
+      h.key = key; h.token = function () { return tok; }; h.reset = function () { tok = ""; try { window.turnstile.reset(id); } catch (e) {} };
+    } catch (e) { h.key = key; h.failed = true; }
+    return h;
   }
 
   var starting = false;

@@ -208,14 +208,17 @@
     document.body.appendChild(el);
     var err = $q("#adlErr"); if (msg) { err.textContent = msg; err.hidden = false; }
     el.querySelector("a").addEventListener("click", function () { el.remove(); });
+    var tsh = null; tsLoginMount(el.querySelector("form")).then(function (h) { tsh = h; });
     el.querySelector("form").addEventListener("submit", async function (e) {
       e.preventDefault();
       var em = $q("#adlEmail").value.trim(), pw = $q("#adlPass").value, b = $q("#adlGo");
       if (!em || !pw) { err.textContent = "Enter your username and password."; err.hidden = false; return; }
       if (em.indexOf("@") < 0) em = em.toLowerCase() + "@team.delidome.local";
       b.disabled = true; b.textContent = "Signing in…"; err.hidden = true;
-      try { await K.login(em, pw); await go(); }
-      catch (ex) { err.textContent = ex.message; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; }
+      var cap = tsh ? tsh.token() : "";
+      if (tsh && tsh.key && !cap) { err.textContent = tsh.failed ? "The security check could not load. Please reload the page." : "Please complete the security check."; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; return; }
+      try { await K.login(em, pw, cap); await go(); }
+      catch (ex) { err.textContent = ex.message; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; if (tsh) tsh.reset(); }
     });
   };
 

@@ -104,10 +104,10 @@
     return j;
   }
 
-  async function login(email, password) {
+  async function login(email, password, captcha) {
     var t = timeout(25000), r;
     try {
-      r = await fetch(URL_ + "/auth/v1/token?grant_type=password", { method: "POST", headers: headers(null), body: JSON.stringify({ email: email, password: password }), signal: t.signal });
+      r = await fetch(URL_ + "/auth/v1/token?grant_type=password", { method: "POST", headers: headers(null), body: JSON.stringify(captcha ? { email: email, password: password, gotrue_meta_security: { captcha_token: captcha } } : { email: email, password: password }), signal: t.signal });
     } catch (e) { t.done(); throw new Error(nice(e && e.message)); }
     t.done();
     var j = await r.json().catch(function () { return {}; });
