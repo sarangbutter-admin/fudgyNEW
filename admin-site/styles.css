@@ -1904,3 +1904,5 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .armtip span:first-child{font-size:22px;animation:bsflash .9s ease-in-out infinite}
 @keyframes armblink{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,.0)}50%{box-shadow:0 0 0 5px rgba(255,209,102,.9)}}
 .extra.noextra{border-style:dashed}.extra.noextra[aria-pressed="true"]{background:#EEF0FF;border-color:#000096}
+
+.bscour.tipped dd{display:grid;gap:8px;justify-items:end}.bscour .armtip{margin:0 0 8px;font-size:13px;padding:8px 12px;display:flex}

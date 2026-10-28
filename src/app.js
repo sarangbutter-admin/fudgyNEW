@@ -404,7 +404,7 @@ function crumbColors(p){
 
 /* ================= SHOP ================= */
 loadDB();
-const fresh = () => ({size:6, box:[], auto:[], step:1, mode:"pickup", speed:"scheduled", day:null, time:null, note:"", addons:[], extrasDone:false, extraTip:false, noteTip:false, courierTip:false, coupon:"", ship:null, bsSkip:false, dnote:"", dphoto:""});
+const fresh = () => ({size:6, box:[], auto:[], step:1, mode:"pickup", speed:"scheduled", day:null, time:null, note:"", addons:[], extrasDone:false, extraTip:false, courierTip:false, coupon:"", ship:null, bsSkip:false, dnote:"", dphoto:""});
 let S = fresh(), hadCart=false;
 try{const s=JSON.parse(localStorage.getItem(CART_KEY)||"null");if(s&&Array.isArray(s.box)){S={...S,...s,step:s.step===2?2:1};hadCart=true;
   }}catch(e){}
@@ -612,10 +612,20 @@ function ctaState(){
 }
 /* guide: after the time is chosen, scroll to the extras and blink an arm tip until they choose an extra or "No extras"; then guide them to the courier */
 function guideExtras(){const blk=$("#extrasBlock");if(!blk||blk.hidden||S.extrasDone||!(S.day&&S.time))return;S.extraTip=true;renderStore();setTimeout(()=>scrollToEl(blk),80)}
-function guideCourier(){S.extraTip=false;S.noteTip=false;if(S.mode!=="delivery"){renderStore();return}S.courierTip=!!(bsOn()&&bsPending(S));renderStore();bsSumDraw();
-  setTimeout(()=>{const s=$("#bsSum");scrollToEl(S.courierTip&&s&&!s.hidden?s:($("#bsRow")||$("#coName")))},120)}
-// extras chosen (not "No extras"): a tip at the gift note box. It is optional: they can type or skip, then the courier is next.
-function guideNote(){S.extraTip=false;S.noteTip=true;renderStore();setTimeout(()=>scrollToEl($("#giftNote").closest(".block")),80)}
+function guideCourier(){S.extraTip=false;if(S.mode!=="delivery"){renderStore();return}S.courierTip=!!(bsOn()&&bsPending(S));renderStore();
+  setTimeout(()=>{const t=$("#csTip")||$("#bsRow");if(t)scrollToEl(t)},150)}
+/* extras that need a gift note: Gift wrap and Greeting card (the owner sets the type of each extra). Other extras do not show the note box. */
+const addonKind=a=>a.kind||(/wrap/i.test(a.name||"")?"giftwrap":/card|greeting/i.test(a.name||"")?"greeting":"other");
+const noteNeeded=()=>S.addons.some(id=>{const a=DB.addons.find(x=>x.id===id);return a&&addonKind(a)!=="other"});
+// the gift note box, its arm tip and the "Done, continue" button follow what the customer chose
+function extraGuideUI(){const gn=$("#giftNote");if(!gn)return;const blk=gn.closest(".block"),need=noteNeeded(),filled=!!S.note.trim();
+  blk.hidden=!need&&!(S.editId&&S.note);if(!need&&!S.editId&&S.note){S.note="";gn.value=""}
+  let nt=$("#gnTip");if(!nt){nt=document.createElement("div");nt.id="gnTip";nt.className="armtip";nt.hidden=true;const lb=document.querySelector('label[for="giftNote"]');lb.parentNode.insertBefore(nt,lb)}
+  nt.hidden=!(need&&!filled);if(!nt.hidden)nt.innerHTML=`<span aria-hidden="true">✍️</span><span>Write your <b>gift note</b> here. It goes with your gift wrap or greeting card.</span>`;
+  let dn=$("#extraDone");const show=S.addons.length>0&&(!need||filled);
+  if(show){if(!dn){dn=document.createElement("button");dn.id="extraDone";dn.type="button";dn.className="btn btn-blue btn-sm";dn.dataset.extradone="1";dn.textContent="Done, continue →";dn.style.cssText="margin-top:10px"}
+    const host=need?blk:$("#extras");if(dn.parentNode!==host)host.appendChild(dn)}
+  else if(dn)dn.remove()}
 function renderStore(){
   if(preGate())return;
   pgInit();
@@ -651,11 +661,9 @@ function renderStore(){
   document.querySelectorAll("[data-time]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.time===S.time));
   document.querySelectorAll("[data-addon]").forEach(b=>b.setAttribute("aria-pressed",S.addons.includes(b.dataset.addon)));
   {const t=document.querySelector("[data-noextra]");if(t)t.setAttribute("aria-pressed",String(!!S.extrasDone&&!S.addons.length));
-   {let dn=$("#extraDone");if(S.addons.length){if(!dn){dn=document.createElement("button");dn.id="extraDone";dn.type="button";dn.className="btn btn-blue btn-sm";dn.dataset.extradone="1";dn.style.cssText="grid-column:1/-1;justify-self:start";dn.textContent="Done, continue →";$("#extras").appendChild(dn)}}else if(dn)dn.remove()}
    let tip=$("#exTip");if(!tip){tip=document.createElement("div");tip.id="exTip";tip.className="armtip";tip.hidden=true;$("#extras").parentNode.insertBefore(tip,$("#extras"))}
    const on=!!S.extraTip&&!S.extrasDone&&!$("#extrasBlock").hidden;tip.hidden=!on;if(on)tip.innerHTML=`<span aria-hidden="true">👇</span><span>Add something extra, or tap <b>No extras, thanks</b> to continue.</span>`;
-   let nt=$("#gnTip");if(!nt){nt=document.createElement("div");nt.id="gnTip";nt.className="armtip";nt.hidden=true;const lb=document.querySelector('label[for="giftNote"]');lb.parentNode.insertBefore(nt,lb)}
-   nt.hidden=!S.noteTip;if(S.noteTip)nt.innerHTML=`<span aria-hidden="true">✍️</span><span>Want to add a <b>gift note</b>? Type it below, or <button class="ghost sm" type="button" data-noteskip style="margin-left:4px">Skip</button></span>`}
+   extraGuideUI()}
   $("#giftNote").value=S.note;
   // box panel
   const cols=S.size<=4?2:S.size<=9?3:4;
@@ -675,7 +683,7 @@ function renderStore(){
     L+=`<div><dt>${OPT_NAME[optOf(S)]}</dt><dd>${q.feePending?"Choose a courier":q.feeWas?`<s class="fdwas">${money(q.feeWas)}</s> ${q.fee?`<b class="fdnow">${money(q.fee)}</b>`:fbHTML("Del")}`:q.fee?money(q.fee):fbHTML("Del")}</dd></div>`;
     if(S.day)L+=`<div><dt>When</dt><dd>${S.mode!=="pickup"&&S.speed==="sameday"?(samedayOpen()?"Today (sameday)"+(S.time&&S.time!=="Same day"?", "+esc(S.time):""):"Sameday (after the cut-off)"):fmtDay(S.day)+(S.time?", "+esc(S.time):"")}</dd></div>`;
     if(bsOn()&&S.mode==="delivery"){const sh=bsShip(S);
-      L+=`<div class="bscour${q.feePending?" need":""}" id="bsRow"><dt>Courier</dt><dd><button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?esc(scName())+" · Change":"🛵 Choose courier"}</button></dd></div>`}
+      L+=`<div class="bscour${q.feePending?" need":""}${S.courierTip&&q.feePending&&!BSD.busy?" tipped":""}" id="bsRow"><dt>Courier</dt><dd>${S.courierTip&&q.feePending&&!BSD.busy?`<span class="armtip" id="csTip"><span aria-hidden="true">👇</span><span>Tap <b>Choose courier</b> to see the prices.</span></span>`:""}<button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?esc(scName())+" · Change":"🛵 Choose courier"}</button></dd></div>`}
   }
   $("#lines").innerHTML=L;
   renderCoupon(q);renderGiftBox();
@@ -1174,7 +1182,7 @@ function bsPopOpen(){
 // checkout form: one line with the chosen courier and a Change button (the full courier box lives in the pop-up)
 function bsSumDraw(){
   const el=$("#bsSum");if(!el)return;const on=bsOn()&&S.mode==="delivery";el.hidden=!on;if(!on)return;const sh=bsShip(S);
-  el.innerHTML=(S.courierTip&&!sh&&!S.bsSkip&&!BSD.busy?`<div class="armtip" id="csTip"><span aria-hidden="true">👇</span><span>Now tap <b>Choose courier</b> to see the prices.</span></div>`:"")+`<span class="flbl" style="font-weight:600;font-size:14px">Courier</span><div class="bssumrow${sh||S.bsSkip?"":" need"}${BSD.busy?" busy":""}"><span>${BSD.busy?`<span class="bsmoto sm" aria-hidden="true">🛵</span> <b>${BSD.phase==="map"?"Finding your address…":"Looking for couriers…"}</b>`:sh?`<b>${esc(sh.courierName||sh.courier)}</b> ${esc(sh.serviceName||sh.service)}${sh.eta?` <small>${esc(sh.eta)}</small>`:""}`:S.bsSkip?esc(scName()):"<b>⚠ Choose your courier</b>"}</span>${sh?`<span class="num">${money(sh.price)}</span>`:""}<button type="button" class="ghost" data-bscourier>${sh||S.bsSkip?"Change":"🛵 Choose courier"}</button></div>`;
+  el.innerHTML=`<span class="flbl" style="font-weight:600;font-size:14px">Courier</span><div class="bssumrow${sh||S.bsSkip?"":" need"}${BSD.busy?" busy":""}"><span>${BSD.busy?`<span class="bsmoto sm" aria-hidden="true">🛵</span> <b>${BSD.phase==="map"?"Finding your address…":"Looking for couriers…"}</b>`:sh?`<b>${esc(sh.courierName||sh.courier)}</b> ${esc(sh.serviceName||sh.service)}${sh.eta?` <small>${esc(sh.eta)}</small>`:""}`:S.bsSkip?esc(scName()):"<b>⚠ Choose your courier</b>"}</span>${sh?`<span class="num">${money(sh.price)}</span>`:""}<button type="button" class="ghost" data-bscourier>${sh||S.bsSkip?"Change":"🛵 Choose courier"}</button></div>`;
 }
 /* guided tour for the courier pop-up: shows once, can be skipped, replay with the "?" button */
 /* guided tour of the shop for a new visitor: starts when they tap the main button, follows them through the box, the day and time, and checkout. It can be skipped and replayed with "How does it work?". */
@@ -1543,13 +1551,12 @@ setInterval(()=>{try{if(S.speed==="sameday"&&S.mode!=="pickup"){sdWatch();if(S.t
 $("#times").addEventListener("click",e=>{const b=e.target.closest("[data-time]");if(b){S.time=b.dataset.time;renderStore();guideExtras()}});
 $("#extras").addEventListener("click",e=>{
   if(e.target.closest("[data-noextra]")){S.addons=[];S.extrasDone=true;S.extraTip=false;renderStore();guideCourier();return}
-  if(e.target.closest("[data-extradone]")){S.extrasDone=true;S.extraTip=false;S.addons.length?guideNote():(renderStore(),guideCourier());return}
-  const b=e.target.closest("[data-addon]");if(!b)return;const id=b.dataset.addon;S.extrasDone=true;
-  S.addons=S.addons.includes(id)?S.addons.filter(x=>x!==id):[...S.addons,id];renderStore();if(!RM&&S.addons.includes(id))bump(b.querySelector(".tick"))});
+  const b=e.target.closest("[data-addon]");if(!b)return;const id=b.dataset.addon;S.extrasDone=false;S.extraTip=false;const was=noteNeeded();
+  S.addons=S.addons.includes(id)?S.addons.filter(x=>x!==id):[...S.addons,id];renderStore();
+  if(!was&&noteNeeded()&&!S.note.trim())setTimeout(()=>{scrollToEl($("#giftNote").closest(".block"));$("#giftNote").focus({preventScroll:true})},120);if(!RM&&S.addons.includes(id))bump(b.querySelector(".tick"))});
 $("#giftNote").addEventListener("input",e=>{S.note=e.target.value;saveCart()});
-$("#giftNote").addEventListener("change",()=>{if(S.noteTip)guideCourier()});
-$("#giftNote").addEventListener("blur",()=>{if(S.noteTip&&S.note.trim())guideCourier()});
-document.addEventListener("click",e=>{if(e.target.closest("[data-noteskip]"))guideCourier()});
+$("#giftNote").addEventListener("input",extraGuideUI);
+document.addEventListener("click",e=>{if(e.target.closest("[data-extradone]")){S.extrasDone=true;S.extraTip=false;guideCourier()}});
 $("#coPhone").addEventListener("change",()=>{if(normPhone($("#coPhone").value).length>=9&&tsOn("whatsapp"))tsPass("whatsapp").catch(()=>{})});
 $("#coForm").addEventListener("input",saveCust);$("#coForm").addEventListener("change",saveCust);
 $("#panelCta").addEventListener("click",e=>cta(e.currentTarget.dataset.go));
@@ -1565,7 +1572,8 @@ $("#moSheet").addEventListener("input",e=>{if(e.target.id==="moMail"){const v=e.
 $("#coPhone").addEventListener("input",e=>{const v=e.target.value.replace(/\D/g,"");if(v!==e.target.value)e.target.value=v});
 $("#coForm").addEventListener("submit",e=>{
   e.preventDefault();
-  if(!$("#extrasBlock").hidden&&!S.extrasDone&&!S.editId){S.extraTip=true;renderStore();scrollToEl($("#extrasBlock"));toast("Please choose an extra, or No extras");return}
+  if(!$("#extrasBlock").hidden&&!S.extrasDone&&!S.addons.length&&!S.editId){S.extraTip=true;renderStore();scrollToEl($("#extrasBlock"));toast("Please choose an extra, or No extras");return}
+  if(noteNeeded()&&!S.note.trim()){renderStore();scrollToEl($("#giftNote").closest(".block"));toast("Please write your gift note");return}
   if(!/^\d{8,15}$/.test($("#coPhone").value)){$("#coErr").textContent="WhatsApp number: use numbers only, 8 to 15 digits.";$("#coErr").hidden=false;nudge($("#coPhone"));return}
   const f=e.currentTarget;
   if(!f.checkValidity()){const bad=f.querySelector(":invalid");$("#coErr").textContent=`Please check "${bad.labels[0].textContent}".`;$("#coErr").hidden=false;nudge(bad);return}
@@ -3977,10 +3985,11 @@ function viewBoxes(){
         <p class="note" style="grid-column:span 2;margin:0">Example: a box of ${DB.settings.customMin} costs ${money(r2(DB.settings.customMin*DB.settings.customPer))}. Flash sales set to "Every box" apply to it; per-cookie flavor extras are added on top.</p></div>
     </section>
     <section class="panel">
-      <div class="phead"><div><h2>Paid extras</h2><p class="sub">Shown in step 2 of the box builder. Each one adds its price to the order. Give each one a picture (or an icon if there is no picture), a background and a movement. A free extra (price 0) shows your Free badge.</p></div><button class="btn btn-blue btn-sm" type="button" data-aadd>+ Add extra</button></div>
-      ${DB.addons.length?`<div class="tablewrap"><table class="t" style="min-width:620px"><thead><tr><th>Name</th><th>Description</th><th>Price</th><th>Active</th><th></th></tr></thead><tbody>
+      <div class="phead"><div><h2>Paid extras</h2><p class="sub">Shown in step 2 of the box builder. Each one adds its price to the order. Choose a <b>Type</b> for each: Gift wrap and Greeting card make the customer write a gift note (the note box appears only then); an Other extra (name it yourself) shows no note box. Give each one a picture (or an icon if there is no picture), a background and a movement. A free extra (price 0) shows your Free badge.</p></div><button class="btn btn-blue btn-sm" type="button" data-aadd>+ Add extra</button></div>
+      ${DB.addons.length?`<div class="tablewrap"><table class="t" style="min-width:620px"><thead><tr><th>Name</th><th>Type</th><th>Description</th><th>Price</th><th>Active</th><th></th></tr></thead><tbody>
       ${DB.addons.map(a=>`<tr>
         <td><input class="in" data-k="addons:${a.id}:name" value="${esc(a.name)}" aria-label="Extra name"></td>
+        <td style="min-width:170px"><select class="in" data-k="addons:${a.id}:kind" aria-label="Type of ${esc(a.name)}">${[["giftwrap","Gift wrap"],["greeting","Greeting card"],["other","Other extra"]].map(([v,l])=>`<option value="${v}" ${addonKind(a)===v?"selected":""}>${l}</option>`).join("")}</select></td>
         <td><input class="in" data-k="addons:${a.id}:desc" value="${esc(a.desc)}" aria-label="Extra description"></td>
         <td style="width:130px"><div class="money-in"><span>+${DB.settings.currency}</span><input class="in" type="number" min="0" step="0.5" data-k="addons:${a.id}:price" value="${a.price}" aria-label="Extra price"></div></td>
         <td><label class="sw"><input type="checkbox" data-k="addons:${a.id}:active" ${a.active?"checked":""} aria-label="${esc(a.name)} active"><span></span></label></td>
