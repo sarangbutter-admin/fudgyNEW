@@ -2226,9 +2226,9 @@ function renderPre(force){const v=preView();if(v.hidden)return;const P=DB.prelau
         ${P.form.email!==false?`<input class="pre-in" id="prEmail" type="email" autocomplete="email" maxlength="120" placeholder="Email (optional)">`:""}
         ${PRE.err?`<p class="pre-err" role="alert">${esc(PRE.err)}</p>`:""}<button class="pre-btn" type="submit" ${PRE.busy?"disabled":""}>${PRE.busy?"Saving…":esc(P.form.btn||"Claim my free Gift Set")}</button></form>`;
     body=`<div class="dome" id="preDome"><div class="hm" aria-hidden="true"></div><div class="ho" aria-hidden="true"></div><p class="eyebrow"></p><h1></h1><p class="lede"></p><div class="hero-ctas"><a class="btn btn-white" href="#preForm" data-prego="form"></a><a class="btn btn-line" href="#preGame" data-prego="game"></a></div></div>
-      ${me?reg+preCdHTML(P):preCdHTML(P)+reg}${preGiftsHTML(P)}${P.game.on?preGameCardHTML(P):""}`}
+      ${me?reg+preCdHTML(P):preCdHTML(P)+reg}${preGiftsHTML(P)}${P.game.on?preGameCardHTML(P):""}<section class="cq cq-pre" id="cqPre" hidden aria-label="Our flavors"></section>`}
   const pv=preForced()?`<div class="pre-pv" data-notr><b>👁 Preview</b><span>Like a private window: nothing is saved and nobody is registered.</span><div>${[["form","Form"],["done","You're in"],["full","All taken"]].map(([k,l])=>`<button type="button" data-pvst="${k}" aria-pressed="${(k==="done"&&!!me)||(k==="full"&&full)||(k==="form"&&!me&&!full)}">${l}</button>`).join("")}<button type="button" data-pvgame>Game</button></div></div>`:"";
-  v.innerHTML=`${preFxHTML(P)}<div class="pre-wrap">${pv}${top}${body}</div>`;
+  v.innerHTML=`${preFxHTML(P)}<div class="pre-wrap">${pv}${top}${body}</div>`;renderPreCarousel();
   const dome=v.querySelector("#preDome");if(dome){const h=JSON.parse(JSON.stringify(P.hero));if(!P.game.on)h.btn2="";if(me)h.btn1="";if(!h.bg)h.bg=pg.brand;heroFill(dome,h)}
   preTick();clearInterval(PRE.t);PRE.t=setInterval(preTick,1000);
   clearInterval(PRE.poll);if(SBH.on&&!me)PRE.poll=setInterval(()=>{if(!document.hidden&&!preView().hidden)preStatus()},30000)}
@@ -2453,7 +2453,7 @@ function pgPanelHTML(){if(!PG.info)return "";const I=PG.info,its=(I.items||[]).f
 const preGiftHTML=(o,cust)=>o.preGift&&cust&&o.preGift.mode==="surprise"&&o.preGift.drawn&&(o.preGift.items||[]).length&&!bbOpened(o.id+"|p")?`<div class="dsec"><h4>🎁 Your pre-launch gift · ${esc(o.preGift.code||"")}</h4>${bbCardHTML(o.id+"|p")}</div>`:o.preGift?`<div class="dsec"><h4>🎁 ${o.preGift.src==="review"?(cust?"Your review reward":"Review reward to pack"):(cust?"Your pre-launch gift":"Pre-launch gift to pack")} · ${esc(o.preGift.code||"")}</h4><div class="gl">${(o.preGift.items||[]).map(g=>giftChip(g)).join("")||giftChip({name:o.preGift.mode==="surprise"&&o.preGift.drawn===false?bbName():o.preGift.soldOut?"Out of stock":o.preGift.title||"Free Gift Set"})}</div>${o.preGift.mode==="surprise"&&o.preGift.drawn===false?`<p class="note" style="margin:8px 0 0">${cust?"Your ${esc(bbName())} is picked when you send your payment proof.":"Not drawn yet. It is picked when the payment proof is sent."}</p>`:o.preGift.soldOut?`<p class="note" style="margin:8px 0 0">${cust?"Sorry, the free gifts ran out.":"No gift left in stock for this order."}</p>`:o.preGift.mode==="surprise"&&o.preGift.pool>1?`<p class="note" style="margin:8px 0 0">Picked at random from ${o.preGift.pool} gifts.</p>`:""}</div>`:"";
 /* ===== Carrousel card: a running row of flavor cards. Tapping + opens a quickview with the owner's detail sections.
    The row pauses while it is touched or slid and while the quickview is open, then runs again after a short wait. ===== */
-const CQ={sig:"",tr:null,x:0,W:0,setTo:-9,raf:0,ts:0,hold:0,down:false,open:false,vis:true,io:null,opener:null,rm:matchMedia("(prefers-reduced-motion: reduce)").matches};
+const CQ={sig:"",host:null,tr:null,x:0,W:0,setTo:-9,raf:0,ts:0,hold:0,down:false,open:false,vis:true,io:null,opener:null,rm:matchMedia("(prefers-reduced-motion: reduce)").matches};
 const CQ_SZ={S:150,M:190,L:240},CQ_DT={bar:"Level",notes:"Taste notes",text:"Good to know",image:"Photo"};
 const cqCfg=()=>(DB.page&&DB.page.cq)||{};
 const cqNum=(v,d,lo,hi)=>{v=+v;return isFinite(v)&&String(v)!==""?Math.max(lo,Math.min(hi,v)):d};
@@ -2467,8 +2467,11 @@ function cqCardHTML(o,dup){const {p}=o,c=cqCfg(),pl=c.plus||{},out=isOut(p),fx=[
   return `<article class="cq-card${out?" out":""}" data-cqid="${esc(p.id)}"><div class="cq-pl" data-cqopen="${esc(p.id)}">${plateHTML(p)}${c.price!==false&&p.surcharge>0?`<span class="cq-x">+${money(p.surcharge)}</span>`:""}${out?`<span class="cq-sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:""}</div>
     <h4>${esc(p.name)}</h4><button class="cq-plus fx-${fx}" type="button" data-cqopen="${esc(p.id)}"${tb} aria-label="See the details of ${esc(p.name)}">${cqPlusHTML(c)}</button></article>`}
 function cqStop(){cancelAnimationFrame(CQ.raf);CQ.raf=0;if(CQ.io){CQ.io.disconnect();CQ.io=null}CQ.tr=null}
-function renderCarousel(force){const el=document.getElementById("cq");if(!el)return;const c=cqCfg(),list=cqList(),on=!!c.on&&list.length>0;
-  const sig=JSON.stringify([on,c,list.map(o=>[o.p.id,o.p.name,o.p.status,o.p.surcharge,o.p.track?o.p.stock:0])]);if(!force&&sig===CQ.sig)return;CQ.sig=sig;
+// the shop page shows it while the shop is open; the pre-launch page has its own copy below the mini game
+function renderCarousel(force){const el=document.getElementById("cq"),pv=document.getElementById("preView");if(!el||(pv&&!pv.hidden))return;cqMount(el,force,false)}
+function renderPreCarousel(){const el=document.getElementById("cqPre");if(el)cqMount(el,true,true)}
+function cqMount(el,force,pre){const c=cqCfg(),list=cqList(),on=(pre?c.pre!==false:!!c.on)&&list.length>0;
+  const sig=JSON.stringify([on,pre,c,list.map(o=>[o.p.id,o.p.name,o.p.status,o.p.surcharge,o.p.track?o.p.stock:0])]);if(!force&&sig===CQ.sig&&CQ.host===el)return;CQ.sig=sig;CQ.host=el;
   cqStop();if(!on){el.hidden=true;el.innerHTML="";return}
   const cw=CQ_SZ[c.size]||CQ_SZ.M,vw=Math.min(innerWidth||400,1200),r=Math.max(1,Math.ceil(1.3*vw/((cw+14)*list.length))),
     copy=k=>`<div class="cq-copy"${k?` aria-hidden="true"`:""}>${Array.from({length:r}).map(()=>list.map(o=>cqCardHTML(o,k)).join("")).join("")}</div>`;
@@ -2512,7 +2515,7 @@ function cqOpen(pid){const p=prod(pid);if(!p)return;const it=(cqCfg().items||[])
   m.innerHTML=cqQvHTML(p,it);m.hidden=false;m.scrollTop=0;document.body.style.overflow="hidden";const x=m.querySelector(".cq-qx");if(x)x.focus({preventScroll:true})}
 function cqClose(){const m=document.getElementById("cqQv");if(!m||m.hidden)return;m.hidden=true;m.innerHTML="";document.body.style.overflow="";CQ.open=false;CQ.hold=performance.now()+cqNum(cqCfg().rc,1,0,10)*1000;
   try{if(CQ.opener&&CQ.opener.focus&&document.contains(CQ.opener))CQ.opener.focus({preventScroll:true})}catch(e){}}
-document.addEventListener("click",e=>{const o=e.target.closest("[data-cqopen]");if(o&&o.closest("#cq")){e.preventDefault();cqOpen(o.dataset.cqopen);return}
+document.addEventListener("click",e=>{const o=e.target.closest("[data-cqopen]");if(o&&o.closest("#cq,#cqPre")){e.preventDefault();cqOpen(o.dataset.cqopen);return}
   const a=e.target.closest("[data-cqarr]");if(a&&CQ.tr){const d=+a.dataset.cqarr,tr=CQ.tr;CQ.hold=performance.now()+cqNum(cqCfg().rs,1.5,0,10)*1000;tr.scrollBy({left:d*((CQ_SZ[cqCfg().size]||190)+14)*1.5,behavior:"smooth"})}});
 addEventListener("keydown",e=>{if(e.key==="Escape")cqClose()});
 function toast(msg){if(typeof toastHook==="function")msg=toastHook(msg);const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,Math.max(1600,msg.length*45))}
@@ -2633,7 +2636,7 @@ function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffff
   logoSize:0,nameShow:true,nameSize:0,bb:{name:"Blind box",img:"",fx:"wiggle",speed:100,size:120,tip:"Tap the box to open it!"},nameSide:"right",logoPos:{m:"normal",x:0,y:0},adm:{name:"",show:true,size:0,logo:""},
   mq2:{on:false,noFont:true,texts:["Hello there! Fresh cookies, baked daily"],images:[],links:[],mode:"both",imgH:0,bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium"},bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},
   snow:{on:false,icon:"❄️",imgs:[],n:40,speed:4,size:30,op:80,layer:"front",sway:true,spin:false,shop:true,aff:true,admin:false},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
-  cq:{on:false,title:"Meet our flavors",sub:"Tap the + to peek inside each cookie.",speed:3,dir:"left",size:"M",bg:"#FFF4D6",ink:"#0B0B45",accent:"#000096",price:true,rs:1.5,rc:1,plus:{icon:"+",img:"",bg:"#000096",color:"#ffffff",fx:"pulse"},items:[]},
+  cq:{on:false,pre:true,title:"Meet our flavors",sub:"Tap the + to peek inside each cookie.",speed:3,dir:"left",size:"M",bg:"#FFF4D6",ink:"#0B0B45",accent:"#000096",price:true,rs:1.5,rc:1,plus:{icon:"+",img:"",bg:"#000096",color:"#ffffff",fx:"pulse"},items:[]},
   hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,waitVideo:true,swipe:true,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
   build:{title:"Build your box",intro:"Choose a size, fill every spot, then tell us when you want it. Each box is baked the morning it leaves the oven room."},
@@ -3089,7 +3092,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 17:05 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 17:11 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

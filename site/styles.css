@@ -1757,3 +1757,5 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .cq-tx{margin:0;white-space:pre-line}.cq-fig{margin:0}.cq-fig img{width:100%;border-radius:14px;display:block}.cq-fig figcaption{font-size:13px;opacity:.75;margin-top:6px;text-align:center}.cq-em{margin:0;opacity:.6;font-size:14px}
 .cq-cl{width:100%}
 @media (prefers-reduced-motion:reduce){.cq-plus,.cq-bar i.on,.cq-qc,.cq-tm{animation:none}}
+.cq-pre{padding:6px 0 0}.cq-pre .wrap{padding:0;max-width:none}.cq-pre .cq-t{font-size:clamp(20px,5vw,26px)}
+.cq-pre,.cq-pre .cq-rel,.cq-pre .cq-track{min-width:0;max-width:100%;width:100%;box-sizing:border-box}

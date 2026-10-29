@@ -2049,3 +2049,5 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 /* admin: Carrousel card */
 .cqrow-h{display:grid;grid-template-columns:54px 1fr auto auto;gap:10px;align-items:center}.cqrow-i{width:54px;height:54px}.cqrow-i .plate{width:54px;height:54px;border-radius:14px}
 .cqrow-n small{display:block;opacity:.7}.cqthumb{display:block;max-width:140px;max-height:90px;border-radius:10px;margin-top:6px;object-fit:contain;background:#EEF0FF}
+.cq-pre{padding:6px 0 0}.cq-pre .wrap{padding:0;max-width:none}.cq-pre .cq-t{font-size:clamp(20px,5vw,26px)}
+.cq-pre,.cq-pre .cq-rel,.cq-pre .cq-track{min-width:0;max-width:100%;width:100%;box-sizing:border-box}
