@@ -2477,7 +2477,7 @@ function renderAdmin(){try{applyBgx();applySnow();applyAdminBrand();lpFavicon(DB
   const nNew=DB.orders.filter(o=>o.status==="review"||o.status==="new").length,nLive=DB.sales.filter(s=>saleStatus(s)==="live").length;
   $("#cOrders").textContent=nNew||"";$("#cOrders").hidden=!nNew;
   {const nc=DB.orders.filter(o=>o.complaint&&(o.complaint.status==="open")).length;$("#cComplaints").textContent=nc||"";$("#cComplaints").hidden=!nc;$("#cComplaints").classList.toggle("live",!!nc)}
-  {const nc=DB.coupons.filter(c=>cpState(c)==="live").length;$("#cCoupons").textContent=nc?nc+" live":"";$("#cCoupons").hidden=!nc;$("#cCoupons").classList.toggle("live",!!nc)}
+  {const nc=DB.coupons.filter(c=>!c.aff&&cpState(c)==="live").length;$("#cCoupons").textContent=nc?nc+" live":"";$("#cCoupons").hidden=!nc;$("#cCoupons").classList.toggle("live",!!nc)}
   $("#cSales").textContent=nLive?nLive+" live":"";$("#cSales").hidden=!nLive;
   const lowN=DB.products.filter(isLow).length;
   $("#cProducts").textContent=lowN?lowN+" low":DB.products.filter(p=>p.status==="available").length;$("#cProducts").classList.toggle("live",!!lowN);
@@ -2806,7 +2806,7 @@ async function csvImport(){const rows=(CSVI.rows||[]).filter(x=>{const s=csvStat
 function csvDownload(name,rows){const q=v=>{const s=String(v==null?"":v);return /[",\n;]/.test(s)?`"${s.replace(/"/g,'""')}"`:s};
   const blob=new Blob(["﻿"+rows.map(r=>r.map(q).join(",")).join("\n")],{type:"text/csv"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
 function csvTemplate(){csvDownload("coupon-template.csv",[CSV_COLS,["WELCOME10","percent",10,"",50000,"",200,1,"","2026-11-01 10:00","2026-11-30 23:59","yes","10% off your box"],["RP15K","amount",15000,"","",6,"",1,"","","","yes","Rp15.000 off a box of 6"],["FREEONGKIR","freedelivery","","","","",100,1,"","","2026-12-31 23:59","yes","Free delivery"],["GIFT-AB12","gift","","Pre-launch Gift Set","","",1,1,"6281234567890","","2026-11-08 23:59","yes","Sari W."]])}
-function csvExport(){const d=s=>String(s||"").replace("T"," ");csvDownload("coupons.csv",[CSV_COLS,...DB.coupons.map(c=>[c.code,c.type,c.type==="freedelivery"?"":c.value,"",c.minSpend||"",c.appliesTo==="all"?"":c.appliesTo,c.maxUses||"",c.onePerPhone?1:0,"",d(c.startsAt),d(c.endsAt),c.on?"yes":"no",c.desc||""])])}
+function csvExport(){const d=s=>String(s||"").replace("T"," ");csvDownload("coupons.csv",[CSV_COLS,...DB.coupons.filter(c=>!c.aff).map(c=>[c.code,c.type,c.type==="freedelivery"?"":c.value,"",c.minSpend||"",c.appliesTo==="all"?"":c.appliesTo,c.maxUses||"",c.onePerPhone?1:0,"",d(c.startsAt),d(c.endsAt),c.on?"yes":"no",c.desc||""])])}
 function csvPanel(){const R=CSVI.rows,cnt=k=>R?R.filter(x=>csvState(x)===k).length:0;
   const lab={new:["✅","New","#0A6B34"],upd:["✏️","Will update","#8a5a00"],skip:["⏭","Exists, skipped","#777"],bad:["⚠️","Problem","#C8102E"]};
   return `<section class="panel"><div class="phead"><div><h2>🎟 Add many coupons with a CSV file</h2><p class="sub">Fill the template in Excel or Google Sheets, save as CSV, then upload. The pre-launch gift code export uses the same columns, so you can upload it here too.</p></div></div>
@@ -2818,7 +2818,7 @@ function csvPanel(){const R=CSVI.rows,cnt=k=>R?R.filter(x=>csvState(x)===k).leng
     <p class="note" style="margin:10px 0 0">Columns: ${CSV_COLS.join(" · ")}. type is percent, amount, freedelivery or gift. Dates like 2026-11-01 10:00. per_customer 1 = once per WhatsApp number. Phone numbers can start with 0, 62 or +62.</p></section>`}
 function viewCoupons(){
   const F=A.cp,ST={live:["Live","#0A6B34"],scheduled:["Scheduled","#8a5a00"],expired:["Ended","#777"],used:["Used up","#777"],off:["Off","#777"]};
-  const list=DB.coupons.map(c=>{const st=cpState(c),u=cpUses(c.code,DB).length;return `<div class="pmcard" style="gap:6px">
+  const SC=DB.coupons.filter(c=>!c.aff),list=SC.map(c=>{const st=cpState(c),u=cpUses(c.code,DB).length;return `<div class="pmcard" style="gap:6px">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:17px;letter-spacing:.06em">${esc(c.code)}</b><span style="font-size:12px;font-weight:700;color:${ST[st][1]}">${ST[st][0]}${c.show?" · promoted":""}</span></div>
     <div>${esc(cpOff(c))}${c.minSpend>0?` · min box ${money(c.minSpend)}`:""}${c.appliesTo!=="all"?` · box of ${c.appliesTo} only`:""}</div>
     ${c.desc?`<div class="note" style="margin:0">${esc(c.desc)}</div>`:""}
@@ -2843,7 +2843,7 @@ function viewCoupons(){
     ${form}
     ${csvPanel()}
     <section class="panel"><div class="phead"><div><h2>All coupons</h2><p class="sub">Coupons marked "promoted" appear as tappable offers next to the coupon box.</p></div>${F?"":`<button class="btn btn-blue btn-sm" type="button" data-cpnew>+ New coupon</button>`}</div>
-    ${DB.coupons.length?`<div class="pmlist" style="margin-top:10px;display:grid;gap:10px">${list}</div>`:`<div class="empty">No coupons yet.</div>`}</section></div>`;
+    ${SC.length?`<div class="pmlist" style="margin-top:10px;display:grid;gap:10px">${list}</div>`:`<div class="empty">No coupons yet.</div>`}<p class="note" style="margin:10px 0 0">Coupons made by affiliators are kept apart, in <b>Affiliate coupons</b>.</p></section></div>`;
 }
 
 /* --- Notifications to all customers (owner) --- */
@@ -6518,8 +6518,9 @@ async function afFaqSave(){AFQ.busy=true;renderAdmin();const items=(AFQ.draft||[
 async function afCpnLoad(){try{AFM.cpn=await SBH.rpc("aff_coupon_info",{})}catch(e){AFM.cpn={ok:false}}affRender()}
 function afCpnText(c){const d=c.type==="freedelivery"?"free delivery":c.type==="amount"?money(+c.value)+" off":(+c.value)+"% off";return d+(+c.minSpend>0?" on orders from "+money(+c.minSpend):"")+(c.stack?", also on flash sales":", not on flash sales")+(c.endsAt?", until "+esc(String(c.endsAt).replace("T"," ")):"")}
 function afCouponHTML(){const c=AFM.cpn;if(!c||!c.ok)return "";const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,"");
-  return `<section class="panel"><h2 style="margin:0 0 6px">🎟️ My coupon</h2>${!c.ready?`<p class="sub">Your coupon is not ready yet. The owner sets the discount first, then you can choose its name here.</p>`
-    :`<p class="sub" style="margin:0 0 8px">${c.coupon?`Your code <b>${esc(c.coupon)}</b>`:"You do not have a coupon name yet."} Customers who type it get <b>${afCpnText(c)}</b>. You earn <b>${+c.rate}%</b> of the order. Your link is remembered for 30 days, so orders from customers who came through it also count.</p>
+  return `<section class="panel"><h2 style="margin:0 0 6px">🎟️ My coupon</h2>${!c.ready?`<p class="sub">Coupons are not ready yet. The shop sets the discount first, then you can choose your coupon name here.</p>`
+    :`<div class="afcpdef"><span aria-hidden="true">🎁</span><div>Discount for your customers<b>${afCpnText(c)}</b><small>Set by the shop. It is added to your coupon automatically.</small></div></div>
+    <p class="sub" style="margin:0 0 8px">${c.coupon?`Your code <b>${esc(c.coupon)}</b>`:"You do not have a coupon name yet."} Customers who type it get <b>${afCpnText(c)}</b>. You earn <b>${+c.rate}%</b> of the order. Your link is remembered for 30 days, so orders from customers who came through it also count.</p>
     ${c.canName?`<div class="colin" style="flex-wrap:wrap;gap:8px"><input class="in" id="afCpIn" maxlength="20" placeholder="Choose a name, like ALPHA001" value="${esc(c.coupon||"")}" style="flex:1;min-width:180px;text-transform:uppercase"><button class="btn btn-blue btn-sm" type="button" data-afcpsave ${AFM.busy?"disabled":""}>${c.coupon?"Change name":"Save"}</button></div><p class="note" style="margin:6px 0 0">3 to 20 letters or numbers. You can change it once an hour.</p>`:`<p class="note" style="margin:0">The owner sets your coupon name.</p>`}
     ${AFM.msg?`<p class="note" style="margin:6px 0 0"><b>${esc(AFM.msg)}</b></p>`:""}`}</section>`}
 function afPwHTML(){return `<section class="panel"><h2 style="margin:0 0 6px">🔑 Change my password</h2><div class="grid2"><label class="af">Current password<input class="in" id="afPwOld" type="password" autocomplete="current-password" maxlength="72"></label><label class="af">New password (8+ characters)<input class="in" id="afPwNew" type="password" autocomplete="new-password" maxlength="72"></label></div>
@@ -6676,22 +6677,39 @@ function afAnnHTML(L){const F=AF.annf||(AF.annf={to:"all",title:"",body:""}),A=A
     <div class="colin" style="margin-top:8px"><button class="btn btn-blue btn-sm" type="button" data-afannsend>Send announcement</button></div>
     ${A.length?`<div class="afannl">${A.map(x=>`<div class="afann${x.hidden?" off":""}"><span><small>${fmtAgo(x.at)} · ${x.aff?"to "+esc(x.aname||""):"to everyone"}${x.hidden?" · removed":""}</small><b>${esc(x.title)}</b><span>${esc(x.body)}</span></span>${x.hidden?"":`<button class="ghost sm" type="button" data-afannhide="${x.id}">Remove</button>`}</div>`).join("")}</div>`:""}</section>`}
 /* --- Affiliate coupons (owner): the coupon rule and commission of each affiliator --- */
-const AFC={list:null,loading:false,err:"",ed:{},busy:""};
-async function afcLoad(){if(AFC.loading||!SBH.on)return;AFC.loading=true;try{AFC.list=await SBH.rpc("admin_aff_coupons",{});AFC.err=""}catch(e){AFC.err=e.message;AFC.list=[]}AFC.loading=false;if(A.tab==="afcoupons")renderAdmin()}
+const AFC={list:null,loading:false,err:"",ed:{},busy:"",def:null,dd:null,dbusy:false};
+async function afcLoad(){if(AFC.loading||!SBH.on)return;AFC.loading=true;try{const [l,d]=await Promise.all([SBH.rpc("admin_aff_coupons",{}),SBH.rpc("admin_aff_cdef",{p:{}}).catch(()=>null)]);AFC.list=l;if(d){AFC.def=d;AFC.dd=null}AFC.err=""}catch(e){AFC.err=e.message;AFC.list=[]}AFC.loading=false;if(A.tab==="afcoupons")renderAdmin()}
 const afcVal=(a,k)=>{const e=AFC.ed[a.id];if(e&&k in e)return e[k];const r=a.crule||{};if(k==="rate")return a.rate;if(k==="coupon")return a.coupon||"";return r[k]};
 function viewAfCoupons(){if(!SBH.on)return head("Affiliate coupons","Each affiliator gets their own coupon. You set the discount and the commission here.")+MOCK+`<section class="panel"><p class="note">This page works on the live site.</p></section>`;
   if(AFC.list===null&&!AFC.loading)afcLoad();const L=AFC.list||[];
   const inp=(a,l,k,o={})=>`<label class="af">${l}<input class="in" data-afc="${a.id}|${k}" ${o.num?`type="number" min="0" step="${o.step||1}"`:o.dt?`type="datetime-local"`:""} maxlength="${o.max||40}" value="${esc(afcVal(a,k)??"")}"${o.ph?` placeholder="${esc(o.ph)}"`:""}></label>`;
   const sw=(a,l,k,d)=>`<label class="chk"><input type="checkbox" data-afc="${a.id}|${k}" ${(afcVal(a,k)??d)!==false&&(afcVal(a,k)??d)!=="false"?"checked":""}> ${l}</label>`;
-  return head("Affiliate coupons","Each affiliator can have their own coupon (like ALPHA001). You set the discount customers get and the commission the affiliator earns. Orders that use the coupon, or come from their link in the last 30 days, are credited to them.")+`<div class="stack">
-  ${AFC.err?`<section class="panel"><p class="err">${esc(AFC.err)}</p></section>`:""}
+  const DD=AFC.def?(AFC.dd||(AFC.dd=Object.assign({},AFC.def))):null,dty=DD?DD.type||"percent":"percent",dset=DD&&(DD.type==="freedelivery"||+DD.value>0);
+  const dsw=(l,k,d)=>`<label class="chk"><input type="checkbox" data-afcd="${k}" ${(DD[k]??d)!==false&&(DD[k]??d)!=="false"?"checked":""}> ${l}</label>`;
+  const dflt=DD?`<section class="panel"><h2 style="margin:0 0 4px">🎁 Discount for all affiliator coupons</h2><p class="sub" style="margin:0 0 8px">Set it once. Every affiliator coupon gives customers this discount, and affiliators see it when they choose their coupon name. These coupons are kept apart from your store coupons.</p>
+    ${dset?"":`<p class="err" style="margin:0 0 8px">Not set yet. Affiliators can't create a coupon until you set the discount.</p>`}
+    <div class="grid2"><label class="af">Discount for the customer<select class="in" data-afcd="type">${[["percent","Percent off the box"],["amount","Amount off the box"],["freedelivery","Free delivery"]].map(([v,l])=>`<option value="${v}" ${dty===v?"selected":""}>${l}</option>`).join("")}</select></label>
+    ${dty==="freedelivery"?"<span></span>":`<label class="af">${dty==="percent"?"Percent (%)":"Amount"}<input class="in" type="number" min="0" step="0.5" data-afcd="value" value="${esc(DD.value??"")}"></label>`}</div>
+    <div class="grid2" style="margin-top:8px"><label class="af">Minimum order (0 = none)<input class="in" type="number" min="0" data-afcd="minSpend" value="${esc(DD.minSpend??0)}"></label><label class="af">Total uses per coupon (0 = unlimited)<input class="in" type="number" min="0" data-afcd="maxUses" value="${esc(DD.maxUses??0)}"></label><label class="af">Ends (optional)<input class="in" type="datetime-local" data-afcd="endsAt" value="${esc(DD.endsAt||"")}"></label></div>
+    <div class="stack" style="gap:6px;margin-top:8px">${dsw("One use per customer (checked by WhatsApp number)","onePerPhone",true)}${dsw("Can be used together with a flash sale","stack",false)}</div>
+    <div class="colin" style="margin-top:10px;gap:8px;flex-wrap:wrap"><button class="btn btn-blue btn-sm" type="button" data-afcdsave ${AFC.dbusy?"disabled":""}>${AFC.dbusy?"Saving…":"Save the discount"}</button><button class="ghost" type="button" data-afcdsave="all" ${AFC.dbusy?"disabled":""}>Save and use it for everyone</button></div>
+    <p class="note" style="margin:6px 0 0">Below, you can still give one affiliator a special discount. Leave it empty to use this one. "Use it for everyone" removes the special discounts.</p></section>`:"";
+  return head("Affiliate coupons","Each affiliator can have their own coupon (like ALPHA001). The discount customers get is the same for all (set below), and you set the commission each affiliator earns. Orders that use the coupon, or come from their link in the last 30 days, are credited to them.")+`<div class="stack">
+  ${AFC.err?`<section class="panel"><p class="err">${esc(AFC.err)}</p></section>`:""}${dflt}
   ${L.length?L.map(a=>{const ty=afcVal(a,"type")||"percent";return `<section class="panel"><div class="afhead"><div><h2 style="margin:0">${esc(a.name||a.username)} <span class="note" style="margin:0">@${esc(a.username)} · link code ${esc(a.code)}${a.status!=="active"?" · "+esc(a.status):""}</span></h2><p class="sub" style="margin:4px 0 0">${a.coupon?`Coupon <b>${esc(a.coupon)}</b> · used by ${+a.uses||0} order${+a.uses===1?"":"s"}`:"No coupon name yet. The affiliator can choose one in their dashboard, or you can type it here."}</p></div></div>
     <div class="grid2" style="margin-top:10px">${inp(a,"Coupon name (3 to 20 letters or numbers)","coupon",{max:20,ph:"ALPHA001"})}${inp(a,"Commission (% of the order, without delivery)","rate",{num:1,step:"0.5"})}</div>
-    <div class="grid2" style="margin-top:8px"><label class="af">Discount for the customer<select class="in" data-afc="${a.id}|type">${[["percent","Percent off the box"],["amount","Amount off the box"],["freedelivery","Free delivery"]].map(([v,l])=>`<option value="${v}" ${ty===v?"selected":""}>${l}</option>`).join("")}</select></label>
+    <div class="grid2" style="margin-top:8px"><label class="af">Special discount for this affiliator (empty = the default above)<select class="in" data-afc="${a.id}|type">${[["percent","Percent off the box"],["amount","Amount off the box"],["freedelivery","Free delivery"]].map(([v,l])=>`<option value="${v}" ${ty===v?"selected":""}>${l}</option>`).join("")}</select></label>
       ${ty==="freedelivery"?"<span></span>":inp(a,ty==="percent"?"Percent (%)":"Amount","value",{num:1,step:"0.5"})}</div>
     <div class="grid2" style="margin-top:8px">${inp(a,"Minimum order (0 = none)","minSpend",{num:1})}${inp(a,"Total uses (0 = unlimited)","maxUses",{num:1})}${inp(a,"Starts (optional)","startsAt",{dt:1})}${inp(a,"Ends (optional)","endsAt",{dt:1})}</div>
     <div class="stack" style="gap:6px;margin-top:8px">${sw(a,"Coupon is on","on",true)}${sw(a,"One use per customer (checked by WhatsApp number)","onePerPhone",true)}${sw(a,"Can be used together with a flash sale","stack",false)}${sw(a,"The affiliator may choose and change the coupon name","canName",true)}</div>
     <div class="colin" style="margin-top:10px"><button class="btn btn-blue btn-sm" type="button" data-afcsave="${a.id}" ${AFC.busy===a.id?"disabled":""}>Save</button></div></section>`}).join(""):`<section class="panel"><p class="note">${AFC.loading?"Loading…":"No affiliators yet. Add one in the Affiliates menu first."}</p></section>`}</div>`}
+$("#amain").addEventListener("input",e=>{const k=e.target.dataset.afcd;if(k&&AFC.dd&&e.target.type!=="checkbox"&&e.target.tagName!=="SELECT")AFC.dd[k]=e.target.value});
+$("#amain").addEventListener("change",e=>{const el=e.target,k=el.dataset.afcd;if(!k||!AFC.dd)return;AFC.dd[k]=el.type==="checkbox"?el.checked:el.value;if(k==="type")renderAdmin()});
+$("#amain").addEventListener("click",async e=>{const b=e.target.closest("[data-afcdsave]");if(!b||!AFC.dd)return;const all=b.dataset.afcdsave==="all";
+  const go=async()=>{AFC.dbusy=true;renderAdmin();const D=AFC.dd;
+    try{AFC.def=await SBH.rpc("admin_aff_cdef",{p:{type:D.type||"percent",value:D.type==="freedelivery"?"":D.value,minSpend:D.minSpend||0,maxUses:D.maxUses||0,endsAt:D.endsAt||"",onePerPhone:D.onePerPhone!==false&&D.onePerPhone!=="false",stack:D.stack===true||D.stack==="true",all}});AFC.dd=null;AFC.list=null;toast(all?"Saved. Every affiliator coupon uses it now":"Saved. Affiliator coupons use it now")}catch(er){toast(er.message||"Couldn't save.")}
+    AFC.dbusy=false;renderAdmin()};
+  if(all)armed(b,go);else go()});
 $("#amain").addEventListener("input",e=>{const k=e.target.dataset.afc;if(!k||e.target.type==="checkbox"||e.target.tagName==="SELECT")return;const [id,f]=k.split("|");(AFC.ed[id]=AFC.ed[id]||{})[f]=e.target.value});
 $("#amain").addEventListener("change",e=>{const el=e.target,k=el.dataset.afc;if(!k)return;const [id,f]=k.split("|");(AFC.ed[id]=AFC.ed[id]||{})[f]=el.type==="checkbox"?el.checked:el.value;if(f==="type")renderAdmin()});
 $("#amain").addEventListener("click",async e=>{const b=e.target.closest("[data-afcsave]");if(!b)return;const id=b.dataset.afcsave,a=(AFC.list||[]).find(x=>x.id===id);if(!a)return;

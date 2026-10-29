@@ -1961,3 +1961,6 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .pgm-fly{position:absolute;bottom:-30px;font-style:normal;pointer-events:none;z-index:3;animation:pgmfly 2s ease-out forwards;opacity:0}
 @keyframes pgmfly{0%{opacity:0;transform:translateY(0) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translateY(-420px) rotate(220deg)}}
 @media (prefers-reduced-motion:reduce){.pgm-card.win .pgm-big,.pgm-card.try .pgm-big,.pgm-card.win h2{animation:none}}
+/* affiliator coupon box: the shop's discount */
+.afcpdef{display:flex;gap:12px;align-items:center;background:#FFF8D6;border:2px dashed #E0B800;border-radius:16px;padding:10px 14px;margin:0 0 10px}
+.afcpdef>span{font-size:30px}.afcpdef b{display:block;font-size:20px;color:var(--blue,#000096)}.afcpdef small{display:block;opacity:.75;font-size:12px}
