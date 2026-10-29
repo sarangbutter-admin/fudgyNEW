@@ -254,8 +254,26 @@
     var C = window.DELIDOME_CONFIG || {}, shop = String(C.shopUrl || "").replace(/\/+$/, ""), p = document.createElement("p");
     p.className = "adl-sub"; p.style.cssText = "margin-top:12px;display:grid;gap:6px";
     var mail = TSL.help ? '<a href="mailto:' + TSL.help.replace(/"/g, "") + '?subject=' + encodeURIComponent("Forgot password reset") + '&body=' + encodeURIComponent("Hello, I forgot my password. Please reset it.\n\nMy username: (type your username here)\n\nI am writing from the email address I registered with you.") + '">Forgot your password? Email us</a><br><small>Write from your registered email and type your username.</small>' : "Forgot your password? Ask the owner to reset it.";
-    p.innerHTML = '<span>' + mail + '</span>' + (shop ? '<span>Want to become an affiliator? <a href="' + shop + '/join" target="_blank" rel="noopener">Apply here</a></span>' : "");
+    p.innerHTML = '<span><button type="button" class="adl-fgb" data-fg>Forgot your password?</button></span>' +
+      '<div class="adl-fgf" hidden><small>Affiliators: type your username and the email you registered with. We check it and send you a new password by WhatsApp or email.</small>' +
+      '<input class="in" id="fgUser" maxlength="40" placeholder="Username" autocomplete="username" autocapitalize="none" spellcheck="false">' +
+      '<input class="in" id="fgMail" type="email" maxlength="120" placeholder="Registered email" autocomplete="email">' +
+      '<p class="adl-err" id="fgErr" hidden></p><button class="btn btn-ghost-blue btn-sm" type="button" data-fgsend>Send my request</button>' +
+      (TSL.help ? '<small>No answer? <a href="mailto:' + TSL.help.replace(/"/g, "") + '?subject=' + encodeURIComponent("Forgot password reset") + '">Email us</a></small>' : '') + '</div>' +
+      (shop ? '<span>Want to become an affiliator? <a href="' + shop + '/join" target="_blank" rel="noopener">Apply here</a></span>' : "");
     form.appendChild(p);
+    var box = p.querySelector(".adl-fgf"), errEl = p.querySelector("#fgErr"), send = p.querySelector("[data-fgsend]"), busy = false;
+    var go = async function () {
+      if (busy) return; errEl.hidden = true;
+      var u = p.querySelector("#fgUser").value.trim(), m = p.querySelector("#fgMail").value.trim();
+      if (u.length < 3) { errEl.textContent = "Please type your username."; errEl.hidden = false; return; }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)) { errEl.textContent = "Please type the email you registered with."; errEl.hidden = false; return; }
+      busy = true; send.disabled = true; send.textContent = "Sending…";
+      try { await K.rpc("aff_forgot", { p_username: u, p_email: m }, false); box.innerHTML = '<p class="adl-ok">✅ Request sent. If your details match, the shop will send you a new password by WhatsApp or email soon.</p>'; }
+      catch (e) { errEl.textContent = e.message || "Couldn't send. Please try again."; errEl.hidden = false; busy = false; send.disabled = false; send.textContent = "Send my request"; }
+    };
+    p.addEventListener("click", function (e) { if (e.target.closest("[data-fg]")) { box.hidden = !box.hidden; if (!box.hidden) { var i = p.querySelector("#fgUser"); if (i) i.focus(); } } else if (e.target.closest("[data-fgsend]")) go(); });
+    p.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target.closest(".adl-fgf")) { e.preventDefault(); go(); } });
   }
   // adds the widget above the sign-in button; returns { key, token(), reset() }
   async function tsLoginMount(form) {

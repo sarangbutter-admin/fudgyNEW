@@ -1965,3 +1965,7 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .afcpdef{display:flex;gap:12px;align-items:center;background:#FFF8D6;border:2px dashed #E0B800;border-radius:16px;padding:10px 14px;margin:0 0 10px}
 .afcpdef>span{font-size:30px}.afcpdef b{display:block;font-size:20px;color:var(--blue,#000096)}.afcpdef small{display:block;opacity:.75;font-size:12px}
 .in.locked{background:#F1F2FA;color:var(--blue,#000096);font-weight:800;letter-spacing:.06em;cursor:default;border-style:dashed}
+/* sign-in pages: forgot password */
+.adl-fgb{border:0;background:none;color:var(--blue,#000096);font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
+.adl-fgf{display:grid;gap:8px;background:var(--ice,#EEF0FF);border-radius:14px;padding:12px}.adl-fgf[hidden]{display:none}.adl-fgf small{opacity:.8}
+.adl-ok{margin:0;font-weight:700;color:#0A6B34}
