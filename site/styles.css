@@ -1719,8 +1719,8 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .cq{padding:26px 0 8px;color:var(--cqink,#0B0B45)}.cq[hidden]{display:none}
 .cq-t{font-family:var(--display);font-size:clamp(22px,5vw,30px);margin:0 0 4px;color:var(--cqac,#000096)}.cq-s{margin:0 0 14px;opacity:.8}
 .cq-rel{position:relative}
-.cq-track{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;padding:8px 0 16px;outline:none}.cq-track::-webkit-scrollbar{display:none}
-.cq-row{display:flex;width:max-content}.cq-copy{display:flex;flex:0 0 auto}
+.cq-track{overflow:hidden;touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none;padding:8px 0 16px;outline:none}.cq-track.drag{cursor:grabbing}.cq-track img{-webkit-user-drag:none}
+.cq-row{display:flex;width:max-content;will-change:transform;backface-visibility:hidden}.cq-copy{display:flex;flex:0 0 auto}
 .cq-card{position:relative;flex:0 0 var(--cqw,190px);width:var(--cqw,190px);margin-right:14px;background:var(--cqbg,#FFF4D6);border-radius:24px;padding:12px 12px 14px;text-align:center;box-shadow:0 6px 16px rgba(0,0,60,.1);scroll-snap-align:none}
 .cq-pl{position:relative;cursor:pointer}.cq-pl .plate{width:100%;aspect-ratio:1;border-radius:20px}
 .cq-card h4{margin:10px 4px 0;font-family:var(--display);font-size:15px;line-height:1.2;text-align:left;color:var(--cqink,#0B0B45)}
