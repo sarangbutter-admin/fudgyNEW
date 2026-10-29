@@ -590,7 +590,7 @@ function renderTimes(){
 function renderStoreStatic(){
   const set=DB.settings;
   applyPopScale();
-  renderMenu();renderMarquee($("#marq"),DB.marquee);
+  renderMenu();renderCarousel();renderMarquee($("#marq"),DB.marquee);
   renderOpts();
   const closedTxt=set.closedWeekdays.length?`We're closed ${listJoin(set.closedWeekdays.slice().sort().map(d=>DOW_LONG[d])).replace(" or "," and ")}. `:"";
   $("#heroStrip").innerHTML=[`Boxes of ${listJoin(activeSizes().map(s=>s.n))}`,set.samedayOn?`Sameday shipment before ${fmtHour(set.samedayCutoff)}`:"",optLead("scheduled")===24&&optLead("pickup")===24?`Order by ${fmtHour(set.cutoffHour)} for the next day`:`Order ${fmtLead(Math.min(optLead("pickup"),optLead("scheduled")))} ahead`,closedTxt?closedTxt.replace("We're closed ","Closed ").replace(/\. $/,""):""].filter(Boolean).map(t=>`<span>${t}</span>`).join("");
@@ -2473,12 +2473,77 @@ function pgPanelHTML(){if(!PG.info)return "";const I=PG.info,its=(I.items||[]).f
     <div class="gl big">${I.mode==="surprise"?`<span class="gcard"><i aria-hidden="true">🎁</i><b>${esc(bbName())}</b><em>FREE</em></span>`:its.length?its.map(g=>giftCard(g)).join(""):`<span class="gcard"><i aria-hidden="true">🎁</i><b>${esc(I.title||"Free Gift Set")}</b><em>FREE</em></span>`}</div></div>`}
 const preGiftHTML=(o,cust)=>o.preGift&&cust&&o.preGift.mode==="surprise"&&o.preGift.drawn&&(o.preGift.items||[]).length&&!bbOpened(o.id+"|p")?`<div class="dsec"><h4>🎁 Your pre-launch gift · ${esc(o.preGift.code||"")}</h4>${bbCardHTML(o.id+"|p")}</div>`:o.preGift?`<div class="dsec"><h4>🎁 ${o.preGift.src==="review"?(cust?"Your review reward":"Review reward to pack"):(cust?"Your pre-launch gift":"Pre-launch gift to pack")} · ${esc(o.preGift.code||"")}</h4><div class="gl">${(o.preGift.items||[]).map(g=>giftChip(g)).join("")||giftChip({name:o.preGift.mode==="surprise"&&o.preGift.drawn===false?bbName():o.preGift.soldOut?"Out of stock":o.preGift.title||"Free Gift Set"})}</div>${o.preGift.mode==="surprise"&&o.preGift.drawn===false?`<p class="note" style="margin:8px 0 0">${cust?"Your ${esc(bbName())} is picked when you send your payment proof.":"Not drawn yet. It is picked when the payment proof is sent."}</p>`:o.preGift.soldOut?`<p class="note" style="margin:8px 0 0">${cust?"Sorry, the free gifts ran out.":"No gift left in stock for this order."}</p>`:o.preGift.mode==="surprise"&&o.preGift.pool>1?`<p class="note" style="margin:8px 0 0">Picked at random from ${o.preGift.pool} gifts.</p>`:""}</div>`:"";
 
+/* ===== Carrousel card: a running row of flavor cards. Tapping + opens a quickview with the owner's detail sections.
+   The row pauses while it is touched or slid and while the quickview is open, then runs again after a short wait. ===== */
+const CQ={sig:"",tr:null,x:0,W:0,setTo:-9,raf:0,ts:0,hold:0,down:false,open:false,vis:true,io:null,opener:null,rm:matchMedia("(prefers-reduced-motion: reduce)").matches};
+const CQ_SZ={S:150,M:190,L:240},CQ_DT={bar:"Level",notes:"Taste notes",text:"Good to know",image:"Photo"};
+const cqCfg=()=>(DB.page&&DB.page.cq)||{};
+const cqNum=(v,d,lo,hi)=>{v=+v;return isFinite(v)&&String(v)!==""?Math.max(lo,Math.min(hi,v)):d};
+// the flavors in the row: the owner's order and choices first; a new flavor joins at the end by itself
+function cqList(){const c=cqCfg(),vis=DB.products.filter(p=>p.status!=="hidden"),items=Array.isArray(c.items)?c.items:[],seen=new Set(),out=[];
+  items.forEach(it=>{const p=vis.find(x=>x.id===it.pid);if(p&&it.on!==false&&!seen.has(p.id)){seen.add(p.id);out.push({p,it})}});
+  vis.forEach(p=>{if(!seen.has(p.id)&&!items.some(it=>it.pid===p.id))out.push({p,it:{pid:p.id}})});
+  return out}
+function cqPlusHTML(c){const pl=c.plus||{},img=imgOk(pl.img);return img?`<img src="${esc(img)}" alt="" draggable="false">`:esc(String(pl.icon||"+").slice(0,4))}
+function cqCardHTML(o,dup){const {p}=o,c=cqCfg(),pl=c.plus||{},out=isOut(p),fx=["pulse","wiggle","none"].includes(pl.fx)?pl.fx:"pulse",tb=dup?` tabindex="-1"`:"";
+  return `<article class="cq-card${out?" out":""}" data-cqid="${esc(p.id)}"><div class="cq-pl" data-cqopen="${esc(p.id)}">${plateHTML(p)}${c.price!==false&&p.surcharge>0?`<span class="cq-x">+${money(p.surcharge)}</span>`:""}${out?`<span class="cq-sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:""}</div>
+    <h4>${esc(p.name)}</h4><button class="cq-plus fx-${fx}" type="button" data-cqopen="${esc(p.id)}"${tb} aria-label="See the details of ${esc(p.name)}">${cqPlusHTML(c)}</button></article>`}
+function cqStop(){cancelAnimationFrame(CQ.raf);CQ.raf=0;if(CQ.io){CQ.io.disconnect();CQ.io=null}CQ.tr=null}
+function renderCarousel(force){const el=document.getElementById("cq");if(!el)return;const c=cqCfg(),list=cqList(),on=!!c.on&&list.length>0;
+  const sig=JSON.stringify([on,c,list.map(o=>[o.p.id,o.p.name,o.p.status,o.p.surcharge,o.p.track?o.p.stock:0])]);if(!force&&sig===CQ.sig)return;CQ.sig=sig;
+  cqStop();if(!on){el.hidden=true;el.innerHTML="";return}
+  const cw=CQ_SZ[c.size]||CQ_SZ.M,vw=Math.min(innerWidth||400,1200),r=Math.max(1,Math.ceil(1.3*vw/((cw+14)*list.length))),
+    copy=k=>`<div class="cq-copy"${k?` aria-hidden="true"`:""}>${Array.from({length:r}).map(()=>list.map(o=>cqCardHTML(o,k)).join("")).join("")}</div>`;
+  el.style.cssText=`--cqw:${cw}px;--cqbg:${hexOk(c.bg,"#FFF4D6")};--cqink:${hexOk(c.ink,"#0B0B45")};--cqac:${hexOk(c.accent,"#000096")};--cqpb:${hexOk((c.plus||{}).bg,"#000096")};--cqpc:${hexOk((c.plus||{}).color,"#ffffff")}`;
+  el.hidden=false;
+  el.innerHTML=`<div class="wrap">${c.title?`<h2 class="cq-t">${esc(c.title)}</h2>`:""}${c.sub?`<p class="cq-s">${esc(c.sub)}</p>`:""}</div>
+    <div class="cq-rel"><button class="cq-arr l" type="button" data-cqarr="-1" aria-label="Previous flavors">‹</button><div class="cq-track" id="cqTrack" tabindex="0" role="region" aria-label="Flavors. Swipe to browse."><div class="cq-row">${[0,1,2,3,4].map(copy).join("")}</div></div><button class="cq-arr r" type="button" data-cqarr="1" aria-label="Next flavors">›</button></div>`;
+  const tr=CQ.tr=document.getElementById("cqTrack"),cp=tr.querySelector(".cq-copy");CQ.W=cp?cp.getBoundingClientRect().width:0;CQ.x=CQ.setTo=tr.scrollLeft=2*CQ.W;CQ.hold=performance.now()+400;
+  const hold=()=>{CQ.hold=performance.now()+cqNum(c.rs,1.5,0,10)*1000};
+  tr.addEventListener("scroll",()=>{if(Math.abs(tr.scrollLeft-CQ.setTo)<=1.5)return;CQ.x=tr.scrollLeft;hold()},{passive:true});
+  ["touchstart","mousedown"].forEach(t=>tr.addEventListener(t,()=>{CQ.down=true},{passive:true}));
+  ["touchend","touchcancel","mouseup","mouseleave"].forEach(t=>tr.addEventListener(t,()=>{if(CQ.down){CQ.down=false;hold()}},{passive:true}));
+  ["wheel","keydown","focusin"].forEach(t=>tr.addEventListener(t,hold,{passive:true}));
+  if(window.IntersectionObserver){CQ.io=new IntersectionObserver(e=>{CQ.vis=e[0].isIntersecting},{threshold:0});CQ.io.observe(el)}
+  CQ.ts=0;if(!CQ.rm)CQ.raf=requestAnimationFrame(cqLoop)}
+function cqLoop(ts){CQ.raf=requestAnimationFrame(cqLoop);const tr=CQ.tr;if(!tr)return;const dt=Math.min(.05,(ts-(CQ.ts||ts))/1000);CQ.ts=ts;
+  if(!CQ.vis||document.hidden||CQ.open||CQ.down||performance.now()<CQ.hold||!CQ.W)return;
+  const c=cqCfg(),sp=cqNum(c.speed,3,1,10)*18*dt*(c.dir==="right"?-1:1);CQ.x+=sp;
+  while(CQ.x>=3*CQ.W)CQ.x-=CQ.W;while(CQ.x<CQ.W)CQ.x+=CQ.W;CQ.setTo=CQ.x;tr.scrollLeft=CQ.x}
+/* quickview */
+function cqIcon(s,cls){const img=imgOk(s.img);return img?`<img class="${cls}" src="${esc(img)}" alt="" draggable="false">`:s.icon?`<span class="${cls} e" aria-hidden="true">${esc(String(s.icon).slice(0,4))}</span>`:""}
+function cqBodyHTML(s){const t=s.type;
+  if(t==="bar"){const n=cqNum(s.n,5,1,5),v=cqNum(s.v,3,0,n),L=[s.lo,s.mid,s.hi].map(x=>String(x||"").trim());
+    return `<div class="cq-bar" role="img" aria-label="${esc((s.title||CQ_DT.bar)+": "+v+" of "+n)}">${Array.from({length:n},(_,k)=>`<i class="${k<v?"on":""}" style="--k:${k}"></i>`).join("")}</div>${L.some(Boolean)?`<div class="cq-bl"><span>${esc(L[0])}</span><span>${esc(L[1])}</span><span>${esc(L[2])}</span></div>`:""}`}
+  if(t==="notes")return `<div class="cq-notes">${(s.list||[]).filter(x=>x&&(x.label||x.img||x.icon)).map(x=>`<div class="cq-nt">${cqIcon(x,"cq-ni")}<span>${esc(x.label||"")}</span></div>`).join("")||`<p class="cq-em">Nothing here yet.</p>`}</div>`;
+  if(t==="text")return `<p class="cq-tx">${esc(s.body||"")}</p>`;
+  if(t==="image"){const u=imgOk(s.img2);return u?`<figure class="cq-fig"><img src="${esc(u)}" alt="${esc(s.caption||s.title||"")}" loading="lazy" draggable="false">${s.caption?`<figcaption>${esc(s.caption)}</figcaption>`:""}</figure>`:`<p class="cq-em">No picture yet.</p>`}
+  return ""}
+function cqSecHTML(s,i){const open=s.auto===true,tip=String(s.tip||"").trim();
+  return `<section class="cq-sec${open?" open":""}"><div class="cq-sh"><button class="cq-sht" type="button" data-cqsec aria-expanded="${open}">${cqIcon(s,"cq-shi")}<b>${esc(s.title||CQ_DT[s.type]||"Details")}</b><i class="cq-chev" aria-hidden="true"></i></button>${tip?`<button class="cq-tip" type="button" data-cqtip aria-label="More info" aria-expanded="false">!</button>`:""}</div>
+    ${tip?`<div class="cq-tm" role="note" hidden>${esc(tip)}</div>`:""}<div class="cq-sb"${open?"":" hidden"}>${cqBodyHTML(s)}</div></section>`}
+function cqQvHTML(p,it){const secs=(it.secs||[]).filter(s=>s&&["bar","notes","text","image"].includes(s.type));
+  return `<div class="cq-qc" role="dialog" aria-modal="true" aria-label="${esc(p.name)}"><button class="cq-qx" type="button" data-cqx aria-label="Close">✕</button>
+    <div class="cq-qh"><div class="cq-qp">${plateHTML(p)}</div><h3>${esc(p.name)}</h3>${p.desc?`<p class="cq-qd">${esc(p.desc)}</p>`:""}${p.surcharge>0?`<span class="cq-x on">+${money(p.surcharge)} per cookie</span>`:""}</div>
+    <div class="cq-secs">${secs.length?secs.map(cqSecHTML).join(""):`<p class="cq-em">More details are coming soon.</p>`}</div><button class="btn btn-blue cq-cl" type="button" data-cqx>Close</button></div>`}
+function cqOpen(pid){const p=prod(pid);if(!p)return;const it=(cqCfg().items||[]).find(x=>x.pid===pid)||{pid};CQ.open=true;CQ.opener=document.activeElement;
+  let m=document.getElementById("cqQv");if(!m){m=document.createElement("div");m.id="cqQv";m.className="cq-qv";document.body.appendChild(m);
+    m.addEventListener("click",e=>{if(e.target===m||e.target.closest("[data-cqx]")){cqClose();return}
+      const st=e.target.closest("[data-cqsec]");if(st){const s=st.closest(".cq-sec"),o=!s.classList.contains("open");s.classList.toggle("open",o);st.setAttribute("aria-expanded",String(o));s.querySelector(".cq-sb").hidden=!o;return}
+      const tp=e.target.closest("[data-cqtip]");if(tp){const s=tp.closest(".cq-sec"),tm=s.querySelector(".cq-tm"),o=tm.hidden;tm.hidden=!o;tp.setAttribute("aria-expanded",String(o))}})}
+  m.innerHTML=cqQvHTML(p,it);m.hidden=false;m.scrollTop=0;document.body.style.overflow="hidden";const x=m.querySelector(".cq-qx");if(x)x.focus({preventScroll:true})}
+function cqClose(){const m=document.getElementById("cqQv");if(!m||m.hidden)return;m.hidden=true;m.innerHTML="";document.body.style.overflow="";CQ.open=false;CQ.hold=performance.now()+cqNum(cqCfg().rc,1,0,10)*1000;
+  try{if(CQ.opener&&CQ.opener.focus&&document.contains(CQ.opener))CQ.opener.focus({preventScroll:true})}catch(e){}}
+document.addEventListener("click",e=>{const o=e.target.closest("[data-cqopen]");if(o&&o.closest("#cq")){e.preventDefault();cqOpen(o.dataset.cqopen);return}
+  const a=e.target.closest("[data-cqarr]");if(a&&CQ.tr){const d=+a.dataset.cqarr,tr=CQ.tr;CQ.hold=performance.now()+cqNum(cqCfg().rs,1.5,0,10)*1000;tr.scrollBy({left:d*((CQ_SZ[cqCfg().size]||190)+14)*1.5,behavior:"smooth"})}});
+addEventListener("keydown",e=>{if(e.key==="Escape")cqClose()});
+
 
 /* ================= ADMIN ================= */
 const A={sel:new Set(),lbl:null,lblPrev:"sample",rvPid:null,tab:"dashboard",nf:{type:"news",title:"",text:"",pid:"",code:"",until:""},dd:"today",vr:"today",dsig:"",filter:"all",od:"all",q:"",pq:"",pcat:"all",modal:null,np:null,bakeDay:null,openOrder:null,
   draft:{kind:"discount",name:"Flash sale",type:"percent",value:20,appliesTo:"all",fdAll:true,fdSizes:[],fdCustom:false,dkind:"free",damount:0,dscope:"all",startMode:"now",startAt:"",durH:1,durM:0,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#000096",fx:"shine",view:"teaser"}};
 // the page the team is on survives a refresh (and coming back later in the same browser)
-{const KEY="delidome-admin-tab",TABS="dashboard orders complaints customers products badges sales coupons boxes notify announcer hero landing marquee revrew delivery labels settings security affiliates afcoupons prelaunch log team".split(" ");
+{const KEY="delidome-admin-tab",TABS="dashboard orders complaints customers products badges sales coupons boxes notify announcer hero landing carousel marquee revrew delivery labels settings security affiliates afcoupons prelaunch log team".split(" ");
   let cur="dashboard";try{const v=localStorage.getItem(KEY);if(TABS.includes(v))cur=v}catch(e){}
   Object.defineProperty(A,"tab",{enumerable:true,get:()=>cur,set:v=>{cur=v;if(TABS.includes(v))try{localStorage.setItem(KEY,v)}catch(e){}}})}
 function toast(msg){if(typeof toastHook==="function")msg=toastHook(msg);const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,Math.max(1600,msg.length*45))}
@@ -2504,7 +2569,7 @@ function renderAdmin(){try{applyBgx();applySnow();applyAdminBrand();lpFavicon(DB
   $("#cSales").textContent=nLive?nLive+" live":"";$("#cSales").hidden=!nLive;
   const lowN=DB.products.filter(isLow).length;
   $("#cProducts").textContent=lowN?lowN+" low":DB.products.filter(p=>p.status==="available").length;$("#cProducts").classList.toggle("live",!!lowN);
-  $("#amain").innerHTML=({afcoupons:viewAfCoupons,notify:viewNotify,prelaunch:viewPrelaunch,revrew:viewRevrew,dashboard:viewDashboard,orders:viewOrders,sales:viewSales,products:viewProducts,complaints:viewComplaints,boxes:viewBoxes,marquee:viewMarquee,announcer:viewAnnouncer,coupons:viewCoupons,hero:viewHero,labels:viewLabels,landing:viewLanding,settings:viewSettings,delivery:viewDelivery,customers:viewCustomers,team:viewTeam,badges:viewBadges,log:viewLog,security:viewSecurity,affiliates:viewAffiliates})[A.tab]();
+  $("#amain").innerHTML=({afcoupons:viewAfCoupons,notify:viewNotify,prelaunch:viewPrelaunch,revrew:viewRevrew,dashboard:viewDashboard,orders:viewOrders,sales:viewSales,products:viewProducts,complaints:viewComplaints,boxes:viewBoxes,marquee:viewMarquee,announcer:viewAnnouncer,coupons:viewCoupons,hero:viewHero,labels:viewLabels,landing:viewLanding,carousel:viewCarousel,settings:viewSettings,delivery:viewDelivery,customers:viewCustomers,team:viewTeam,badges:viewBadges,log:viewLog,security:viewSecurity,affiliates:viewAffiliates})[A.tab]();
   if(A.tab==="log"&&LG.list===null)loadLog();
   if(A.tab==="customers"&&(CU.list===null||CU.stale))loadCustomers();
   if(A.tab==="team"&&TM.list===null)loadTeam();
@@ -2526,8 +2591,8 @@ function renderAdmin(){try{applyBgx();applySnow();applyAdminBrand();lpFavicon(DB
 /* drafts: each screen publishes (or discards) only the changes made on that screen.
    Shop settings, Boxes & extras, Delivery & courier and Security share one settings document, and Landing page and
    Top banner share the page document, so every changed field remembers the screen it was changed on. */
-const DRAFT_TABS={settings:["settings","boxes","delivery","security","badges"],marquee:["marquee"],page:["landing","hero","marquee"],prelaunch:["prelaunch"],revrew:["revrew"],revpool:["revrew"],thanks:["settings"],proofpop:["settings"],payMethods:["settings"],badges:["badges"]};
-const DRAFT_TAB_NAME={prelaunch:"Pre-launch",revrew:"Review rewards",settings:"Shop settings",boxes:"Boxes & extras",delivery:"Delivery & courier",security:"Security",badges:"Badges",marquee:"Marquee banner",landing:"Landing page",hero:"Top banner"};
+const DRAFT_TABS={settings:["settings","boxes","delivery","security","badges"],marquee:["marquee"],page:["landing","hero","marquee","carousel"],prelaunch:["prelaunch"],revrew:["revrew"],revpool:["revrew"],thanks:["settings"],proofpop:["settings"],payMethods:["settings"],badges:["badges"]};
+const DRAFT_TAB_NAME={prelaunch:"Pre-launch",revrew:"Review rewards",settings:"Shop settings",boxes:"Boxes & extras",delivery:"Delivery & courier",security:"Security",badges:"Badges",marquee:"Marquee banner",landing:"Landing page",carousel:"Carrousel card",hero:"Top banner"};
 const DRAFT_ALL=[...new Set(Object.values(DRAFT_TABS).flat())];
 const DTAG={};   // doc -> {field: screen}
 function draftScan(tab){
@@ -4852,6 +4917,79 @@ document.addEventListener("click",e=>{});
 
 function mqLum(h){const c=[1,3,5].map(i=>{const v=parseInt(h.slice(i,i+2),16)/255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*c[0]+.7152*c[1]+.0722*c[2]}
 function mqContrast(a,b){const x=mqLum(a),y=mqLum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
+/* ===== Carrousel card (owner): the running flavor row, and the quickview details of each flavor ===== */
+const CQA={ed:null};
+const cqs=()=>DB.page.cq,cqg=path=>path.split(".").reduce((o,k)=>o==null?undefined:o[k],cqs());
+const cqset=(path,v)=>{const ks=path.split("."),l=ks.pop();let o=cqs();for(const k of ks){if(o[k]==null)o[k]={};o=o[k]}o[l]=v;saveSoon()};
+const cqRR=()=>{const y=scrollY;renderAdmin();scrollTo(0,y)};
+// the flavors as the owner sees them: the saved order first (also the ones switched off), then flavors not placed yet
+function cqAdminList(){const c=cqs(),vis=DB.products.filter(p=>p.status!=="hidden"),items=Array.isArray(c.items)?c.items:[],out=[],seen=new Set();
+  items.forEach(it=>{const p=vis.find(x=>x.id===it.pid);if(p&&!seen.has(p.id)){seen.add(p.id);out.push({p,it})}});
+  vis.forEach(p=>{if(!seen.has(p.id))out.push({p,it:{pid:p.id,on:true,secs:[]}})});return out}
+const cqMat=()=>{cqs().items=cqAdminList().map(x=>x.it);return cqs().items};
+function cqEnt(pid){const c=cqs();c.items=Array.isArray(c.items)?c.items:[];let i=c.items.findIndex(x=>x.pid===pid);if(i<0){c.items.push({pid,on:true,secs:[]});i=c.items.length-1}const it=c.items[i];if(!Array.isArray(it.secs))it.secs=[];return i}
+const CQ_NEW={bar:()=>({type:"bar",title:"Sweet",auto:true,tip:"",icon:"",img:"",n:5,v:3,lo:"Mild",mid:"Fair",hi:"Sweet"}),
+  notes:()=>({type:"notes",title:"Taste notes",auto:true,tip:"",icon:"",img:"",list:[{label:"Butter",icon:"🧈",img:""}]}),
+  text:()=>({type:"text",title:"Good to know",auto:false,tip:"",icon:"💡",img:"",body:""}),
+  image:()=>({type:"image",title:"Photo",auto:false,tip:"",icon:"",img:"",img2:"",caption:""})};
+const CQ_LBL={bar:"📊 Bar meter",notes:"👅 Taste notes",text:"💡 Text box",image:"🖼️ Picture / GIF"};
+function viewCarousel(){const c=cqs(),list=cqAdminList();
+  const t=(l,k,o={})=>`<label class="af">${l}${o.rows?`<textarea class="in" rows="${o.rows}" data-cq="${k}" maxlength="${o.max||400}">${esc(cqg(k)??"")}</textarea>`:`<input class="in" data-cq="${k}" maxlength="${o.max||120}" value="${esc(cqg(k)??"")}"${o.ph?` placeholder="${esc(o.ph)}"`:""}>`}</label>`;
+  const nm=(l,k,mn,mx,st)=>`<label class="af">${l}<input class="in" type="number" min="${mn}" max="${mx}" step="${st||1}" data-cq="${k}" data-cqnum value="${esc(cqg(k)??"")}"></label>`;
+  const col=(l,k,d)=>`<label class="af">${l}<input type="color" data-cq="${k}" value="${esc(HEX6.test(cqg(k)||"")?cqg(k):d)}" style="width:100%;height:40px"></label>`;
+  const sw=(l,k,d)=>`<div style="display:flex;gap:10px;align-items:center"><label class="sw"><input type="checkbox" data-cqchk="${k}" ${(cqg(k)??d)!==false?"checked":""} aria-label="${esc(l)}"><span></span></label><span class="stlabel">${l}</span></div>`;
+  const chips=(k,opts,num)=>`<div class="chips" style="margin-top:6px">${opts.map(([v,l])=>`<button class="fchip" type="button" data-cqset="${k}|${v}" aria-pressed="${String(cqg(k))===String(v)}">${l}</button>`).join("")}</div>`;
+  const img=(l,k)=>{const v=String(cqg(k)||"");return `<div class="af">${l}<div class="colin" style="gap:6px;flex-wrap:wrap"><input class="in" data-cq="${k}" maxlength="500" placeholder="https://… (link to a picture or GIF)" value="${esc(v)}" style="flex:1;min-width:150px"><label class="ghost mqbtn">⬆ Upload<input type="file" accept="image/*" hidden data-cqup="${k}"></label>${v?`<button class="ghost sm" type="button" data-cqclr="${k}" aria-label="Remove the picture">✕</button>`:""}</div>${imgOk(v)?`<img class="cqthumb" src="${esc(v)}" alt="">`:v?`<small style="color:#C8102E">Only https:// links work.</small>`:""}</div>`};
+  const secEd=(idx,si,s)=>{const P=`items.${idx}.secs.${si}`,type=s.type;
+    const body=type==="bar"?`<div class="grid2"><div class="af">How many bars in total${chips(P+".n",[1,2,3,4,5].map(n=>[n,n]))}</div><div class="af">How many bars are filled${chips(P+".v",[1,2,3,4,5].filter(n=>n<=(+s.n||5)).map(n=>[n,n]))}</div></div>
+        <div class="grid3">${t("Left label",P+".lo",{max:20,ph:"Mild"})}${t("Middle label",P+".mid",{max:20,ph:"Fair"})}${t("Right label",P+".hi",{max:20,ph:"Sweet"})}</div>`
+      :type==="notes"?`<div class="stack" style="gap:8px">${(s.list||[]).map((x,ni)=>`<div class="lpblock" style="padding:8px"><div class="grid2">${t("Taste note",P+`.list.${ni}.label`,{max:30,ph:"Butter"})}${t("Icon (emoji)",P+`.list.${ni}.icon`,{max:4})}</div>${img("…or a picture / GIF",P+`.list.${ni}.img`)}<button class="danger sm" type="button" data-cqnd="${P}|${ni}">Remove this note</button></div>`).join("")}${(s.list||[]).length<16?`<button class="ghost" type="button" data-cqna="${P}" style="justify-self:start">+ Add a taste note</button>`:""}</div>`
+      :type==="text"?t("Description",P+".body",{rows:4,max:700})
+      :`${img("Picture or GIF",P+".img2")}${t("Caption (optional)",P+".caption",{max:120})}`;
+    return `<div class="lpblock cqsec"><div class="afhead"><b>${CQ_LBL[type]||type}</b><div class="colin" style="gap:6px">${si?`<button class="ghost sm" type="button" data-cqsm="${idx}|${si}|-1" aria-label="Move up">↑</button>`:""}<button class="ghost sm" type="button" data-cqsm="${idx}|${si}|1" aria-label="Move down">↓</button><button class="danger sm" type="button" data-cqsd="${idx}|${si}">Delete</button></div></div>
+      <div class="grid2">${t("Title",P+".title",{max:40})}${t("Header icon (emoji)",P+".icon",{max:4})}</div>${img("Header icon as a picture or GIF (optional)",P+".img")}
+      <div class="af">When someone opens the quickview${chips(P+".auto",[["true","Show it open"],["false","Tap to view"]])}</div>
+      ${t("Exclamation ! message (leave empty for no ! mark)",P+".tip",{rows:2,max:240})}${body}</div>`};
+  const row=(x,n)=>{const p=x.p,it=x.it,on=it.on!==false,secs=it.secs||[],open=CQA.ed===p.id,idx=open?cqEnt(p.id):-1;
+    return `<div class="pmcard cqrow"><div class="cqrow-h"><span class="cqrow-i">${plateHTML(p)}</span><div class="cqrow-n"><b>${esc(p.name)}</b><small>${secs.length} detail${secs.length===1?"":"s"}</small></div>
+      <label class="sw"><input type="checkbox" ${on?"checked":""} data-cqtog="${esc(p.id)}" aria-label="Show ${esc(p.name)} in the carousel"><span></span></label>
+      <div class="colin" style="gap:4px">${n?`<button class="ghost sm" type="button" data-cqmv="${esc(p.id)}|-1" aria-label="Move earlier">↑</button>`:""}${n<list.length-1?`<button class="ghost sm" type="button" data-cqmv="${esc(p.id)}|1" aria-label="Move later">↓</button>`:""}</div></div>
+      <div class="colin" style="gap:8px;flex-wrap:wrap"><button class="btn btn-blue btn-sm" type="button" data-cqed="${esc(p.id)}">${open?"Close the editor":"✏️ Quickview details"}</button><button class="ghost" type="button" data-cqprev="${esc(p.id)}">👁 Preview</button></div>
+      ${open?`<div class="stack" style="gap:10px;margin-top:6px">${secs.map((s,si)=>secEd(idx,si,s)).join("")}<div class="af">Add a detail${`<div class="chips" style="margin-top:6px">${Object.keys(CQ_LBL).map(k=>`<button class="fchip" type="button" data-cqadd="${esc(p.id)}|${k}">+ ${CQ_LBL[k]}</button>`).join("")}</div>`}</div></div>`:""}</div>`};
+  return head("Carrousel card","A row of flavor cards that runs on its own on your shop page. Customers tap + to open a quickview with the details you write here.")+`<div class="stack">
+  <section class="panel"><h2>🎠 The carousel</h2>${sw("Show the carousel on the shop page (above Build your box)","on",false)}
+    <div class="grid2" style="margin-top:10px">${t("Title","title",{max:80})}${t("Text under the title","sub",{max:160})}</div>
+    <div class="grid2" style="margin-top:8px"><label class="af">Running speed: <b id="cqSpL">${+c.speed||3}</b> of 10<input type="range" min="1" max="10" step="1" data-cq="speed" data-cqnum data-cqlab="cqSpL" value="${+c.speed||3}" style="width:100%"></label>
+      <div class="af">Direction${chips("dir",[["left","◀ Moves left"],["right","Moves right ▶"]])}</div></div>
+    <div class="grid2" style="margin-top:8px"><div class="af">Card size${chips("size",[["S","Small"],["M","Medium"],["L","Large"]])}</div>${sw("Show the extra price on a card","price",true)}</div>
+    <div class="grid3" style="margin-top:8px">${col("Card color","bg","#FFF4D6")}${col("Text color","ink","#0B0B45")}${col("Title color","accent","#000096")}</div>
+    <div class="grid2" style="margin-top:8px">${nm("Runs again after a slide (seconds)","rs",0,10,0.5)}${nm("Runs again after the quickview closes (seconds)","rc",0,10,0.5)}</div>
+    <p class="note" style="margin:6px 0 0">The row stops while a customer touches or slides it and while the quickview is open, then runs again after these waits.</p></section>
+  <section class="panel"><h2>➕ The plus button</h2><div class="grid3">${t("Symbol (a character or emoji)","plus.icon",{max:4})}${col("Button color","plus.bg","#000096")}${col("Symbol color","plus.color","#ffffff")}</div>
+    ${img("…or use your own picture / GIF as the button","plus.img")}<div class="af">Effect${chips("plus.fx",[["pulse","Pulse"],["wiggle","Wiggle"],["none","None"]])}</div></section>
+  <section class="panel"><h2>🍪 Flavors in the carousel</h2><p class="sub">Switch a flavor off to hide it from the row. Use the arrows to change the order. New flavors join the end of the row by themselves.</p>
+    <div class="stack" style="gap:10px;margin-top:8px">${list.length?list.map(row).join(""):`<p class="note">No flavors yet. Add them in Flavors first.</p>`}</div></section></div>`}
+const cqAm=$("#amain");
+cqAm.addEventListener("input",e=>{const el=e.target,k=el.dataset.cq;if(!k||A.tab!=="carousel")return;const v=el.dataset.cqnum!==undefined?(el.value===""?"":+el.value):el.value;cqset(k,v);if(el.dataset.cqlab){const l=document.getElementById(el.dataset.cqlab);if(l)l.textContent=el.value}});
+cqAm.addEventListener("change",async e=>{if(A.tab!=="carousel")return;const el=e.target;
+  if(el.dataset.cqchk){cqset(el.dataset.cqchk,el.checked);return}
+  if(el.dataset.cqtog){const i=cqEnt(el.dataset.cqtog);cqs().items[i].on=el.checked;saveSoon();cqRR();return}
+  if(el.dataset.cqup){const f=el.files&&el.files[0],path=el.dataset.cqup;el.value="";if(!f)return;
+    try{let data;if(f.type==="image/gif"){if(f.size>4e6)throw new Error("That GIF is over 4 MB. Use a smaller one, or paste a link.");data=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(new Error("Couldn't read that file."));r.readAsDataURL(f)})}else data=await lpResize(f,900,true);
+      cqset(path,SBH.on?await SBK.upload(data):data);toast("Picture added")}catch(er){toast(er.message||"Couldn't add that picture.")}cqRR()}});
+cqAm.addEventListener("click",e=>{if(A.tab!=="carousel")return;const b=e.target.closest("button");if(!b)return;const d=b.dataset;
+  const secs=pid=>cqs().items[cqEnt(pid)].secs;
+  if(d.cqset){const [k,v]=d.cqset.split("|");cqset(k,v==="true"?true:v==="false"?false:/^\d+$/.test(v)&&/(\.n|\.v)$/.test(k)?+v:v);
+    if(/\.n$/.test(k)){const P=k.slice(0,-2),s=cqg(P);if(s&&+s.v>+s.n)cqset(P+".v",+s.n)}cqRR();return}
+  if(d.cqed){CQA.ed=CQA.ed===d.cqed?null:d.cqed;if(CQA.ed)cqEnt(CQA.ed);cqRR();return}
+  if(d.cqprev){cqOpen(d.cqprev);return}
+  if(d.cqmv){const [pid,dir]=d.cqmv.split("|"),L=cqMat(),i=L.findIndex(x=>x.pid===pid),j=i+(+dir);if(i>=0&&j>=0&&j<L.length){[L[i],L[j]]=[L[j],L[i]];saveSoon()}cqRR();return}
+  if(d.cqadd){const [pid,type]=d.cqadd.split("|");secs(pid).push(CQ_NEW[type]());saveSoon();cqRR();return}
+  if(d.cqsd){const [i,si]=d.cqsd.split("|").map(Number);cqs().items[i].secs.splice(si,1);saveSoon();cqRR();return}
+  if(d.cqsm){const [i,si,dir]=d.cqsm.split("|").map(Number),L=cqs().items[i].secs,j=si+dir;if(j>=0&&j<L.length){[L[si],L[j]]=[L[j],L[si]];saveSoon()}cqRR();return}
+  if(d.cqna){const s=cqg(d.cqna);s.list=s.list||[];s.list.push({label:"",icon:"",img:""});saveSoon();cqRR();return}
+  if(d.cqnd){const [P,ni]=d.cqnd.split("|");cqg(P).list.splice(+ni,1);saveSoon();cqRR();return}
+  if(d.cqclr){cqset(d.cqclr,"");cqRR()}});
 function viewMarquee(){return viewMarquee1()+mq2Section()}
 function viewMarquee1(){
   const m=DB.marquee,ok=mqContrast(m.bg,m.color)>=3;
@@ -5019,6 +5157,7 @@ function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffff
   logoSize:0,nameShow:true,nameSize:0,bb:{name:"Blind box",img:"",fx:"wiggle",speed:100,size:120,tip:"Tap the box to open it!"},nameSide:"right",logoPos:{m:"normal",x:0,y:0},adm:{name:"",show:true,size:0,logo:""},
   mq2:{on:false,noFont:true,texts:["Hello there! Fresh cookies, baked daily"],images:[],links:[],mode:"both",imgH:0,bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium"},bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},
   snow:{on:false,icon:"❄️",imgs:[],n:40,speed:4,size:30,op:80,layer:"front",sway:true,spin:false,shop:true,aff:true,admin:false},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
+  cq:{on:false,title:"Meet our flavors",sub:"Tap the + to peek inside each cookie.",speed:3,dir:"left",size:"M",bg:"#FFF4D6",ink:"#0B0B45",accent:"#000096",price:true,rs:1.5,rc:1,plus:{icon:"+",img:"",bg:"#000096",color:"#ffffff",fx:"pulse"},items:[]},
   hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,waitVideo:true,swipe:true,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
   build:{title:"Build your box",intro:"Choose a size, fill every spot, then tell us when you want it. Each box is baked the morning it leaves the oven room."},
@@ -5560,7 +5699,7 @@ am.addEventListener("click",e=>{
   else if(d.lpsdel!==undefined){pg.strip.items.splice(+d.lpsdel,1);saveDB();lpRender()}
   else if(d.lpfadd!==undefined){const nf=pg.faq.length;pg.faq.push({q:"New question",a:"Your answer."});saveDB();lpRender();showNew(document.querySelector(`[data-lp="faq.${nf}.q"]`)?.closest(".lpblock"))}
   else if(d.lpfdel!==undefined){armed(b,()=>{pg.faq.splice(+d.lpfdel,1);saveDB();toast("Question deleted");lpRender()})}
-  else if(d.lpreset!==undefined){armed(b,()=>{DB.page=defaultPage();saveDB();toast("Landing page reset");lpRender()})}
+  else if(d.lpreset!==undefined){armed(b,()=>{const keepCq=DB.page.cq;DB.page=defaultPage();if(keepCq)DB.page.cq=keepCq;saveDB();toast("Landing page reset");lpRender()})}
 });
 am.addEventListener("toggle",e=>{const d=e.target;if(d.dataset&&d.dataset.sec)LPOPEN[d.dataset.sec]=d.open},true);
 
@@ -6162,7 +6301,7 @@ const PERMS=[["dashboard","Dashboard","sales numbers (visitor numbers are for ow
   ["notify","Notifications","messages to all customers"],["design","Shop look","top banner, landing page, marquee, announcer"],["settings","Shop settings","settings, payment methods, delivery & courier"]];
 const PERM_PRESETS={Cashier:["orders","complaints","customers","labels"],Packer:["orders","labels"],Baker:["orders","products"],Manager:PERMS.map(p=>p[0]).filter(k=>k!=="settings")};
 const TAB_PERM={dashboard:"dashboard",orders:"orders",complaints:"complaints",customers:"customers",labels:"labels",products:"products",badges:"badges",boxes:"boxes",
-  sales:"sales",coupons:"coupons",notify:"notify",announcer:"design",hero:"design",landing:"design",marquee:"design",revrew:"coupons",settings:"settings",delivery:"settings"};
+  sales:"sales",coupons:"coupons",notify:"notify",announcer:"design",hero:"design",landing:"design",carousel:"design",marquee:"design",revrew:"coupons",settings:"settings",delivery:"settings"};
 const myPerms=()=>SBH.on?(SBH.perms||[]):PERMS.map(p=>p[0]);
 const tabAllowed=t=>ROLE()==="owner"||(TAB_PERM[t]&&myPerms().includes(TAB_PERM[t]));
 const CU={list:null,q:"",form:null,err:"",loading:false,stale:false,bf:null,only:"",bm:null,bmd:null,bmOpen:false,bmBusy:false};
