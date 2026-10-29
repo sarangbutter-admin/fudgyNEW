@@ -2459,17 +2459,30 @@ const cqCfg=()=>(DB.page&&DB.page.cq)||{};
 const cqNum=(v,d,lo,hi)=>{v=+v;return isFinite(v)&&String(v)!==""?Math.max(lo,Math.min(hi,v)):d};
 // the flavors in the row: the owner's order and choices first; a new flavor joins at the end by itself
 function cqList(){const c=cqCfg(),vis=DB.products.filter(p=>p.status!=="hidden"),items=Array.isArray(c.items)?c.items:[],seen=new Set(),out=[];
-  items.forEach(it=>{const p=vis.find(x=>x.id===it.pid);if(p&&it.on!==false&&!seen.has(p.id)){seen.add(p.id);out.push({p,it})}});
-  vis.forEach(p=>{if(!seen.has(p.id)&&!items.some(it=>it.pid===p.id))out.push({p,it:{pid:p.id}})});
+  items.forEach(it=>{if(!it||it.on===false)return;if(it.kind==="custom"){if(it.id)out.push({p:null,it});return}const p=vis.find(x=>x.id===it.pid);if(p&&!seen.has(p.id)){seen.add(p.id);out.push({p,it})}});
+  if(c.auto!==false)vis.forEach(p=>{if(!seen.has(p.id)&&!items.some(it=>it&&it.pid===p.id))out.push({p,it:{pid:p.id}})});
   return out}
-// the cookie picture of a flavor as a flat image: it is decoded once, so redrawing a tile is a cheap copy instead of drawing gradients and a blur again
+const cqKey=o=>o.p?o.p.id:o.it.id;
+const CQ_FX=["float","wiggle","pulse","bounce","spin","shine"];
+// a custom card's picture or video: small in the row (a still or a muted loop), playing in the quickview
+function cqMediaHTML(it,big){const v=String(it.video||"").trim(),img=imgOk(it.img),t=esc(it.title||"Video");
+  if(it.media==="video"&&v){const y=ytId(v),vm=vimeoId(v);
+    if(big&&y)return `<div class="cq-vid"><iframe src="https://www.youtube-nocookie.com/embed/${y}?autoplay=1&mute=1&playsinline=1&loop=1&playlist=${y}&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="${t}"></iframe></div>`;
+    if(big&&vm)return `<div class="cq-vid"><iframe src="https://player.vimeo.com/video/${vm}?autoplay=1&muted=1&loop=1" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="${t}"></iframe></div>`;
+    if(y)return `<img class="cq-cimg" src="https://i.ytimg.com/vi/${y}/hqdefault.jpg" alt="" draggable="false"><span class="cq-play" aria-hidden="true">▶</span>`;
+    if(vm)return `${img?`<img class="cq-cimg" src="${esc(img)}" alt="" draggable="false">`:`<div class="cq-cimg cq-ph" aria-hidden="true">🎬</div>`}<span class="cq-play" aria-hidden="true">▶</span>`;
+    if(/^https:\/\/[^\s"'<>]+\.(mp4|webm|ogg|mov)(\?[^\s"'<>]*)?$/i.test(v))return `<video class="cq-cimg" src="${esc(v)}"${img?` poster="${esc(img)}"`:""} muted loop playsinline autoplay preload="metadata"${big?" controls":""}></video>`}
+  return img?`<img class="cq-cimg" src="${esc(img)}" alt="" draggable="false">`:`<div class="cq-cimg cq-ph" aria-hidden="true">✨</div>`}
 function cqPlate(p){const g=plateBg(p),inner=plateInner(p)||"";let body=inner;
   if(/^\s*<svg/i.test(inner)){const k=p.id+"|"+inner.length+"|"+(p.art||"");let u=CQ.svg[k];if(!u){const sv=/xmlns=/.test(inner.slice(0,200))?inner:inner.replace(/^\s*<svg/i,'<svg xmlns="http://www.w3.org/2000/svg"');u=CQ.svg[k]="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(sv)}
     body=`<img class="ck cq-ck" src="${u}" alt="" draggable="false" decoding="async">`}
   return `<div class="plate${g.dark?" dark":""}${inner?"":" blank"}" style="${esc(g.css)}">${body}</div>`}
 function cqPlusHTML(c){const pl=c.plus||{},img=imgOk(pl.img);return img?`<img src="${esc(img)}" alt="" draggable="false">`:esc(String(pl.icon||"+").slice(0,4))}
-function cqCardHTML(o,dup){const {p}=o,c=cqCfg(),pl=c.plus||{},out=isOut(p),fx=["pulse","wiggle","none"].includes(pl.fx)?pl.fx:"pulse",tb=dup?` tabindex="-1"`:"";
-  return `<article class="cq-card${out?" out":""}" data-cqid="${esc(p.id)}"><div class="cq-pl" data-cqopen="${esc(p.id)}">${cqPlate(p)}${c.price!==false&&p.surcharge>0?`<span class="cq-x">+${money(p.surcharge)}</span>`:""}${out?`<span class="cq-sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:""}</div>
+function cqCardHTML(o,dup){const {p,it}=o,c=cqCfg(),pl=c.plus||{},k=cqKey(o),fx=["pulse","wiggle","none"].includes(pl.fx)?pl.fx:"pulse",tb=dup?` tabindex="-1"`:"",cfx=CQ_FX.includes(it.fx)?` cfx-${it.fx}`:"";
+  if(!p)return `<article class="cq-card cq-cust" data-cqid="${esc(k)}"><div class="cq-pl${cfx}" data-cqopen="${esc(k)}"><div class="cq-media">${cqMediaHTML(it)}</div></div>
+    <h4>${esc(it.title||"")}</h4>${it.sub?`<p class="cq-cs">${esc(it.sub)}</p>`:""}<button class="cq-plus fx-${fx}" type="button" data-cqopen="${esc(k)}"${tb} aria-label="See more about ${esc(it.title||"this card")}">${cqPlusHTML(c)}</button></article>`;
+  const out=isOut(p);
+  return `<article class="cq-card${out?" out":""}" data-cqid="${esc(p.id)}"><div class="cq-pl${cfx}" data-cqopen="${esc(p.id)}">${cqPlate(p)}${c.price!==false&&p.surcharge>0?`<span class="cq-x">+${money(p.surcharge)}</span>`:""}${out?`<span class="cq-sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:""}</div>
     <h4>${esc(p.name)}</h4><button class="cq-plus fx-${fx}" type="button" data-cqopen="${esc(p.id)}"${tb} aria-label="See the details of ${esc(p.name)}">${cqPlusHTML(c)}</button></article>`}
 function cqStop(){clearTimeout(CQ.rt);CQ.tr=CQ.row=CQ.dw=null}
 // the shop page shows it while the shop is open; the pre-launch page has its own copy below the mini game
@@ -2478,7 +2491,7 @@ function renderPreCarousel(){const el=document.getElementById("cqPre");if(el)cqM
 /* Runs like the marquee banner: a CSS animation slides identical sets by exactly one set, forever (the browser does it on its own).
    Pausing only freezes that animation. A finger or mouse moves an outer wrapper, so the running loop is never disturbed. */
 function cqMount(el,force,pre){const c=cqCfg(),list=cqList(),on=(pre?c.pre!==false:!!c.on)&&list.length>0;
-  const sig=JSON.stringify([on,pre,c,list.map(o=>[o.p.id,o.p.name,o.p.status,o.p.surcharge,o.p.track?o.p.stock:0])]);if(!force&&sig===CQ.sig&&CQ.host===el)return;CQ.sig=sig;CQ.host=el;
+  const sig=JSON.stringify([on,pre,c,list.map(o=>o.p?[o.p.id,o.p.name,o.p.status,o.p.surcharge,o.p.track?o.p.stock:0]:[o.it.id])]);if(!force&&sig===CQ.sig&&CQ.host===el)return;CQ.sig=sig;CQ.host=el;
   cqStop();if(!on){el.hidden=true;el.innerHTML="";return}
   el.hidden=false;
   const cw=CQ_SZ[c.size]||CQ_SZ.M,vw=Math.max(el.clientWidth||0,innerWidth||0,320),r=Math.max(1,Math.ceil(1.3*vw/((cw+14)*list.length))),
@@ -2521,11 +2534,12 @@ function cqBodyHTML(s){const t=s.type;
 function cqSecHTML(s,i){const open=s.auto===true,tip=String(s.tip||"").trim();
   return `<section class="cq-sec${open?" open":""}"><div class="cq-sh"><button class="cq-sht" type="button" data-cqsec aria-expanded="${open}">${cqIcon(s,"cq-shi")}<b>${esc(s.title||CQ_DT[s.type]||"Details")}</b><i class="cq-chev" aria-hidden="true"></i></button>${tip?`<button class="cq-tip" type="button" data-cqtip aria-label="More info" aria-expanded="false">!</button>`:""}</div>
     ${tip?`<div class="cq-tm" role="note" hidden>${esc(tip)}</div>`:""}<div class="cq-sb"${open?"":" hidden"}>${cqBodyHTML(s)}</div></section>`}
-function cqQvHTML(p,it){const secs=(it.secs||[]).filter(s=>s&&["bar","notes","text","image"].includes(s.type));
-  return `<div class="cq-qc" role="dialog" aria-modal="true" aria-label="${esc(p.name)}"><button class="cq-qx" type="button" data-cqx aria-label="Close">✕</button>
-    <div class="cq-qh"><div class="cq-qp">${plateHTML(p)}</div><h3>${esc(p.name)}</h3>${p.desc?`<p class="cq-qd">${esc(p.desc)}</p>`:""}${p.surcharge>0?`<span class="cq-x on">+${money(p.surcharge)} per cookie</span>`:""}</div>
-    <div class="cq-secs">${secs.length?secs.map(cqSecHTML).join(""):`<p class="cq-em">More details are coming soon.</p>`}</div><button class="btn btn-blue cq-cl" type="button" data-cqx>Close</button></div>`}
-function cqOpen(pid){const p=prod(pid);if(!p)return;const it=(cqCfg().items||[]).find(x=>x.pid===pid)||{pid};CQ.open=true;cqPause();CQ.opener=document.activeElement;
+function cqQvHTML(p,it){const secs=(it.secs||[]).filter(s=>s&&["bar","notes","text","image"].includes(s.type)),nm=p?p.name:(it.title||"");
+  const head=p?`<div class="cq-qp">${plateHTML(p)}</div><h3>${esc(p.name)}</h3>${p.desc?`<p class="cq-qd">${esc(p.desc)}</p>`:""}${p.surcharge>0?`<span class="cq-x on">+${money(p.surcharge)} per cookie</span>`:""}`
+    :`<div class="cq-qm">${cqMediaHTML(it,true)}</div>${it.title?`<h3>${esc(it.title)}</h3>`:""}${it.sub?`<p class="cq-qd">${esc(it.sub)}</p>`:""}`;
+  return `<div class="cq-qc" role="dialog" aria-modal="true" aria-label="${esc(nm||"Details")}"><button class="cq-qx" type="button" data-cqx aria-label="Close">✕</button>
+    <div class="cq-qh">${head}</div><div class="cq-secs">${secs.length?secs.map(cqSecHTML).join(""):p?`<p class="cq-em">More details are coming soon.</p>`:""}</div><button class="btn btn-blue cq-cl" type="button" data-cqx>Close</button></div>`}
+function cqOpen(key){const it=(cqCfg().items||[]).find(x=>x&&(x.id===key||x.pid===key))||{pid:key},p=it.kind==="custom"?null:prod(it.pid||key);if(!p&&it.kind!=="custom")return;CQ.open=true;cqPause();CQ.opener=document.activeElement;
   let m=document.getElementById("cqQv");if(!m){m=document.createElement("div");m.id="cqQv";m.className="cq-qv";document.body.appendChild(m);
     m.addEventListener("click",e=>{if(e.target===m||e.target.closest("[data-cqx]")){cqClose();return}
       const st=e.target.closest("[data-cqsec]");if(st){const s=st.closest(".cq-sec"),o=!s.classList.contains("open");s.classList.toggle("open",o);st.setAttribute("aria-expanded",String(o));s.querySelector(".cq-sb").hidden=!o;return}
@@ -2654,7 +2668,7 @@ function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffff
   logoSize:0,nameShow:true,nameSize:0,bb:{name:"Blind box",img:"",fx:"wiggle",speed:100,size:120,tip:"Tap the box to open it!"},nameSide:"right",logoPos:{m:"normal",x:0,y:0},adm:{name:"",show:true,size:0,logo:""},
   mq2:{on:false,noFont:true,texts:["Hello there! Fresh cookies, baked daily"],images:[],links:[],mode:"both",imgH:0,bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium"},bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},
   snow:{on:false,icon:"❄️",imgs:[],n:40,speed:4,size:30,op:80,layer:"front",sway:true,spin:false,shop:true,aff:true,admin:false},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
-  cq:{on:false,pre:true,title:"Meet our flavors",sub:"Tap the + to peek inside each cookie.",speed:3,dir:"left",size:"M",bg:"#FFF4D6",ink:"#0B0B45",accent:"#000096",price:true,rs:1.5,rc:1,plus:{icon:"+",img:"",bg:"#000096",color:"#ffffff",fx:"pulse"},items:[]},
+  cq:{on:false,pre:true,auto:true,title:"Meet our flavors",sub:"Tap the + to peek inside each cookie.",speed:3,dir:"left",size:"M",bg:"#FFF4D6",ink:"#0B0B45",accent:"#000096",price:true,rs:1.5,rc:1,plus:{icon:"+",img:"",bg:"#000096",color:"#ffffff",fx:"pulse"},items:[]},
   hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,waitVideo:true,swipe:true,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
   build:{title:"Build your box",intro:"Choose a size, fill every spot, then tell us when you want it. Each box is baked the morning it leaves the oven room."},
@@ -3110,7 +3124,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 18:35 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 18:45 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

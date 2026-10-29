@@ -2481,17 +2481,30 @@ const cqCfg=()=>(DB.page&&DB.page.cq)||{};
 const cqNum=(v,d,lo,hi)=>{v=+v;return isFinite(v)&&String(v)!==""?Math.max(lo,Math.min(hi,v)):d};
 // the flavors in the row: the owner's order and choices first; a new flavor joins at the end by itself
 function cqList(){const c=cqCfg(),vis=DB.products.filter(p=>p.status!=="hidden"),items=Array.isArray(c.items)?c.items:[],seen=new Set(),out=[];
-  items.forEach(it=>{const p=vis.find(x=>x.id===it.pid);if(p&&it.on!==false&&!seen.has(p.id)){seen.add(p.id);out.push({p,it})}});
-  vis.forEach(p=>{if(!seen.has(p.id)&&!items.some(it=>it.pid===p.id))out.push({p,it:{pid:p.id}})});
+  items.forEach(it=>{if(!it||it.on===false)return;if(it.kind==="custom"){if(it.id)out.push({p:null,it});return}const p=vis.find(x=>x.id===it.pid);if(p&&!seen.has(p.id)){seen.add(p.id);out.push({p,it})}});
+  if(c.auto!==false)vis.forEach(p=>{if(!seen.has(p.id)&&!items.some(it=>it&&it.pid===p.id))out.push({p,it:{pid:p.id}})});
   return out}
-// the cookie picture of a flavor as a flat image: it is decoded once, so redrawing a tile is a cheap copy instead of drawing gradients and a blur again
+const cqKey=o=>o.p?o.p.id:o.it.id;
+const CQ_FX=["float","wiggle","pulse","bounce","spin","shine"];
+// a custom card's picture or video: small in the row (a still or a muted loop), playing in the quickview
+function cqMediaHTML(it,big){const v=String(it.video||"").trim(),img=imgOk(it.img),t=esc(it.title||"Video");
+  if(it.media==="video"&&v){const y=ytId(v),vm=vimeoId(v);
+    if(big&&y)return `<div class="cq-vid"><iframe src="https://www.youtube-nocookie.com/embed/${y}?autoplay=1&mute=1&playsinline=1&loop=1&playlist=${y}&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="${t}"></iframe></div>`;
+    if(big&&vm)return `<div class="cq-vid"><iframe src="https://player.vimeo.com/video/${vm}?autoplay=1&muted=1&loop=1" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="${t}"></iframe></div>`;
+    if(y)return `<img class="cq-cimg" src="https://i.ytimg.com/vi/${y}/hqdefault.jpg" alt="" draggable="false"><span class="cq-play" aria-hidden="true">▶</span>`;
+    if(vm)return `${img?`<img class="cq-cimg" src="${esc(img)}" alt="" draggable="false">`:`<div class="cq-cimg cq-ph" aria-hidden="true">🎬</div>`}<span class="cq-play" aria-hidden="true">▶</span>`;
+    if(/^https:\/\/[^\s"'<>]+\.(mp4|webm|ogg|mov)(\?[^\s"'<>]*)?$/i.test(v))return `<video class="cq-cimg" src="${esc(v)}"${img?` poster="${esc(img)}"`:""} muted loop playsinline autoplay preload="metadata"${big?" controls":""}></video>`}
+  return img?`<img class="cq-cimg" src="${esc(img)}" alt="" draggable="false">`:`<div class="cq-cimg cq-ph" aria-hidden="true">✨</div>`}
 function cqPlate(p){const g=plateBg(p),inner=plateInner(p)||"";let body=inner;
   if(/^\s*<svg/i.test(inner)){const k=p.id+"|"+inner.length+"|"+(p.art||"");let u=CQ.svg[k];if(!u){const sv=/xmlns=/.test(inner.slice(0,200))?inner:inner.replace(/^\s*<svg/i,'<svg xmlns="http://www.w3.org/2000/svg"');u=CQ.svg[k]="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(sv)}
     body=`<img class="ck cq-ck" src="${u}" alt="" draggable="false" decoding="async">`}
   return `<div class="plate${g.dark?" dark":""}${inner?"":" blank"}" style="${esc(g.css)}">${body}</div>`}
 function cqPlusHTML(c){const pl=c.plus||{},img=imgOk(pl.img);return img?`<img src="${esc(img)}" alt="" draggable="false">`:esc(String(pl.icon||"+").slice(0,4))}
-function cqCardHTML(o,dup){const {p}=o,c=cqCfg(),pl=c.plus||{},out=isOut(p),fx=["pulse","wiggle","none"].includes(pl.fx)?pl.fx:"pulse",tb=dup?` tabindex="-1"`:"";
-  return `<article class="cq-card${out?" out":""}" data-cqid="${esc(p.id)}"><div class="cq-pl" data-cqopen="${esc(p.id)}">${cqPlate(p)}${c.price!==false&&p.surcharge>0?`<span class="cq-x">+${money(p.surcharge)}</span>`:""}${out?`<span class="cq-sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:""}</div>
+function cqCardHTML(o,dup){const {p,it}=o,c=cqCfg(),pl=c.plus||{},k=cqKey(o),fx=["pulse","wiggle","none"].includes(pl.fx)?pl.fx:"pulse",tb=dup?` tabindex="-1"`:"",cfx=CQ_FX.includes(it.fx)?` cfx-${it.fx}`:"";
+  if(!p)return `<article class="cq-card cq-cust" data-cqid="${esc(k)}"><div class="cq-pl${cfx}" data-cqopen="${esc(k)}"><div class="cq-media">${cqMediaHTML(it)}</div></div>
+    <h4>${esc(it.title||"")}</h4>${it.sub?`<p class="cq-cs">${esc(it.sub)}</p>`:""}<button class="cq-plus fx-${fx}" type="button" data-cqopen="${esc(k)}"${tb} aria-label="See more about ${esc(it.title||"this card")}">${cqPlusHTML(c)}</button></article>`;
+  const out=isOut(p);
+  return `<article class="cq-card${out?" out":""}" data-cqid="${esc(p.id)}"><div class="cq-pl${cfx}" data-cqopen="${esc(p.id)}">${cqPlate(p)}${c.price!==false&&p.surcharge>0?`<span class="cq-x">+${money(p.surcharge)}</span>`:""}${out?`<span class="cq-sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:""}</div>
     <h4>${esc(p.name)}</h4><button class="cq-plus fx-${fx}" type="button" data-cqopen="${esc(p.id)}"${tb} aria-label="See the details of ${esc(p.name)}">${cqPlusHTML(c)}</button></article>`}
 function cqStop(){clearTimeout(CQ.rt);CQ.tr=CQ.row=CQ.dw=null}
 // the shop page shows it while the shop is open; the pre-launch page has its own copy below the mini game
@@ -2500,7 +2513,7 @@ function renderPreCarousel(){const el=document.getElementById("cqPre");if(el)cqM
 /* Runs like the marquee banner: a CSS animation slides identical sets by exactly one set, forever (the browser does it on its own).
    Pausing only freezes that animation. A finger or mouse moves an outer wrapper, so the running loop is never disturbed. */
 function cqMount(el,force,pre){const c=cqCfg(),list=cqList(),on=(pre?c.pre!==false:!!c.on)&&list.length>0;
-  const sig=JSON.stringify([on,pre,c,list.map(o=>[o.p.id,o.p.name,o.p.status,o.p.surcharge,o.p.track?o.p.stock:0])]);if(!force&&sig===CQ.sig&&CQ.host===el)return;CQ.sig=sig;CQ.host=el;
+  const sig=JSON.stringify([on,pre,c,list.map(o=>o.p?[o.p.id,o.p.name,o.p.status,o.p.surcharge,o.p.track?o.p.stock:0]:[o.it.id])]);if(!force&&sig===CQ.sig&&CQ.host===el)return;CQ.sig=sig;CQ.host=el;
   cqStop();if(!on){el.hidden=true;el.innerHTML="";return}
   el.hidden=false;
   const cw=CQ_SZ[c.size]||CQ_SZ.M,vw=Math.max(el.clientWidth||0,innerWidth||0,320),r=Math.max(1,Math.ceil(1.3*vw/((cw+14)*list.length))),
@@ -2543,11 +2556,12 @@ function cqBodyHTML(s){const t=s.type;
 function cqSecHTML(s,i){const open=s.auto===true,tip=String(s.tip||"").trim();
   return `<section class="cq-sec${open?" open":""}"><div class="cq-sh"><button class="cq-sht" type="button" data-cqsec aria-expanded="${open}">${cqIcon(s,"cq-shi")}<b>${esc(s.title||CQ_DT[s.type]||"Details")}</b><i class="cq-chev" aria-hidden="true"></i></button>${tip?`<button class="cq-tip" type="button" data-cqtip aria-label="More info" aria-expanded="false">!</button>`:""}</div>
     ${tip?`<div class="cq-tm" role="note" hidden>${esc(tip)}</div>`:""}<div class="cq-sb"${open?"":" hidden"}>${cqBodyHTML(s)}</div></section>`}
-function cqQvHTML(p,it){const secs=(it.secs||[]).filter(s=>s&&["bar","notes","text","image"].includes(s.type));
-  return `<div class="cq-qc" role="dialog" aria-modal="true" aria-label="${esc(p.name)}"><button class="cq-qx" type="button" data-cqx aria-label="Close">✕</button>
-    <div class="cq-qh"><div class="cq-qp">${plateHTML(p)}</div><h3>${esc(p.name)}</h3>${p.desc?`<p class="cq-qd">${esc(p.desc)}</p>`:""}${p.surcharge>0?`<span class="cq-x on">+${money(p.surcharge)} per cookie</span>`:""}</div>
-    <div class="cq-secs">${secs.length?secs.map(cqSecHTML).join(""):`<p class="cq-em">More details are coming soon.</p>`}</div><button class="btn btn-blue cq-cl" type="button" data-cqx>Close</button></div>`}
-function cqOpen(pid){const p=prod(pid);if(!p)return;const it=(cqCfg().items||[]).find(x=>x.pid===pid)||{pid};CQ.open=true;cqPause();CQ.opener=document.activeElement;
+function cqQvHTML(p,it){const secs=(it.secs||[]).filter(s=>s&&["bar","notes","text","image"].includes(s.type)),nm=p?p.name:(it.title||"");
+  const head=p?`<div class="cq-qp">${plateHTML(p)}</div><h3>${esc(p.name)}</h3>${p.desc?`<p class="cq-qd">${esc(p.desc)}</p>`:""}${p.surcharge>0?`<span class="cq-x on">+${money(p.surcharge)} per cookie</span>`:""}`
+    :`<div class="cq-qm">${cqMediaHTML(it,true)}</div>${it.title?`<h3>${esc(it.title)}</h3>`:""}${it.sub?`<p class="cq-qd">${esc(it.sub)}</p>`:""}`;
+  return `<div class="cq-qc" role="dialog" aria-modal="true" aria-label="${esc(nm||"Details")}"><button class="cq-qx" type="button" data-cqx aria-label="Close">✕</button>
+    <div class="cq-qh">${head}</div><div class="cq-secs">${secs.length?secs.map(cqSecHTML).join(""):p?`<p class="cq-em">More details are coming soon.</p>`:""}</div><button class="btn btn-blue cq-cl" type="button" data-cqx>Close</button></div>`}
+function cqOpen(key){const it=(cqCfg().items||[]).find(x=>x&&(x.id===key||x.pid===key))||{pid:key},p=it.kind==="custom"?null:prod(it.pid||key);if(!p&&it.kind!=="custom")return;CQ.open=true;cqPause();CQ.opener=document.activeElement;
   let m=document.getElementById("cqQv");if(!m){m=document.createElement("div");m.id="cqQv";m.className="cq-qv";document.body.appendChild(m);
     m.addEventListener("click",e=>{if(e.target===m||e.target.closest("[data-cqx]")){cqClose();return}
       const st=e.target.closest("[data-cqsec]");if(st){const s=st.closest(".cq-sec"),o=!s.classList.contains("open");s.classList.toggle("open",o);st.setAttribute("aria-expanded",String(o));s.querySelector(".cq-sb").hidden=!o;return}
@@ -4938,28 +4952,30 @@ document.addEventListener("click",e=>{});
 
 function mqLum(h){const c=[1,3,5].map(i=>{const v=parseInt(h.slice(i,i+2),16)/255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*c[0]+.7152*c[1]+.0722*c[2]}
 function mqContrast(a,b){const x=mqLum(a),y=mqLum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
-/* ===== Carrousel card (owner): the running flavor row, and the quickview details of each flavor ===== */
-const CQA={ed:null};
+/* ===== Carrousel card (owner): the cards of the running row (flavors or custom picture/video cards) and their quickview details ===== */
+const CQA={ed:null,add:null,sec:null};
 const cqs=()=>DB.page.cq,cqg=path=>path.split(".").reduce((o,k)=>o==null?undefined:o[k],cqs());
 const cqset=(path,v)=>{const ks=path.split("."),l=ks.pop();let o=cqs();for(const k of ks){if(o[k]==null)o[k]={};o=o[k]}o[l]=v;saveSoon()};
 const cqRR=()=>{const y=scrollY;renderAdmin();scrollTo(0,y)};
-// the flavors as the owner sees them: the saved order first (also the ones switched off), then flavors not placed yet
+// every card as the owner sees it: the saved order first (also the ones switched off), then flavors not placed yet (when they join by themselves)
 function cqAdminList(){const c=cqs(),vis=DB.products.filter(p=>p.status!=="hidden"),items=Array.isArray(c.items)?c.items:[],out=[],seen=new Set();
-  items.forEach(it=>{const p=vis.find(x=>x.id===it.pid);if(p&&!seen.has(p.id)){seen.add(p.id);out.push({p,it})}});
-  vis.forEach(p=>{if(!seen.has(p.id))out.push({p,it:{pid:p.id,on:true,secs:[]}})});return out}
+  items.forEach(it=>{if(!it)return;if(it.kind==="custom"){if(it.id)out.push({p:null,it,key:it.id});return}const p=vis.find(x=>x.id===it.pid);if(p&&!seen.has(p.id)){seen.add(p.id);out.push({p,it,key:p.id})}});
+  if(c.auto!==false)vis.forEach(p=>{if(!seen.has(p.id))out.push({p,it:{pid:p.id,on:true,secs:[]},key:p.id})});return out}
 const cqMat=()=>{cqs().items=cqAdminList().map(x=>x.it);return cqs().items};
-function cqEnt(pid){const c=cqs();c.items=Array.isArray(c.items)?c.items:[];let i=c.items.findIndex(x=>x.pid===pid);if(i<0){c.items.push({pid,on:true,secs:[]});i=c.items.length-1}const it=c.items[i];if(!Array.isArray(it.secs))it.secs=[];return i}
+function cqEnt(key){const c=cqs();c.items=Array.isArray(c.items)?c.items:[];let i=c.items.findIndex(x=>x&&(x.id===key||x.pid===key));if(i<0){c.items.push({pid:key,on:true,secs:[]});i=c.items.length-1}const it=c.items[i];if(!Array.isArray(it.secs))it.secs=[];return i}
 const CQ_NEW={bar:()=>({type:"bar",title:"Sweet",auto:true,tip:"",icon:"",img:"",n:5,v:3,lo:"Mild",mid:"Fair",hi:"Sweet"}),
   notes:()=>({type:"notes",title:"Taste notes",auto:true,tip:"",icon:"",img:"",list:[{label:"Butter",icon:"🧈",img:""}]}),
   text:()=>({type:"text",title:"Good to know",auto:false,tip:"",icon:"💡",img:"",body:""}),
   image:()=>({type:"image",title:"Photo",auto:false,tip:"",icon:"",img:"",img2:"",caption:""})};
 const CQ_LBL={bar:"📊 Bar meter",notes:"👅 Taste notes",text:"💡 Text box",image:"🖼️ Picture / GIF"};
+const CQ_HELP={bar:"1 to 5 bars with three labels, like Mild · Fair · Sweet",notes:"Little tiles with an emoji, picture or GIF, like Butter or Caramel",text:"A title with an icon and a description below",image:"A big picture or GIF with a caption"};
+const CQ_FXL=[["none","None"],["float","Float"],["wiggle","Wiggle"],["pulse","Pulse"],["bounce","Bounce"],["spin","Spin"],["shine","Shine"]];
 function viewCarousel(){const c=cqs(),list=cqAdminList();
   const t=(l,k,o={})=>`<label class="af">${l}${o.rows?`<textarea class="in" rows="${o.rows}" data-cq="${k}" maxlength="${o.max||400}">${esc(cqg(k)??"")}</textarea>`:`<input class="in" data-cq="${k}" maxlength="${o.max||120}" value="${esc(cqg(k)??"")}"${o.ph?` placeholder="${esc(o.ph)}"`:""}>`}</label>`;
   const nm=(l,k,mn,mx,st)=>`<label class="af">${l}<input class="in" type="number" min="${mn}" max="${mx}" step="${st||1}" data-cq="${k}" data-cqnum value="${esc(cqg(k)??"")}"></label>`;
   const col=(l,k,d)=>`<label class="af">${l}<input type="color" data-cq="${k}" value="${esc(HEX6.test(cqg(k)||"")?cqg(k):d)}" style="width:100%;height:40px"></label>`;
   const sw=(l,k,d)=>`<div style="display:flex;gap:10px;align-items:center"><label class="sw"><input type="checkbox" data-cqchk="${k}" ${(cqg(k)??d)!==false?"checked":""} aria-label="${esc(l)}"><span></span></label><span class="stlabel">${l}</span></div>`;
-  const chips=(k,opts,num)=>`<div class="chips" style="margin-top:6px">${opts.map(([v,l])=>`<button class="fchip" type="button" data-cqset="${k}|${v}" aria-pressed="${String(cqg(k))===String(v)}">${l}</button>`).join("")}</div>`;
+  const chips=(k,opts)=>`<div class="chips" style="margin-top:6px">${opts.map(([v,l])=>`<button class="fchip" type="button" data-cqset="${k}|${v}" aria-pressed="${String(cqg(k)??(k.endsWith(".fx")?"none":""))===String(v)}">${l}</button>`).join("")}</div>`;
   const img=(l,k)=>{const v=String(cqg(k)||"");return `<div class="af">${l}<div class="colin" style="gap:6px;flex-wrap:wrap"><input class="in" data-cq="${k}" maxlength="500" placeholder="https://… (link to a picture or GIF)" value="${esc(v)}" style="flex:1;min-width:150px"><label class="ghost mqbtn">⬆ Upload<input type="file" accept="image/*" hidden data-cqup="${k}"></label>${v?`<button class="ghost sm" type="button" data-cqclr="${k}" aria-label="Remove the picture">✕</button>`:""}</div>${imgOk(v)?`<img class="cqthumb" src="${esc(v)}" alt="">`:v?`<small style="color:#C8102E">Only https:// links work.</small>`:""}</div>`};
   const secEd=(idx,si,s)=>{const P=`items.${idx}.secs.${si}`,type=s.type;
     const body=type==="bar"?`<div class="grid2"><div class="af">How many bars in total${chips(P+".n",[1,2,3,4,5].map(n=>[n,n]))}</div><div class="af">How many bars are filled${chips(P+".v",[1,2,3,4,5].filter(n=>n<=(+s.n||5)).map(n=>[n,n]))}</div></div>
@@ -4971,41 +4987,61 @@ function viewCarousel(){const c=cqs(),list=cqAdminList();
       <div class="grid2">${t("Title",P+".title",{max:40})}${t("Header icon (emoji)",P+".icon",{max:4})}</div>${img("Header icon as a picture or GIF (optional)",P+".img")}
       <div class="af">When someone opens the quickview${chips(P+".auto",[["true","Show it open"],["false","Tap to view"]])}</div>
       ${t("Exclamation ! message (leave empty for no ! mark)",P+".tip",{rows:2,max:240})}${body}</div>`};
-  const row=(x,n)=>{const p=x.p,it=x.it,on=it.on!==false,secs=it.secs||[],open=CQA.ed===p.id,idx=open?cqEnt(p.id):-1;
-    return `<div class="pmcard cqrow"><div class="cqrow-h"><span class="cqrow-i">${plateHTML(p)}</span><div class="cqrow-n"><b>${esc(p.name)}</b><small>${secs.length} detail${secs.length===1?"":"s"}</small></div>
-      <label class="sw"><input type="checkbox" ${on?"checked":""} data-cqtog="${esc(p.id)}" aria-label="Show ${esc(p.name)} in the carousel"><span></span></label>
-      <div class="colin" style="gap:4px">${n?`<button class="ghost sm" type="button" data-cqmv="${esc(p.id)}|-1" aria-label="Move earlier">↑</button>`:""}${n<list.length-1?`<button class="ghost sm" type="button" data-cqmv="${esc(p.id)}|1" aria-label="Move later">↓</button>`:""}</div></div>
-      <div class="colin" style="gap:8px;flex-wrap:wrap"><button class="btn btn-blue btn-sm" type="button" data-cqed="${esc(p.id)}">${open?"Close the editor":"✏️ Quickview details"}</button><button class="ghost" type="button" data-cqprev="${esc(p.id)}">👁 Preview</button></div>
-      ${open?`<div class="stack" style="gap:10px;margin-top:6px">${secs.map((s,si)=>secEd(idx,si,s)).join("")}<div class="af">Add a detail${`<div class="chips" style="margin-top:6px">${Object.keys(CQ_LBL).map(k=>`<button class="fchip" type="button" data-cqadd="${esc(p.id)}|${k}">+ ${CQ_LBL[k]}</button>`).join("")}</div>`}</div></div>`:""}</div>`};
-  return head("Carrousel card","A row of flavor cards that runs on its own on your shop page. Customers tap + to open a quickview with the details you write here.")+`<div class="stack">
+  const thumb=x=>x.p?plateHTML(x.p):`<div class="cq-media" style="border-radius:14px">${cqMediaHTML(x.it)}</div>`;
+  const row=(x,n)=>{const it=x.it,on=it.on!==false,secs=it.secs||[],open=CQA.ed===x.key,idx=open?cqEnt(x.key):-1,P=`items.${idx}`,cust=!x.p;
+    return `<div class="pmcard cqrow"><div class="cqrow-h"><span class="cqrow-i">${thumb(x)}</span><div class="cqrow-n"><b>${esc(cust?(it.title||"Custom card"):x.p.name)}</b><small>${cust?(it.media==="video"?"🎬 Video card":"🖼️ Picture card"):"🍪 Flavor"} · ${secs.length} detail${secs.length===1?"":"s"}${CQ_FX.includes(it.fx)?" · ✨ "+it.fx:""}</small></div>
+      <label class="sw"><input type="checkbox" ${on?"checked":""} data-cqtog="${esc(x.key)}" aria-label="Show this card"><span></span></label>
+      <div class="colin" style="gap:4px">${n?`<button class="ghost sm" type="button" data-cqmv="${esc(x.key)}|-1" aria-label="Move earlier">↑</button>`:""}${n<list.length-1?`<button class="ghost sm" type="button" data-cqmv="${esc(x.key)}|1" aria-label="Move later">↓</button>`:""}</div></div>
+      <div class="colin" style="gap:8px;flex-wrap:wrap"><button class="btn btn-blue btn-sm" type="button" data-cqed="${esc(x.key)}">${open?"Close the editor":"✏️ Edit card"}</button><button class="ghost" type="button" data-cqprev="${esc(x.key)}">👁 Preview</button>${cust?`<button class="danger sm" type="button" data-cqdel="${esc(x.key)}">Delete card</button>`:""}</div>
+      ${open?`<div class="stack" style="gap:10px;margin-top:6px">
+        ${cust?`<div class="lpblock"><b>The card</b><div class="grid2">${t("Title",P+".title",{max:60})}${t("Text under the title (optional)",P+".sub",{max:120})}</div>
+          <div class="af">Show${chips(P+".media",[["image","🖼️ A picture / GIF"],["video","🎬 A video link"]])}</div>
+          ${it.media==="video"?`${t("Video link (YouTube, Vimeo, or a direct .mp4 link)",P+".video",{max:400,ph:"https://youtu.be/…"})}${img("Cover picture (optional, shown before it plays)",P+".img")}`:img("Picture or GIF",P+".img")}</div>`:""}
+        <div class="af">✨ Lively effect on the card picture${chips(P+".fx",CQ_FXL)}</div>
+        <h4 style="margin:6px 0 0">Quickview details</h4>${secs.map((s,si)=>secEd(idx,si,s)).join("")||`<p class="note" style="margin:0">No details yet.</p>`}
+        ${CQA.sec===x.key?`<div class="lpblock"><b>Which kind of detail?</b><div class="stack" style="gap:6px;margin-top:6px">${Object.keys(CQ_LBL).map(k=>`<button class="ghost cqpick" type="button" data-cqsecadd="${esc(x.key)}|${k}"><b>${CQ_LBL[k]}</b><small>${CQ_HELP[k]}</small></button>`).join("")}</div><button class="ghost sm" type="button" data-cqsecx style="margin-top:6px">Cancel</button></div>`
+          :`<button class="btn btn-ghost-blue btn-sm" type="button" data-cqsecnew="${esc(x.key)}" style="justify-self:start">+ Add a detail</button>`}</div>`:""}</div>`};
+  const flav=DB.products.filter(p=>p.status!=="hidden"&&!list.some(x=>x.p&&x.p.id===p.id));
+  const adder=CQA.add==="choose"?`<div class="lpblock"><b>What kind of card?</b><div class="stack" style="gap:6px;margin-top:6px"><button class="ghost cqpick" type="button" data-cqnewk="flavor"><b>🍪 A flavor from your menu</b><small>Its picture, name and price come from Flavors</small></button><button class="ghost cqpick" type="button" data-cqnewk="custom"><b>✨ A custom card</b><small>Your own picture, GIF or video link, with a title</small></button></div><button class="ghost sm" type="button" data-cqnewx style="margin-top:6px">Cancel</button></div>`
+    :CQA.add==="flavor"?`<div class="lpblock"><b>Which flavor?</b>${flav.length?`<div class="colin" style="gap:8px;flex-wrap:wrap;margin-top:6px"><select class="in" id="cqNewF" style="flex:1;min-width:160px">${flav.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select><button class="btn btn-blue btn-sm" type="button" data-cqnewf>Add</button></div>`:`<p class="note" style="margin:6px 0 0">All your flavors are already in the carousel. Switch one back on in the list below.</p>`}<button class="ghost sm" type="button" data-cqnewx style="margin-top:6px">Cancel</button></div>`
+    :`<button class="btn btn-blue btn-sm" type="button" data-cqnew style="justify-self:start">+ Add card</button>`;
+  return head("Carrousel card","A row of cards that runs by itself on your shop page. Customers tap + to open a quickview with the details you write here.")+`<div class="stack">
   <section class="panel"><h2>🎠 The carousel</h2>${sw("Show the carousel on the shop page (above Build your box)","on",false)}${sw("Show the carousel on the pre-launch page (below the mini game)","pre",true)}
     <div class="grid2" style="margin-top:10px">${t("Title","title",{max:80})}${t("Text under the title","sub",{max:160})}</div>
     <div class="grid2" style="margin-top:8px"><label class="af">Running speed: <b id="cqSpL">${+c.speed||3}</b> of 10<input type="range" min="1" max="10" step="1" data-cq="speed" data-cqnum data-cqlab="cqSpL" value="${+c.speed||3}" style="width:100%"></label>
       <div class="af">Direction${chips("dir",[["left","◀ Moves left"],["right","Moves right ▶"]])}</div></div>
-    <div class="grid2" style="margin-top:8px"><div class="af">Card size${chips("size",[["S","Small"],["M","Medium"],["L","Large"]])}</div>${sw("Show the extra price on a card","price",true)}</div>
+    <div class="grid2" style="margin-top:8px"><div class="af">Card size${chips("size",[["S","Small"],["M","Medium"],["L","Large"]])}</div>${sw("Show the extra price on a flavor card","price",true)}</div>
     <div class="grid3" style="margin-top:8px">${col("Card color","bg","#FFF4D6")}${col("Text color","ink","#0B0B45")}${col("Title color","accent","#000096")}</div>
-    <div class="grid2" style="margin-top:8px">${nm("Runs again after a slide (seconds)","rs",0,10,0.5)}${nm("Runs again after the quickview closes (seconds)","rc",0,10,0.5)}</div>
-    <p class="note" style="margin:6px 0 0">The row stops while a customer touches or slides it and while the quickview is open, then runs again after these waits.</p></section>
+    <div class="grid2" style="margin-top:8px">${nm("Runs again after a slide (seconds)","rs",0,10,0.5)}${nm("Runs again after the quickview closes (seconds)","rc",0,10,0.5)}</div></section>
   <section class="panel"><h2>➕ The plus button</h2><div class="grid3">${t("Symbol (a character or emoji)","plus.icon",{max:4})}${col("Button color","plus.bg","#000096")}${col("Symbol color","plus.color","#ffffff")}</div>
     ${img("…or use your own picture / GIF as the button","plus.img")}<div class="af">Effect${chips("plus.fx",[["pulse","Pulse"],["wiggle","Wiggle"],["none","None"]])}</div></section>
-  <section class="panel"><h2>🍪 Flavors in the carousel</h2><p class="sub">Switch a flavor off to hide it from the row. Use the arrows to change the order. New flavors join the end of the row by themselves.</p>
-    <div class="stack" style="gap:10px;margin-top:8px">${list.length?list.map(row).join(""):`<p class="note">No flavors yet. Add them in Flavors first.</p>`}</div></section></div>`}
+  <section class="panel"><h2>🃏 Cards</h2><p class="sub">Add flavor cards or your own picture and video cards. Switch a card off to hide it, use the arrows to change the order.</p>
+    ${sw("New flavors join the carousel by themselves","auto",true)}
+    <div style="margin:10px 0">${adder}</div>
+    <div class="stack" style="gap:10px">${list.length?list.map(row).join(""):`<p class="note">No cards yet. Press + Add card.</p>`}</div></section></div>`}
 const cqAm=$("#amain");
 cqAm.addEventListener("input",e=>{const el=e.target,k=el.dataset.cq;if(!k||A.tab!=="carousel")return;const v=el.dataset.cqnum!==undefined?(el.value===""?"":+el.value):el.value;cqset(k,v);if(el.dataset.cqlab){const l=document.getElementById(el.dataset.cqlab);if(l)l.textContent=el.value}});
 cqAm.addEventListener("change",async e=>{if(A.tab!=="carousel")return;const el=e.target;
-  if(el.dataset.cqchk){cqset(el.dataset.cqchk,el.checked);return}
-  if(el.dataset.cqtog){const i=cqEnt(el.dataset.cqtog);cqs().items[i].on=el.checked;saveSoon();cqRR();return}
+  if(el.dataset.cqchk){cqset(el.dataset.cqchk,el.checked);cqRR();return}
+  if(el.dataset.cqtog){cqMat();const i=cqEnt(el.dataset.cqtog);cqs().items[i].on=el.checked;saveSoon();cqRR();return}
   if(el.dataset.cqup){const f=el.files&&el.files[0],path=el.dataset.cqup;el.value="";if(!f)return;
     try{let data;if(f.type==="image/gif"){if(f.size>4e6)throw new Error("That GIF is over 4 MB. Use a smaller one, or paste a link.");data=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(new Error("Couldn't read that file."));r.readAsDataURL(f)})}else data=await lpResize(f,900,true);
       cqset(path,SBH.on?await SBK.upload(data):data);toast("Picture added")}catch(er){toast(er.message||"Couldn't add that picture.")}cqRR()}});
 cqAm.addEventListener("click",e=>{if(A.tab!=="carousel")return;const b=e.target.closest("button");if(!b)return;const d=b.dataset;
-  const secs=pid=>cqs().items[cqEnt(pid)].secs;
   if(d.cqset){const [k,v]=d.cqset.split("|");cqset(k,v==="true"?true:v==="false"?false:/^\d+$/.test(v)&&/(\.n|\.v)$/.test(k)?+v:v);
     if(/\.n$/.test(k)){const P=k.slice(0,-2),s=cqg(P);if(s&&+s.v>+s.n)cqset(P+".v",+s.n)}cqRR();return}
-  if(d.cqed){CQA.ed=CQA.ed===d.cqed?null:d.cqed;if(CQA.ed)cqEnt(CQA.ed);cqRR();return}
+  if(d.cqnew!==undefined){CQA.add="choose";cqRR();return}
+  if(d.cqnewx!==undefined){CQA.add=null;cqRR();return}
+  if(d.cqnewk==="flavor"){CQA.add="flavor";cqRR();return}
+  if(d.cqnewk==="custom"){const L=cqMat(),id="cc"+uid();L.push({id,kind:"custom",on:true,title:"New card",sub:"",media:"image",img:"",video:"",fx:"none",secs:[]});CQA.add=null;CQA.ed=id;saveSoon();cqRR();return}
+  if(d.cqnewf!==undefined){const v=(document.getElementById("cqNewF")||{}).value;if(v){const L=cqMat();if(!L.some(x=>x&&x.pid===v))L.push({pid:v,on:true,secs:[]});else L.find(x=>x.pid===v).on=true;CQA.add=null;CQA.ed=v;saveSoon()}cqRR();return}
+  if(d.cqdel){armed(b,()=>{const c=cqs();c.items=(c.items||[]).filter(x=>!(x&&x.id===d.cqdel));if(CQA.ed===d.cqdel)CQA.ed=null;saveSoon();toast("Card deleted");cqRR()});return}
+  if(d.cqed){CQA.ed=CQA.ed===d.cqed?null:d.cqed;CQA.sec=null;if(CQA.ed)cqEnt(CQA.ed);cqRR();return}
   if(d.cqprev){cqOpen(d.cqprev);return}
-  if(d.cqmv){const [pid,dir]=d.cqmv.split("|"),L=cqMat(),i=L.findIndex(x=>x.pid===pid),j=i+(+dir);if(i>=0&&j>=0&&j<L.length){[L[i],L[j]]=[L[j],L[i]];saveSoon()}cqRR();return}
-  if(d.cqadd){const [pid,type]=d.cqadd.split("|");secs(pid).push(CQ_NEW[type]());saveSoon();cqRR();return}
+  if(d.cqmv){const [key,dir]=d.cqmv.split("|"),L=cqMat(),i=L.findIndex(x=>x&&(x.id===key||x.pid===key)),j=i+(+dir);if(i>=0&&j>=0&&j<L.length){[L[i],L[j]]=[L[j],L[i]];saveSoon()}cqRR();return}
+  if(d.cqsecnew){CQA.sec=d.cqsecnew;cqRR();return}
+  if(d.cqsecx!==undefined){CQA.sec=null;cqRR();return}
+  if(d.cqsecadd){const [key,type]=d.cqsecadd.split("|");cqs().items[cqEnt(key)].secs.push(CQ_NEW[type]());CQA.sec=null;saveSoon();cqRR();return}
   if(d.cqsd){const [i,si]=d.cqsd.split("|").map(Number);cqs().items[i].secs.splice(si,1);saveSoon();cqRR();return}
   if(d.cqsm){const [i,si,dir]=d.cqsm.split("|").map(Number),L=cqs().items[i].secs,j=si+dir;if(j>=0&&j<L.length){[L[si],L[j]]=[L[j],L[si]];saveSoon()}cqRR();return}
   if(d.cqna){const s=cqg(d.cqna);s.list=s.list||[];s.list.push({label:"",icon:"",img:""});saveSoon();cqRR();return}
@@ -5178,7 +5214,7 @@ function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffff
   logoSize:0,nameShow:true,nameSize:0,bb:{name:"Blind box",img:"",fx:"wiggle",speed:100,size:120,tip:"Tap the box to open it!"},nameSide:"right",logoPos:{m:"normal",x:0,y:0},adm:{name:"",show:true,size:0,logo:""},
   mq2:{on:false,noFont:true,texts:["Hello there! Fresh cookies, baked daily"],images:[],links:[],mode:"both",imgH:0,bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium"},bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},
   snow:{on:false,icon:"❄️",imgs:[],n:40,speed:4,size:30,op:80,layer:"front",sway:true,spin:false,shop:true,aff:true,admin:false},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
-  cq:{on:false,pre:true,title:"Meet our flavors",sub:"Tap the + to peek inside each cookie.",speed:3,dir:"left",size:"M",bg:"#FFF4D6",ink:"#0B0B45",accent:"#000096",price:true,rs:1.5,rc:1,plus:{icon:"+",img:"",bg:"#000096",color:"#ffffff",fx:"pulse"},items:[]},
+  cq:{on:false,pre:true,auto:true,title:"Meet our flavors",sub:"Tap the + to peek inside each cookie.",speed:3,dir:"left",size:"M",bg:"#FFF4D6",ink:"#0B0B45",accent:"#000096",price:true,rs:1.5,rc:1,plus:{icon:"+",img:"",bg:"#000096",color:"#ffffff",fx:"pulse"},items:[]},
   hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,waitVideo:true,swipe:true,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
   build:{title:"Build your box",intro:"Choose a size, fill every spot, then tell us when you want it. Each box is baked the morning it leaves the oven room."},
