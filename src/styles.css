@@ -1964,3 +1964,4 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 /* affiliator coupon box: the shop's discount */
 .afcpdef{display:flex;gap:12px;align-items:center;background:#FFF8D6;border:2px dashed #E0B800;border-radius:16px;padding:10px 14px;margin:0 0 10px}
 .afcpdef>span{font-size:30px}.afcpdef b{display:block;font-size:20px;color:var(--blue,#000096)}.afcpdef small{display:block;opacity:.75;font-size:12px}
+.in.locked{background:#F1F2FA;color:var(--blue,#000096);font-weight:800;letter-spacing:.06em;cursor:default;border-style:dashed}
