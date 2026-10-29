@@ -761,8 +761,9 @@ function anMarquee(el,items,AN,now){
 }
 /* --- motion helpers --- */
 // "reduce motion" on the phone (also switched on by battery saver on many phones) turns animations off,
-// unless the visitor chose "Turn on animations" (remembered on this phone)
-const MOTION_KEY="delidome-motion",PHONE_RM=matchMedia("(prefers-reduced-motion: reduce)").matches;let motionPref="";try{motionPref=localStorage.getItem(MOTION_KEY)||""}catch(e){}
+// unless the visitor chose "Turn on animations". The choice (on, or ✕) lasts for today only; the next day we ask again.
+const MOTION_KEY="delidome-motion",PHONE_RM=matchMedia("(prefers-reduced-motion: reduce)").matches,motionDay=()=>{const d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()};
+let motionPref="";try{const [v,day]=String(localStorage.getItem(MOTION_KEY)||"").split("|");motionPref=day===motionDay()?v:""}catch(e){}
 if(motionPref==="on")document.documentElement.classList.add("motion-on");
 const RM = PHONE_RM&&motionPref!=="on";
 const pop = new Map();
@@ -2555,7 +2556,7 @@ document.addEventListener("click",e=>{const o=e.target.closest("[data-cqopen]");
   const a=e.target.closest("[data-cqarr]");if(a&&CQ.tr)cqStep(+a.dataset.cqarr)});
 addEventListener("keydown",e=>{if(e.key==="Escape")cqClose()});
 /* the phone asks for less motion: offer the animations with one tap, and a quiet way to switch them off again */
-function motionAsk(){if(!PHONE_RM)return;const set=v=>{try{localStorage.setItem(MOTION_KEY,v)}catch(e){}};
+function motionAsk(){if(!PHONE_RM)return;const set=v=>{try{localStorage.setItem(MOTION_KEY,v+"|"+motionDay())}catch(e){}};
   if(motionPref==="on"){const f=document.querySelector("footer");if(f&&!f.querySelector("[data-mooff2]")){const a=document.createElement("button");a.type="button";a.className="mo-back";a.dataset.mooff2="";a.textContent="Animations make you dizzy? Turn them off";a.onclick=()=>{set("off");location.reload()};f.appendChild(a)}return}
   if(motionPref==="off")return;
   setTimeout(()=>{if(document.querySelector(".mo-ask"))return;const d=document.createElement("div");d.className="mo-ask";d.setAttribute("role","dialog");d.setAttribute("aria-label","Animations");
@@ -3136,7 +3137,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 19:22 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 19:24 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   var K = window.SBK, root = document.getElementById("jn"), AP_KEY = "delidome-affapp";
-  try { if (localStorage.getItem("delidome-motion") === "on") document.documentElement.classList.add("motion-on"); } catch (e) {}   // same choice as on the shop
+  try { var mv = String(localStorage.getItem("delidome-motion") || "").split("|"), td = new Date(); if (mv[0] === "on" && mv[1] === td.getFullYear() + "-" + (td.getMonth() + 1) + "-" + td.getDate()) document.documentElement.classList.add("motion-on"); } catch (e) {}   // same choice as on the shop, for today
   // keep in step with AFJ_DEFAULT in app.js (the owner's editor)
   var D = {
     title: "Join our affiliate team", sub: "Share our cookies with your followers and earn money on every order you bring.", heroIcon: "🍪", rate: "10%",
