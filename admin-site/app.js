@@ -2475,7 +2475,7 @@ const preGiftHTML=(o,cust)=>o.preGift&&cust&&o.preGift.mode==="surprise"&&o.preG
 
 /* ===== Carrousel card: a running row of flavor cards. Tapping + opens a quickview with the owner's detail sections.
    The row pauses while it is touched or slid and while the quickview is open, then runs again after a short wait. ===== */
-const CQ={svg:{},ready:false,sig:"",host:null,tr:null,row:null,x:0,W:0,v:0,s:0,acc:0,smp:[],rate:0,next:0,D:0,K:2000,anim:null,supp:false,raf:0,ts:0,hold:0,drag:false,moved:false,open:false,vis:true,io:null,opener:null,rm:matchMedia("(prefers-reduced-motion: reduce)").matches};
+const CQ={svg:{},sig:"",host:null,tr:null,row:null,dw:null,W:0,off:0,rt:0,drag:false,moved:false,supp:false,open:false,opener:null,rm:matchMedia("(prefers-reduced-motion: reduce)").matches};
 const CQ_SZ={S:150,M:190,L:240},CQ_DT={bar:"Level",notes:"Taste notes",text:"Good to know",image:"Photo"};
 const cqCfg=()=>(DB.page&&DB.page.cq)||{};
 const cqNum=(v,d,lo,hi)=>{v=+v;return isFinite(v)&&String(v)!==""?Math.max(lo,Math.min(hi,v)):d};
@@ -2493,59 +2493,44 @@ function cqPlusHTML(c){const pl=c.plus||{},img=imgOk(pl.img);return img?`<img sr
 function cqCardHTML(o,dup){const {p}=o,c=cqCfg(),pl=c.plus||{},out=isOut(p),fx=["pulse","wiggle","none"].includes(pl.fx)?pl.fx:"pulse",tb=dup?` tabindex="-1"`:"";
   return `<article class="cq-card${out?" out":""}" data-cqid="${esc(p.id)}"><div class="cq-pl" data-cqopen="${esc(p.id)}">${cqPlate(p)}${c.price!==false&&p.surcharge>0?`<span class="cq-x">+${money(p.surcharge)}</span>`:""}${out?`<span class="cq-sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:""}</div>
     <h4>${esc(p.name)}</h4><button class="cq-plus fx-${fx}" type="button" data-cqopen="${esc(p.id)}"${tb} aria-label="See the details of ${esc(p.name)}">${cqPlusHTML(c)}</button></article>`}
-function cqStop(){cancelAnimationFrame(CQ.raf);CQ.raf=0;if(CQ.io){CQ.io.disconnect();CQ.io=null}if(CQ.anim){try{CQ.anim.cancel()}catch(e){}CQ.anim=null}CQ.tr=CQ.row=null}
+function cqStop(){clearTimeout(CQ.rt);CQ.tr=CQ.row=CQ.dw=null}
 // the shop page shows it while the shop is open; the pre-launch page has its own copy below the mini game
 function renderCarousel(force){const el=document.getElementById("cq"),pv=document.getElementById("preView");if(!el||(pv&&!pv.hidden))return;cqMount(el,force,false)}
 function renderPreCarousel(){const el=document.getElementById("cqPre");if(el)cqMount(el,true,true)}
-/* The row is two identical copies slid with a transform (sub-pixel smooth, no scroll bar rounding). The position wraps by exactly one
-   copy, so the loop has no seam and no end. A finger or mouse drags it directly and lets go with momentum. */
+/* Runs like the marquee banner: a CSS animation slides identical sets by exactly one set, forever (the browser does it on its own).
+   Pausing only freezes that animation. A finger or mouse moves an outer wrapper, so the running loop is never disturbed. */
 function cqMount(el,force,pre){const c=cqCfg(),list=cqList(),on=(pre?c.pre!==false:!!c.on)&&list.length>0;
-  const keep=CQ.host===el&&CQ.W>0?cqPos()/CQ.W:0;
   const sig=JSON.stringify([on,pre,c,list.map(o=>[o.p.id,o.p.name,o.p.status,o.p.surcharge,o.p.track?o.p.stock:0])]);if(!force&&sig===CQ.sig&&CQ.host===el)return;CQ.sig=sig;CQ.host=el;
   cqStop();if(!on){el.hidden=true;el.innerHTML="";return}
   el.hidden=false;
   const cw=CQ_SZ[c.size]||CQ_SZ.M,vw=Math.max(el.clientWidth||0,innerWidth||0,320),r=Math.max(1,Math.ceil(1.3*vw/((cw+14)*list.length))),
-    seq=Array.from({length:r}).flatMap(()=>list),tailN=Math.ceil((vw+cw)/(cw+14))+1,
-    copy=()=>`<div class="cq-copy">${seq.map(o=>cqCardHTML(o,0)).join("")}</div>`,tail=()=>`<div class="cq-tail" aria-hidden="true">${Array.from({length:tailN},(_,i)=>cqCardHTML(seq[i%seq.length],1)).join("")}</div>`;
+    seq=Array.from({length:r}).flatMap(()=>list),set=k=>`<div class="cq-copy"${k?` aria-hidden="true"`:""}>${seq.map(o=>cqCardHTML(o,k)).join("")}</div>`;
   el.style.cssText=`--cqw:${cw}px;--cqbg:${hexOk(c.bg,"#FFF4D6")};--cqink:${hexOk(c.ink,"#0B0B45")};--cqac:${hexOk(c.accent,"#000096")};--cqpb:${hexOk((c.plus||{}).bg,"#000096")};--cqpc:${hexOk((c.plus||{}).color,"#ffffff")}`;
   el.innerHTML=`<div class="wrap">${c.title?`<h2 class="cq-t">${esc(c.title)}</h2>`:""}${c.sub?`<p class="cq-s">${esc(c.sub)}</p>`:""}</div>
-    <div class="cq-rel"><button class="cq-arr l" type="button" data-cqarr="-1" aria-label="Previous flavors">‹</button><div class="cq-track" id="cqTrack" tabindex="0" role="region" aria-label="Flavors. Drag or swipe to browse."><div class="cq-row">${copy()}${tail()}</div></div><button class="cq-arr r" type="button" data-cqarr="1" aria-label="Next flavors">›</button></div>`;
-  const tr=CQ.tr=document.getElementById("cqTrack"),row=CQ.row=tr.querySelector(".cq-row"),cp=tr.querySelector(".cq-copy");
-  CQ.W=cp?cp.getBoundingClientRect().width:0;CQ.x=keep*CQ.W;CQ.v=CQ.rate=0;CQ.drag=false;CQ.acc=0;CQ.smp=[];CQ.hold=performance.now()+400;CQ.ts=0;
-  // the running is a browser animation (it keeps going on the graphics thread even when the page is busy): one copy per CQ.D ms at rate 1
-  if(CQ.W&&row.animate){CQ.D=CQ.W/CQ_REF*1000;CQ.K=2000;CQ.anim=row.animate([{transform:"translate3d(0,0,0)"},{transform:`translate3d(${-CQ.W}px,0,0)`}],{duration:CQ.D,iterations:Infinity,easing:"linear"});CQ.anim.pause();cqSeek(CQ.x)}
-  const now=()=>performance.now(),hold=()=>{CQ.hold=now()+cqNum(cqCfg().rs,1.5,0,10)*1000};
-  tr.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"&&e.button!==0)return;cqGrab();CQ.drag=true;CQ.id=e.pointerId;CQ.sx=CQ.lx=e.clientX;CQ.moved=false;CQ.v=0;CQ.smp=[[now(),CQ.acc]];hold()});
-  tr.addEventListener("pointermove",e=>{if(!CQ.drag||e.pointerId!==CQ.id)return;let dx;
-    if(!CQ.moved){if(Math.abs(e.clientX-CQ.sx)<6)return;CQ.moved=true;try{tr.setPointerCapture(e.pointerId)}catch(x){}tr.classList.add("drag");dx=CQ.sx-e.clientX}else dx=CQ.lx-e.clientX;
-    CQ.lx=e.clientX;CQ.x+=dx;CQ.acc+=dx;cqSeek(CQ.x);const t=now();CQ.smp.push([t,CQ.acc]);while(CQ.smp.length>1&&t-CQ.smp[0][0]>120)CQ.smp.shift();hold()});
-  const up=e=>{if(!CQ.drag||e.pointerId!==CQ.id)return;CQ.drag=false;tr.classList.remove("drag");
-    if(CQ.moved){CQ.supp=true;setTimeout(()=>{CQ.supp=false},80);const t=now(),s=CQ.smp.filter(a=>t-a[0]<110);let v=0;if(s.length>1){const a=s[0],z=s[s.length-1],dt=(z[0]-a[0])/1000;if(dt>0)v=(z[1]-a[1])/dt}CQ.v=Math.max(-3500,Math.min(3500,v))}hold()};
+    <div class="cq-rel"><button class="cq-arr l" type="button" data-cqarr="-1" aria-label="Previous flavors">‹</button><div class="cq-track cq-paused" id="cqTrack" tabindex="0" role="region" aria-label="Flavors. Drag or swipe to browse."><div class="cq-drag"><div class="cq-row${c.dir==="right"?" rev":""}">${set(0)}${set(1)}${set(2)}</div></div></div><button class="cq-arr r" type="button" data-cqarr="1" aria-label="Next flavors">›</button></div>`;
+  const tr=CQ.tr=document.getElementById("cqTrack"),dw=CQ.dw=tr.querySelector(".cq-drag"),row=CQ.row=tr.querySelector(".cq-row"),cp=tr.querySelector(".cq-copy");
+  CQ.W=cp?cp.getBoundingClientRect().width:0;CQ.off=0;CQ.drag=false;
+  if(!CQ.W)return;
+  row.style.setProperty("--cqmv",-CQ.W+"px");row.style.setProperty("--cqdur",(CQ.W/(cqNum(c.speed,3,1,10)*18)).toFixed(2)+"s");
+  const rs=()=>cqNum(cqCfg().rs,1.5,0,10)*1000;
+  tr.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"&&e.button!==0)return;cqPause();CQ.drag=true;CQ.id=e.pointerId;CQ.sx=CQ.lx=e.clientX;CQ.moved=false;dw.classList.remove("slide")});
+  tr.addEventListener("pointermove",e=>{if(!CQ.drag||e.pointerId!==CQ.id)return;
+    if(!CQ.moved){if(Math.abs(e.clientX-CQ.sx)<6)return;CQ.moved=true;try{tr.setPointerCapture(e.pointerId)}catch(x){}tr.classList.add("drag");CQ.lx=CQ.sx}
+    cqShift(e.clientX-CQ.lx);CQ.lx=e.clientX});
+  const up=e=>{if(!CQ.drag||e.pointerId!==CQ.id)return;CQ.drag=false;tr.classList.remove("drag");if(CQ.moved){CQ.supp=true;setTimeout(()=>{CQ.supp=false},80)}cqResume(rs())};
   tr.addEventListener("pointerup",up);tr.addEventListener("pointercancel",up);
   tr.addEventListener("click",e=>{if(CQ.supp){e.preventDefault();e.stopPropagation()}},true);
-  tr.addEventListener("wheel",e=>{const dx=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.shiftKey?e.deltaY:0;if(!dx)return;e.preventDefault();cqGrab();CQ.x+=dx;cqSeek(CQ.x);hold()},{passive:false});
-  tr.addEventListener("keydown",e=>{if(e.key==="ArrowRight"||e.key==="ArrowLeft"){e.preventDefault();cqGrab();CQ.v+=(e.key==="ArrowRight"?1:-1)*980;hold()}});
-  tr.addEventListener("focusin",hold);
-  if(window.IntersectionObserver){CQ.io=new IntersectionObserver(e=>{CQ.vis=e[0].isIntersecting},{threshold:0});CQ.io.observe(el)}
-  CQ.ready=false;{const imgs=[...row.querySelectorAll("img")],mine=row,go=()=>{if(CQ.row!==mine)return;CQ.ready=true;CQ.hold=Math.max(CQ.hold,performance.now()+250)};
-    Promise.race([Promise.all(imgs.map(i=>i.decode?i.decode().catch(()=>0):0)),new Promise(r=>setTimeout(r,1500))]).then(go)}
-  CQ.raf=requestAnimationFrame(cqLoop)}
-const CQ_REF=90;   // px per second at playback rate 1
-// the animation's clock is the position: time = K copies + the offset inside the current copy
-const cqPos=()=>{const a=CQ.anim;if(!a||!CQ.W)return CQ.x;return (((a.currentTime/CQ.D)%1)+1)%1*CQ.W};
-function cqSeek(x){const a=CQ.anim;if(!a||!CQ.W)return;CQ.x=((x%CQ.W)+CQ.W)%CQ.W;a.currentTime=CQ.K*CQ.D+CQ.x/CQ.W*CQ.D}
-// take over from the running animation (finger down, arrows, wheel): keep the exact position and stop it
-function cqGrab(){const a=CQ.anim;if(!a)return;if(a.playState==="running"){CQ.x=cqPos();a.pause()}CQ.rate=0}
-function cqLoop(ts){CQ.raf=requestAnimationFrame(cqLoop);const a=CQ.anim;if(!CQ.tr||!CQ.W)return;const dt=Math.min(.05,(ts-(CQ.ts||ts))/1000);CQ.ts=ts;
-  if(!CQ.vis||document.hidden){if(a&&a.playState==="running"){CQ.x=cqPos();a.pause();CQ.rate=0}return}
-  const c=cqCfg(),t=performance.now();if(!a||!CQ.ready)return;
-  if(CQ.drag)return;
-  if(Math.abs(CQ.v)>12){if(a.playState==="running"){CQ.x=cqPos();a.pause()}CQ.rate=0;const m=CQ.v*dt;CQ.acc+=m;cqSeek(CQ.x+m);CQ.v*=Math.exp(-3.2*dt);CQ.hold=Math.max(CQ.hold,t+cqNum(c.rs,1.5,0,10)*1000);return}
-  CQ.v=0;const run=!CQ.rm&&!CQ.open&&t>=CQ.hold,tg=run?cqNum(c.speed,3,1,10)*18/CQ_REF*(c.dir==="right"?-1:1):0;
-  // stop at once; start soft and reach full speed in a few small steps (a speed change makes the browser re-sync, so never change it every frame)
-  if(!tg){if(a.playState==="running"){CQ.x=cqPos();a.pause()}CQ.rate=0;return}
-  if(a.playState!=="running"){CQ.rate=tg*.25;a.currentTime=CQ.K*CQ.D+CQ.x/CQ.W*CQ.D;a.playbackRate=CQ.rate;a.play();CQ.next=t+110;return}
-  if(Math.abs(tg-CQ.rate)>.001&&t>=CQ.next){CQ.rate=Math.abs(tg-CQ.rate)<.12*Math.abs(tg)?tg:CQ.rate+(tg-CQ.rate)*.5;a.playbackRate=CQ.rate;CQ.next=t+110}}
+  tr.addEventListener("wheel",e=>{const dx=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.shiftKey?e.deltaY:0;if(!dx)return;e.preventDefault();cqPause();dw.classList.remove("slide");cqShift(-dx);cqResume(rs())},{passive:false});
+  tr.addEventListener("keydown",e=>{if(e.key==="ArrowRight"||e.key==="ArrowLeft"){e.preventDefault();cqStep(e.key==="ArrowRight"?1:-1)}});
+  tr.addEventListener("focusin",()=>{cqPause();cqResume(rs())});
+  cqResume(300)}
+// move the outer wrapper by dx (finger direction); kept within one set, which looks the same because the sets are identical
+function cqShift(dx){if(!CQ.dw||!CQ.W)return;const W=CQ.W;CQ.off=(((CQ.off+dx)%W)-W)%W;CQ.dw.style.transform=`translate3d(${CQ.off}px,0,0)`}
+function cqStep(d){if(!CQ.dw)return;cqPause();const W=CQ.W,cw=(CQ_SZ[cqCfg().size]||190)+14;let o=CQ.off-d*cw*1.5;
+  if(o>0||o<=-W){CQ.dw.classList.remove("slide");cqShift(o>0?-W:W);o=CQ.off-d*cw*1.5}   // jump by one identical set first, then glide
+  void CQ.dw.offsetWidth;CQ.dw.classList.add("slide");CQ.off=o;CQ.dw.style.transform=`translate3d(${o}px,0,0)`;cqResume(cqNum(cqCfg().rs,1.5,0,10)*1000+450)}
+function cqPause(){clearTimeout(CQ.rt);if(CQ.tr)CQ.tr.classList.add("cq-paused")}
+function cqResume(ms){clearTimeout(CQ.rt);CQ.rt=setTimeout(()=>{if(CQ.tr&&!CQ.open&&!CQ.drag&&!CQ.rm)CQ.tr.classList.remove("cq-paused")},ms)}
 /* quickview */
 function cqIcon(s,cls){const img=imgOk(s.img);return img?`<img class="${cls}" src="${esc(img)}" alt="" draggable="false">`:s.icon?`<span class="${cls} e" aria-hidden="true">${esc(String(s.icon).slice(0,4))}</span>`:""}
 function cqBodyHTML(s){const t=s.type;
@@ -2562,16 +2547,16 @@ function cqQvHTML(p,it){const secs=(it.secs||[]).filter(s=>s&&["bar","notes","te
   return `<div class="cq-qc" role="dialog" aria-modal="true" aria-label="${esc(p.name)}"><button class="cq-qx" type="button" data-cqx aria-label="Close">✕</button>
     <div class="cq-qh"><div class="cq-qp">${plateHTML(p)}</div><h3>${esc(p.name)}</h3>${p.desc?`<p class="cq-qd">${esc(p.desc)}</p>`:""}${p.surcharge>0?`<span class="cq-x on">+${money(p.surcharge)} per cookie</span>`:""}</div>
     <div class="cq-secs">${secs.length?secs.map(cqSecHTML).join(""):`<p class="cq-em">More details are coming soon.</p>`}</div><button class="btn btn-blue cq-cl" type="button" data-cqx>Close</button></div>`}
-function cqOpen(pid){const p=prod(pid);if(!p)return;const it=(cqCfg().items||[]).find(x=>x.pid===pid)||{pid};CQ.open=true;CQ.opener=document.activeElement;
+function cqOpen(pid){const p=prod(pid);if(!p)return;const it=(cqCfg().items||[]).find(x=>x.pid===pid)||{pid};CQ.open=true;cqPause();CQ.opener=document.activeElement;
   let m=document.getElementById("cqQv");if(!m){m=document.createElement("div");m.id="cqQv";m.className="cq-qv";document.body.appendChild(m);
     m.addEventListener("click",e=>{if(e.target===m||e.target.closest("[data-cqx]")){cqClose();return}
       const st=e.target.closest("[data-cqsec]");if(st){const s=st.closest(".cq-sec"),o=!s.classList.contains("open");s.classList.toggle("open",o);st.setAttribute("aria-expanded",String(o));s.querySelector(".cq-sb").hidden=!o;return}
       const tp=e.target.closest("[data-cqtip]");if(tp){const s=tp.closest(".cq-sec"),tm=s.querySelector(".cq-tm"),o=tm.hidden;tm.hidden=!o;tp.setAttribute("aria-expanded",String(o))}})}
   m.innerHTML=cqQvHTML(p,it);m.hidden=false;m.scrollTop=0;document.body.style.overflow="hidden";const x=m.querySelector(".cq-qx");if(x)x.focus({preventScroll:true})}
-function cqClose(){const m=document.getElementById("cqQv");if(!m||m.hidden)return;m.hidden=true;m.innerHTML="";document.body.style.overflow="";CQ.open=false;CQ.hold=performance.now()+cqNum(cqCfg().rc,1,0,10)*1000;
+function cqClose(){const m=document.getElementById("cqQv");if(!m||m.hidden)return;m.hidden=true;m.innerHTML="";document.body.style.overflow="";CQ.open=false;cqResume(cqNum(cqCfg().rc,1,0,10)*1000);
   try{if(CQ.opener&&CQ.opener.focus&&document.contains(CQ.opener))CQ.opener.focus({preventScroll:true})}catch(e){}}
 document.addEventListener("click",e=>{const o=e.target.closest("[data-cqopen]");if(o&&o.closest("#cq,#cqPre")){e.preventDefault();cqOpen(o.dataset.cqopen);return}
-  const a=e.target.closest("[data-cqarr]");if(a&&CQ.tr){cqGrab();CQ.v=(+a.dataset.cqarr)*980;CQ.hold=performance.now()+cqNum(cqCfg().rs,1.5,0,10)*1000}});
+  const a=e.target.closest("[data-cqarr]");if(a&&CQ.tr)cqStep(+a.dataset.cqarr)});
 addEventListener("keydown",e=>{if(e.key==="Escape")cqClose()});
 
 
@@ -7077,7 +7062,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 18:24 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 18:35 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
