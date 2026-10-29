@@ -2453,7 +2453,7 @@ function pgPanelHTML(){if(!PG.info)return "";const I=PG.info,its=(I.items||[]).f
 const preGiftHTML=(o,cust)=>o.preGift&&cust&&o.preGift.mode==="surprise"&&o.preGift.drawn&&(o.preGift.items||[]).length&&!bbOpened(o.id+"|p")?`<div class="dsec"><h4>🎁 Your pre-launch gift · ${esc(o.preGift.code||"")}</h4>${bbCardHTML(o.id+"|p")}</div>`:o.preGift?`<div class="dsec"><h4>🎁 ${o.preGift.src==="review"?(cust?"Your review reward":"Review reward to pack"):(cust?"Your pre-launch gift":"Pre-launch gift to pack")} · ${esc(o.preGift.code||"")}</h4><div class="gl">${(o.preGift.items||[]).map(g=>giftChip(g)).join("")||giftChip({name:o.preGift.mode==="surprise"&&o.preGift.drawn===false?bbName():o.preGift.soldOut?"Out of stock":o.preGift.title||"Free Gift Set"})}</div>${o.preGift.mode==="surprise"&&o.preGift.drawn===false?`<p class="note" style="margin:8px 0 0">${cust?"Your ${esc(bbName())} is picked when you send your payment proof.":"Not drawn yet. It is picked when the payment proof is sent."}</p>`:o.preGift.soldOut?`<p class="note" style="margin:8px 0 0">${cust?"Sorry, the free gifts ran out.":"No gift left in stock for this order."}</p>`:o.preGift.mode==="surprise"&&o.preGift.pool>1?`<p class="note" style="margin:8px 0 0">Picked at random from ${o.preGift.pool} gifts.</p>`:""}</div>`:"";
 /* ===== Carrousel card: a running row of flavor cards. Tapping + opens a quickview with the owner's detail sections.
    The row pauses while it is touched or slid and while the quickview is open, then runs again after a short wait. ===== */
-const CQ={sig:"",host:null,tr:null,row:null,x:0,W:0,v:0,s:0,acc:0,smp:[],put:null,supp:false,raf:0,ts:0,hold:0,drag:false,moved:false,open:false,vis:true,io:null,opener:null,rm:matchMedia("(prefers-reduced-motion: reduce)").matches};
+const CQ={sig:"",host:null,tr:null,row:null,x:0,W:0,v:0,s:0,acc:0,smp:[],rate:0,next:0,D:0,K:2000,anim:null,supp:false,raf:0,ts:0,hold:0,drag:false,moved:false,open:false,vis:true,io:null,opener:null,rm:matchMedia("(prefers-reduced-motion: reduce)").matches};
 const CQ_SZ={S:150,M:190,L:240},CQ_DT={bar:"Level",notes:"Taste notes",text:"Good to know",image:"Photo"};
 const cqCfg=()=>(DB.page&&DB.page.cq)||{};
 const cqNum=(v,d,lo,hi)=>{v=+v;return isFinite(v)&&String(v)!==""?Math.max(lo,Math.min(hi,v)):d};
@@ -2466,14 +2466,14 @@ function cqPlusHTML(c){const pl=c.plus||{},img=imgOk(pl.img);return img?`<img sr
 function cqCardHTML(o,dup){const {p}=o,c=cqCfg(),pl=c.plus||{},out=isOut(p),fx=["pulse","wiggle","none"].includes(pl.fx)?pl.fx:"pulse",tb=dup?` tabindex="-1"`:"";
   return `<article class="cq-card${out?" out":""}" data-cqid="${esc(p.id)}"><div class="cq-pl" data-cqopen="${esc(p.id)}">${plateHTML(p)}${c.price!==false&&p.surcharge>0?`<span class="cq-x">+${money(p.surcharge)}</span>`:""}${out?`<span class="cq-sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:""}</div>
     <h4>${esc(p.name)}</h4><button class="cq-plus fx-${fx}" type="button" data-cqopen="${esc(p.id)}"${tb} aria-label="See the details of ${esc(p.name)}">${cqPlusHTML(c)}</button></article>`}
-function cqStop(){cancelAnimationFrame(CQ.raf);CQ.raf=0;if(CQ.io){CQ.io.disconnect();CQ.io=null}CQ.tr=CQ.row=null}
+function cqStop(){cancelAnimationFrame(CQ.raf);CQ.raf=0;if(CQ.io){CQ.io.disconnect();CQ.io=null}if(CQ.anim){try{CQ.anim.cancel()}catch(e){}CQ.anim=null}CQ.tr=CQ.row=null}
 // the shop page shows it while the shop is open; the pre-launch page has its own copy below the mini game
 function renderCarousel(force){const el=document.getElementById("cq"),pv=document.getElementById("preView");if(!el||(pv&&!pv.hidden))return;cqMount(el,force,false)}
 function renderPreCarousel(){const el=document.getElementById("cqPre");if(el)cqMount(el,true,true)}
 /* The row is two identical copies slid with a transform (sub-pixel smooth, no scroll bar rounding). The position wraps by exactly one
    copy, so the loop has no seam and no end. A finger or mouse drags it directly and lets go with momentum. */
 function cqMount(el,force,pre){const c=cqCfg(),list=cqList(),on=(pre?c.pre!==false:!!c.on)&&list.length>0;
-  const keep=CQ.host===el&&CQ.W>0?CQ.x/CQ.W:0;
+  const keep=CQ.host===el&&CQ.W>0?cqPos()/CQ.W:0;
   const sig=JSON.stringify([on,pre,c,list.map(o=>[o.p.id,o.p.name,o.p.status,o.p.surcharge,o.p.track?o.p.stock:0])]);if(!force&&sig===CQ.sig&&CQ.host===el)return;CQ.sig=sig;CQ.host=el;
   cqStop();if(!on){el.hidden=true;el.innerHTML="";return}
   el.hidden=false;
@@ -2483,29 +2483,39 @@ function cqMount(el,force,pre){const c=cqCfg(),list=cqList(),on=(pre?c.pre!==fal
   el.innerHTML=`<div class="wrap">${c.title?`<h2 class="cq-t">${esc(c.title)}</h2>`:""}${c.sub?`<p class="cq-s">${esc(c.sub)}</p>`:""}</div>
     <div class="cq-rel"><button class="cq-arr l" type="button" data-cqarr="-1" aria-label="Previous flavors">‹</button><div class="cq-track" id="cqTrack" tabindex="0" role="region" aria-label="Flavors. Drag or swipe to browse."><div class="cq-row">${[0,1].map(copy).join("")}</div></div><button class="cq-arr r" type="button" data-cqarr="1" aria-label="Next flavors">›</button></div>`;
   const tr=CQ.tr=document.getElementById("cqTrack"),row=CQ.row=tr.querySelector(".cq-row"),cp=tr.querySelector(".cq-copy");
-  CQ.W=cp?cp.getBoundingClientRect().width:0;CQ.x=keep*CQ.W;CQ.v=CQ.s=0;CQ.drag=false;CQ.acc=0;CQ.smp=[];CQ.hold=performance.now()+400;CQ.ts=0;CQ.put=null;
+  CQ.W=cp?cp.getBoundingClientRect().width:0;CQ.x=keep*CQ.W;CQ.v=CQ.rate=0;CQ.drag=false;CQ.acc=0;CQ.smp=[];CQ.hold=performance.now()+400;CQ.ts=0;
+  // the running is a browser animation (it keeps going on the graphics thread even when the page is busy): one copy per CQ.D ms at rate 1
+  if(CQ.W&&row.animate){CQ.D=CQ.W/CQ_REF*1000;CQ.K=2000;CQ.anim=row.animate([{transform:"translate3d(0,0,0)"},{transform:`translate3d(${-CQ.W}px,0,0)`}],{duration:CQ.D,iterations:Infinity,easing:"linear"});CQ.anim.pause();cqSeek(CQ.x)}
   const now=()=>performance.now(),hold=()=>{CQ.hold=now()+cqNum(cqCfg().rs,1.5,0,10)*1000};
-  tr.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"&&e.button!==0)return;CQ.drag=true;CQ.id=e.pointerId;CQ.sx=CQ.lx=e.clientX;CQ.moved=false;CQ.v=CQ.s=0;CQ.smp=[[now(),CQ.acc]];hold()});
+  tr.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"&&e.button!==0)return;cqGrab();CQ.drag=true;CQ.id=e.pointerId;CQ.sx=CQ.lx=e.clientX;CQ.moved=false;CQ.v=0;CQ.smp=[[now(),CQ.acc]];hold()});
   tr.addEventListener("pointermove",e=>{if(!CQ.drag||e.pointerId!==CQ.id)return;let dx;
     if(!CQ.moved){if(Math.abs(e.clientX-CQ.sx)<6)return;CQ.moved=true;try{tr.setPointerCapture(e.pointerId)}catch(x){}tr.classList.add("drag");dx=CQ.sx-e.clientX}else dx=CQ.lx-e.clientX;
-    CQ.lx=e.clientX;CQ.x+=dx;CQ.acc+=dx;const t=now();CQ.smp.push([t,CQ.acc]);while(CQ.smp.length>1&&t-CQ.smp[0][0]>120)CQ.smp.shift();hold()});
+    CQ.lx=e.clientX;CQ.x+=dx;CQ.acc+=dx;cqSeek(CQ.x);const t=now();CQ.smp.push([t,CQ.acc]);while(CQ.smp.length>1&&t-CQ.smp[0][0]>120)CQ.smp.shift();hold()});
   const up=e=>{if(!CQ.drag||e.pointerId!==CQ.id)return;CQ.drag=false;tr.classList.remove("drag");
     if(CQ.moved){CQ.supp=true;setTimeout(()=>{CQ.supp=false},80);const t=now(),s=CQ.smp.filter(a=>t-a[0]<110);let v=0;if(s.length>1){const a=s[0],z=s[s.length-1],dt=(z[0]-a[0])/1000;if(dt>0)v=(z[1]-a[1])/dt}CQ.v=Math.max(-3500,Math.min(3500,v))}hold()};
   tr.addEventListener("pointerup",up);tr.addEventListener("pointercancel",up);
   tr.addEventListener("click",e=>{if(CQ.supp){e.preventDefault();e.stopPropagation()}},true);
-  tr.addEventListener("wheel",e=>{const dx=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.shiftKey?e.deltaY:0;if(!dx)return;e.preventDefault();CQ.x+=dx;CQ.s=0;hold()},{passive:false});
-  tr.addEventListener("keydown",e=>{if(e.key==="ArrowRight"||e.key==="ArrowLeft"){e.preventDefault();CQ.v+=(e.key==="ArrowRight"?1:-1)*980;hold()}});
+  tr.addEventListener("wheel",e=>{const dx=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.shiftKey?e.deltaY:0;if(!dx)return;e.preventDefault();cqGrab();CQ.x+=dx;cqSeek(CQ.x);hold()},{passive:false});
+  tr.addEventListener("keydown",e=>{if(e.key==="ArrowRight"||e.key==="ArrowLeft"){e.preventDefault();cqGrab();CQ.v+=(e.key==="ArrowRight"?1:-1)*980;hold()}});
   tr.addEventListener("focusin",hold);
   if(window.IntersectionObserver){CQ.io=new IntersectionObserver(e=>{CQ.vis=e[0].isIntersecting},{threshold:0});CQ.io.observe(el)}
-  cqApply();CQ.raf=requestAnimationFrame(cqLoop)}
-function cqApply(){const W=CQ.W;if(!W||!CQ.row)return;CQ.x=((CQ.x%W)+W)%W;if(CQ.put!==CQ.x){CQ.put=CQ.x;CQ.row.style.transform=`translate3d(${-CQ.x}px,0,0)`}}
-function cqLoop(ts){CQ.raf=requestAnimationFrame(cqLoop);if(!CQ.tr||!CQ.W)return;const dt=Math.min(.05,(ts-(CQ.ts||ts))/1000);CQ.ts=ts;if(!CQ.vis||document.hidden)return;
-  const c=cqCfg(),t=performance.now();
-  if(CQ.drag)CQ.s=0;
-  else if(Math.abs(CQ.v)>12){const m=CQ.v*dt;CQ.x+=m;CQ.acc+=m;CQ.v*=Math.exp(-3.2*dt);CQ.s=0;CQ.hold=Math.max(CQ.hold,t+cqNum(c.rs,1.5,0,10)*1000)}
-  else{CQ.v=0;const run=!CQ.rm&&!CQ.open&&t>=CQ.hold,tg=run?cqNum(c.speed,3,1,10)*18*(c.dir==="right"?-1:1):0;
-    CQ.s+=(tg-CQ.s)*(1-Math.exp(-6*dt));if(Math.abs(CQ.s)<.05&&!tg)CQ.s=0;if(CQ.s){const m=CQ.s*dt;CQ.x+=m;CQ.acc+=m}}
-  cqApply()}
+  CQ.raf=requestAnimationFrame(cqLoop)}
+const CQ_REF=90;   // px per second at playback rate 1
+// the animation's clock is the position: time = K copies + the offset inside the current copy
+const cqPos=()=>{const a=CQ.anim;if(!a||!CQ.W)return CQ.x;return (((a.currentTime/CQ.D)%1)+1)%1*CQ.W};
+function cqSeek(x){const a=CQ.anim;if(!a||!CQ.W)return;CQ.x=((x%CQ.W)+CQ.W)%CQ.W;a.currentTime=CQ.K*CQ.D+CQ.x/CQ.W*CQ.D}
+// take over from the running animation (finger down, arrows, wheel): keep the exact position and stop it
+function cqGrab(){const a=CQ.anim;if(!a)return;if(a.playState==="running"){CQ.x=cqPos();a.pause()}CQ.rate=0}
+function cqLoop(ts){CQ.raf=requestAnimationFrame(cqLoop);const a=CQ.anim;if(!CQ.tr||!CQ.W)return;const dt=Math.min(.05,(ts-(CQ.ts||ts))/1000);CQ.ts=ts;
+  if(!CQ.vis||document.hidden){if(a&&a.playState==="running"){CQ.x=cqPos();a.pause();CQ.rate=0}return}
+  const c=cqCfg(),t=performance.now();if(!a)return;
+  if(CQ.drag)return;
+  if(Math.abs(CQ.v)>12){if(a.playState==="running"){CQ.x=cqPos();a.pause()}CQ.rate=0;const m=CQ.v*dt;CQ.acc+=m;cqSeek(CQ.x+m);CQ.v*=Math.exp(-3.2*dt);CQ.hold=Math.max(CQ.hold,t+cqNum(c.rs,1.5,0,10)*1000);return}
+  CQ.v=0;const run=!CQ.rm&&!CQ.open&&t>=CQ.hold,tg=run?cqNum(c.speed,3,1,10)*18/CQ_REF*(c.dir==="right"?-1:1):0;
+  // stop at once; start soft and reach full speed in a few small steps (a speed change makes the browser re-sync, so never change it every frame)
+  if(!tg){if(a.playState==="running"){CQ.x=cqPos();a.pause()}CQ.rate=0;return}
+  if(a.playState!=="running"){CQ.rate=tg*.25;a.currentTime=CQ.K*CQ.D+CQ.x/CQ.W*CQ.D;a.playbackRate=CQ.rate;a.play();CQ.next=t+110;return}
+  if(Math.abs(tg-CQ.rate)>.001&&t>=CQ.next){CQ.rate=Math.abs(tg-CQ.rate)<.12*Math.abs(tg)?tg:CQ.rate+(tg-CQ.rate)*.5;a.playbackRate=CQ.rate;CQ.next=t+110}}
 /* quickview */
 function cqIcon(s,cls){const img=imgOk(s.img);return img?`<img class="${cls}" src="${esc(img)}" alt="" draggable="false">`:s.icon?`<span class="${cls} e" aria-hidden="true">${esc(String(s.icon).slice(0,4))}</span>`:""}
 function cqBodyHTML(s){const t=s.type;
@@ -2531,7 +2541,7 @@ function cqOpen(pid){const p=prod(pid);if(!p)return;const it=(cqCfg().items||[])
 function cqClose(){const m=document.getElementById("cqQv");if(!m||m.hidden)return;m.hidden=true;m.innerHTML="";document.body.style.overflow="";CQ.open=false;CQ.hold=performance.now()+cqNum(cqCfg().rc,1,0,10)*1000;
   try{if(CQ.opener&&CQ.opener.focus&&document.contains(CQ.opener))CQ.opener.focus({preventScroll:true})}catch(e){}}
 document.addEventListener("click",e=>{const o=e.target.closest("[data-cqopen]");if(o&&o.closest("#cq,#cqPre")){e.preventDefault();cqOpen(o.dataset.cqopen);return}
-  const a=e.target.closest("[data-cqarr]");if(a&&CQ.tr){CQ.v=(+a.dataset.cqarr)*980;CQ.hold=performance.now()+cqNum(cqCfg().rs,1.5,0,10)*1000}});
+  const a=e.target.closest("[data-cqarr]");if(a&&CQ.tr){cqGrab();CQ.v=(+a.dataset.cqarr)*980;CQ.hold=performance.now()+cqNum(cqCfg().rs,1.5,0,10)*1000}});
 addEventListener("keydown",e=>{if(e.key==="Escape")cqClose()});
 function toast(msg){if(typeof toastHook==="function")msg=toastHook(msg);const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,Math.max(1600,msg.length*45))}
 function armed(btn,fn){if(btn.dataset.armed){fn();return}btn.dataset.armed="1";const t=btn.textContent;btn.textContent="Tap again to confirm";btn.classList.add("armed");
@@ -3107,7 +3117,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 17:54 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 18:06 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
