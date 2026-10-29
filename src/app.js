@@ -6517,23 +6517,23 @@ async function afFaqSave(){AFQ.busy=true;renderAdmin();const items=(AFQ.draft||[
     AFQ.draft=null;toast("FAQ saved. Affiliators see it now")}catch(er){toast(er.message||"Couldn't save the FAQ.")}AFQ.busy=false;const y=scrollY;renderAdmin();scrollTo(0,y)}
 async function afCpnLoad(){try{AFM.cpn=await SBH.rpc("aff_coupon_info",{})}catch(e){AFM.cpn={ok:false}}affRender()}
 function afCpnText(c){const d=c.type==="freedelivery"?"free delivery":c.type==="amount"?money(+c.value)+" off":(+c.value)+"% off";return d+(+c.minSpend>0?" on orders from "+money(+c.minSpend):"")+(c.stack?", also on flash sales":", not on flash sales")+(c.endsAt?", until "+esc(String(c.endsAt).replace("T"," ")):"")}
-function afMyHTML(){const c=AFM.cpn;if(!c||!c.ok)return "";const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,"");
+function afCouponHTML(){const c=AFM.cpn;if(!c||!c.ok)return "";const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,"");
   return `<section class="panel"><h2 style="margin:0 0 6px">🎟️ My coupon</h2>${!c.ready?`<p class="sub">Your coupon is not ready yet. The owner sets the discount first, then you can choose its name here.</p>`
     :`<p class="sub" style="margin:0 0 8px">${c.coupon?`Your code <b>${esc(c.coupon)}</b>`:"You do not have a coupon name yet."} Customers who type it get <b>${afCpnText(c)}</b>. You earn <b>${+c.rate}%</b> of the order. Your link is remembered for 30 days, so orders from customers who came through it also count.</p>
     ${c.canName?`<div class="colin" style="flex-wrap:wrap;gap:8px"><input class="in" id="afCpIn" maxlength="20" placeholder="Choose a name, like ALPHA001" value="${esc(c.coupon||"")}" style="flex:1;min-width:180px;text-transform:uppercase"><button class="btn btn-blue btn-sm" type="button" data-afcpsave ${AFM.busy?"disabled":""}>${c.coupon?"Change name":"Save"}</button></div><p class="note" style="margin:6px 0 0">3 to 20 letters or numbers. You can change it once an hour.</p>`:`<p class="note" style="margin:0">The owner sets your coupon name.</p>`}
-    ${AFM.msg?`<p class="note" style="margin:6px 0 0"><b>${esc(AFM.msg)}</b></p>`:""}`}</section>
-  <section class="panel"><h2 style="margin:0 0 6px">🔑 Change my password</h2><div class="grid2"><label class="af">Current password<input class="in" id="afPwOld" type="password" autocomplete="current-password" maxlength="72"></label><label class="af">New password (8+ characters)<input class="in" id="afPwNew" type="password" autocomplete="new-password" maxlength="72"></label></div>
+    ${AFM.msg?`<p class="note" style="margin:6px 0 0"><b>${esc(AFM.msg)}</b></p>`:""}`}</section>`}
+function afPwHTML(){return `<section class="panel"><h2 style="margin:0 0 6px">🔑 Change my password</h2><div class="grid2"><label class="af">Current password<input class="in" id="afPwOld" type="password" autocomplete="current-password" maxlength="72"></label><label class="af">New password (8+ characters)<input class="in" id="afPwNew" type="password" autocomplete="new-password" maxlength="72"></label></div>
     <div class="colin" style="margin-top:8px;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost-blue btn-sm" type="button" data-afpwsave ${AFM.busy?"disabled":""}>Change password</button>${AFM.pwMsg?`<span class="note" style="margin:0"><b>${esc(AFM.pwMsg)}</b></span>`:""}</div></section>`}
 function afDashHTML(r,owner){
   const a=r.aff,t=r.tot,mx=Math.max(1,...r.series.map(x=>Math.max(x.views,x.orders))),gl={day:"Daily",week:"Weekly",month:"Monthly"};
   const lbl=b=>AF.group==="month"?new Date(b+"-01T00:00:00").toLocaleDateString("en-US",{month:"long",year:"numeric"}):AF.group==="week"?"Week of "+fmtDay(b):fmtDay(b);
   const prods=(AF.prods||[]).filter(p=>p.status!=="hidden");
   return `${a.status==="paused"?`<div class="afwarn">⏸️ ${owner?"This affiliator is paused":"Your account is paused"}: links and the coupon don't earn commission right now.</div>`:""}
-  ${owner?"":afMyHTML()}
   <section class="panel"><div class="afhead"><div><h2 style="margin:0">${esc(a.name||a.username)} ${afChip(AF_STATUS,a.status)}</h2>
     <p class="sub" style="margin:4px 0 0">Code <b>${esc(a.code)}</b> · ${+a.rate}% commission${a.coupon?` · Coupon <b>${esc(a.coupon)}</b>`:""}${owner&&a.phone?` · ${esc(a.phone)}`:""}</p></div></div>
     ${afPeriodHTML()}${afKpis(t,!owner,r.cfg)}
     <p class="note" style="margin:8px 0 0">Commission is ${+a.rate}% of the product value of each order (the delivery fee is never included, and refunds are taken off). After delivery an order stays On hold for ${+r.win} hours, or until a complaint is resolved. Then ${owner?"you review it":"the shop reviews it"}. Approved orders wait for payout and are paid with a transfer proof.</p></section>
+  ${owner?"":afCouponHTML()}
   ${afPayHTML(r,owner)}
   ${owner?afActHTML():""}
   <section class="panel"><h2>Commission orders</h2>${afChips(r.orders,!owner)}${afOrdersHTML(r.orders,owner?"one":"self")}</section>
@@ -6546,7 +6546,8 @@ function afDashHTML(r,owner){
     <div class="grid2" style="margin-top:10px"><label class="af">Opens<select class="in" id="afTo"><option value="">The shop</option>${a.coupon?`<option value="__cp">The shop with coupon ${esc(a.coupon)} filled in</option>`:""}${(AF.sizes||[]).map(z=>`<option value="size:${z.n}">Box of ${z.n} cookies</option>`).join("")}${prods.map(p=>`<option value="${esc(p.id)}">Flavor: ${esc(p.name)}</option>`).join("")}</select></label>
     <label class="af">Shared on<select class="in" id="afCh">${[["ig","Instagram"],["tt","TikTok"],["wa","WhatsApp"],["fb","Facebook"],["yt","YouTube"],["x","X / Twitter"],["ads","Ads"],["web","Website / blog"],["","Other"]].map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></label></div>
     <div class="colin" style="margin-top:8px"><input class="in" id="afLinkOut" readonly value="${esc(afLink(a.code,"","ig",""))}"><button class="btn btn-blue btn-sm" type="button" data-afcopy>Copy</button></div></section>
-  <section class="panel"><h2>Payouts</h2>${r.payouts.length?r.payouts.map(p=>`<div class="afrow" style="grid-template-columns:1fr auto"><span>${fmtDT(p.at)} · ${p.n} order${p.n===1?"":"s"}${p.note?` · ${esc(p.note)}`:""}${/^https:\/\//.test(p.proof||"")?` · <a class="afproof" href="${esc(p.proof)}" target="_blank" rel="noopener">🧾 proof</a>`:""}</span><b>${money(p.amount)}</b></div>`).join(""):`<p class="note">No payouts yet.</p>`}</section>`}
+  <section class="panel"><h2>Payouts</h2>${r.payouts.length?r.payouts.map(p=>`<div class="afrow" style="grid-template-columns:1fr auto"><span>${fmtDT(p.at)} · ${p.n} order${p.n===1?"":"s"}${p.note?` · ${esc(p.note)}`:""}${/^https:\/\//.test(p.proof||"")?` · <a class="afproof" href="${esc(p.proof)}" target="_blank" rel="noopener">🧾 proof</a>`:""}</span><b>${money(p.amount)}</b></div>`).join(""):`<p class="note">No payouts yet.</p>`}</section>
+  ${owner?"":afPwHTML()}`}
 async function affLoadList(){if(!SBH.on)return;AF.loading=true;AF.err="";const [f,t]=afRange();
   try{const [l,o,c,an]=await Promise.all([SBH.rpc("admin_aff_list",{p_from:f,p_to:t}),SBH.rpc("admin_aff_orders",{p_from:f,p_to:t}),SBH.rpc("admin_aff_cfg",{p:{}}),SBH.rpc("admin_aff_announcements",{}).catch(()=>AF.ann||[]),AFQ.loaded?null:afFaqLoad()]);AF.list=l;AF.orders=o;AF.cfg=c;AF.ann=an}catch(e){AF.err=e.message;AF.list=AF.list||[];AF.orders=AF.orders||[]}
   AF.loading=false;if(A.tab==="affiliates"){const y=scrollY;renderAdmin();scrollTo(0,y)}}
