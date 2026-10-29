@@ -1721,7 +1721,7 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .cq-rel{position:relative}
 .cq-track{overflow:hidden;touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none;padding:8px 0 16px;outline:none}.cq-track.drag{cursor:grabbing}.cq-track img{-webkit-user-drag:none}
 .cq-row{display:flex;width:max-content;will-change:transform;backface-visibility:hidden}.cq-copy{display:flex;flex:0 0 auto}
-.cq-card{position:relative;flex:0 0 var(--cqw,190px);width:var(--cqw,190px);margin-right:14px;background:var(--cqbg,#FFF4D6);border-radius:24px;padding:12px 12px 14px;text-align:center;box-shadow:0 6px 16px rgba(0,0,60,.1);scroll-snap-align:none}
+.cq-card{position:relative;flex:0 0 var(--cqw,190px);width:var(--cqw,190px);margin-right:14px;background:var(--cqbg,#FFF4D6);border-radius:24px;padding:12px 12px 14px;text-align:center;box-shadow:0 4px 0 rgba(0,0,60,.07)}
 .cq-pl{position:relative;cursor:pointer}.cq-pl .plate{width:100%;aspect-ratio:1;border-radius:20px}
 .cq-card h4{margin:10px 4px 0;font-family:var(--display);font-size:15px;line-height:1.2;text-align:left;color:var(--cqink,#0B0B45)}
 .cq-card.out .plate{filter:grayscale(.7);opacity:.75}
@@ -1759,3 +1759,8 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 @media (prefers-reduced-motion:reduce){.cq-plus,.cq-bar i.on,.cq-qc,.cq-tm{animation:none}}
 .cq-pre{padding:6px 0 0}.cq-pre .wrap{padding:0;max-width:none}.cq-pre .cq-t{font-size:clamp(20px,5vw,26px)}
 .cq-pre,.cq-pre .cq-rel,.cq-pre .cq-track{min-width:0;max-width:100%;width:100%;box-sizing:border-box}
+
+/* carousel cookie pictures are flat images: no blur filter to redraw */
+.cq-card .plate .cq-ck{width:var(--ck,84%);height:var(--ck,84%);display:block;filter:none;border-radius:50%;box-shadow:0 3px 0 rgba(0,0,40,.13)}
+.cq-card .plate{container-type:normal}
+.cq-tail{display:flex;flex:0 0 auto}

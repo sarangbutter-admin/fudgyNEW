@@ -2475,7 +2475,7 @@ const preGiftHTML=(o,cust)=>o.preGift&&cust&&o.preGift.mode==="surprise"&&o.preG
 
 /* ===== Carrousel card: a running row of flavor cards. Tapping + opens a quickview with the owner's detail sections.
    The row pauses while it is touched or slid and while the quickview is open, then runs again after a short wait. ===== */
-const CQ={sig:"",host:null,tr:null,row:null,x:0,W:0,v:0,s:0,acc:0,smp:[],rate:0,next:0,D:0,K:2000,anim:null,supp:false,raf:0,ts:0,hold:0,drag:false,moved:false,open:false,vis:true,io:null,opener:null,rm:matchMedia("(prefers-reduced-motion: reduce)").matches};
+const CQ={svg:{},ready:false,sig:"",host:null,tr:null,row:null,x:0,W:0,v:0,s:0,acc:0,smp:[],rate:0,next:0,D:0,K:2000,anim:null,supp:false,raf:0,ts:0,hold:0,drag:false,moved:false,open:false,vis:true,io:null,opener:null,rm:matchMedia("(prefers-reduced-motion: reduce)").matches};
 const CQ_SZ={S:150,M:190,L:240},CQ_DT={bar:"Level",notes:"Taste notes",text:"Good to know",image:"Photo"};
 const cqCfg=()=>(DB.page&&DB.page.cq)||{};
 const cqNum=(v,d,lo,hi)=>{v=+v;return isFinite(v)&&String(v)!==""?Math.max(lo,Math.min(hi,v)):d};
@@ -2484,9 +2484,14 @@ function cqList(){const c=cqCfg(),vis=DB.products.filter(p=>p.status!=="hidden")
   items.forEach(it=>{const p=vis.find(x=>x.id===it.pid);if(p&&it.on!==false&&!seen.has(p.id)){seen.add(p.id);out.push({p,it})}});
   vis.forEach(p=>{if(!seen.has(p.id)&&!items.some(it=>it.pid===p.id))out.push({p,it:{pid:p.id}})});
   return out}
+// the cookie picture of a flavor as a flat image: it is decoded once, so redrawing a tile is a cheap copy instead of drawing gradients and a blur again
+function cqPlate(p){const g=plateBg(p),inner=plateInner(p)||"";let body=inner;
+  if(/^\s*<svg/i.test(inner)){const k=p.id+"|"+inner.length+"|"+(p.art||"");let u=CQ.svg[k];if(!u){const sv=/xmlns=/.test(inner.slice(0,200))?inner:inner.replace(/^\s*<svg/i,'<svg xmlns="http://www.w3.org/2000/svg"');u=CQ.svg[k]="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(sv)}
+    body=`<img class="ck cq-ck" src="${u}" alt="" draggable="false" decoding="async">`}
+  return `<div class="plate${g.dark?" dark":""}${inner?"":" blank"}" style="${esc(g.css)}">${body}</div>`}
 function cqPlusHTML(c){const pl=c.plus||{},img=imgOk(pl.img);return img?`<img src="${esc(img)}" alt="" draggable="false">`:esc(String(pl.icon||"+").slice(0,4))}
 function cqCardHTML(o,dup){const {p}=o,c=cqCfg(),pl=c.plus||{},out=isOut(p),fx=["pulse","wiggle","none"].includes(pl.fx)?pl.fx:"pulse",tb=dup?` tabindex="-1"`:"";
-  return `<article class="cq-card${out?" out":""}" data-cqid="${esc(p.id)}"><div class="cq-pl" data-cqopen="${esc(p.id)}">${plateHTML(p)}${c.price!==false&&p.surcharge>0?`<span class="cq-x">+${money(p.surcharge)}</span>`:""}${out?`<span class="cq-sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:""}</div>
+  return `<article class="cq-card${out?" out":""}" data-cqid="${esc(p.id)}"><div class="cq-pl" data-cqopen="${esc(p.id)}">${cqPlate(p)}${c.price!==false&&p.surcharge>0?`<span class="cq-x">+${money(p.surcharge)}</span>`:""}${out?`<span class="cq-sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:""}</div>
     <h4>${esc(p.name)}</h4><button class="cq-plus fx-${fx}" type="button" data-cqopen="${esc(p.id)}"${tb} aria-label="See the details of ${esc(p.name)}">${cqPlusHTML(c)}</button></article>`}
 function cqStop(){cancelAnimationFrame(CQ.raf);CQ.raf=0;if(CQ.io){CQ.io.disconnect();CQ.io=null}if(CQ.anim){try{CQ.anim.cancel()}catch(e){}CQ.anim=null}CQ.tr=CQ.row=null}
 // the shop page shows it while the shop is open; the pre-launch page has its own copy below the mini game
@@ -2500,10 +2505,11 @@ function cqMount(el,force,pre){const c=cqCfg(),list=cqList(),on=(pre?c.pre!==fal
   cqStop();if(!on){el.hidden=true;el.innerHTML="";return}
   el.hidden=false;
   const cw=CQ_SZ[c.size]||CQ_SZ.M,vw=Math.max(el.clientWidth||0,innerWidth||0,320),r=Math.max(1,Math.ceil(1.3*vw/((cw+14)*list.length))),
-    copy=k=>`<div class="cq-copy"${k?` aria-hidden="true"`:""}>${Array.from({length:r}).map(()=>list.map(o=>cqCardHTML(o,k)).join("")).join("")}</div>`;
+    seq=Array.from({length:r}).flatMap(()=>list),tailN=Math.ceil((vw+cw)/(cw+14))+1,
+    copy=()=>`<div class="cq-copy">${seq.map(o=>cqCardHTML(o,0)).join("")}</div>`,tail=()=>`<div class="cq-tail" aria-hidden="true">${Array.from({length:tailN},(_,i)=>cqCardHTML(seq[i%seq.length],1)).join("")}</div>`;
   el.style.cssText=`--cqw:${cw}px;--cqbg:${hexOk(c.bg,"#FFF4D6")};--cqink:${hexOk(c.ink,"#0B0B45")};--cqac:${hexOk(c.accent,"#000096")};--cqpb:${hexOk((c.plus||{}).bg,"#000096")};--cqpc:${hexOk((c.plus||{}).color,"#ffffff")}`;
   el.innerHTML=`<div class="wrap">${c.title?`<h2 class="cq-t">${esc(c.title)}</h2>`:""}${c.sub?`<p class="cq-s">${esc(c.sub)}</p>`:""}</div>
-    <div class="cq-rel"><button class="cq-arr l" type="button" data-cqarr="-1" aria-label="Previous flavors">‹</button><div class="cq-track" id="cqTrack" tabindex="0" role="region" aria-label="Flavors. Drag or swipe to browse."><div class="cq-row">${[0,1].map(copy).join("")}</div></div><button class="cq-arr r" type="button" data-cqarr="1" aria-label="Next flavors">›</button></div>`;
+    <div class="cq-rel"><button class="cq-arr l" type="button" data-cqarr="-1" aria-label="Previous flavors">‹</button><div class="cq-track" id="cqTrack" tabindex="0" role="region" aria-label="Flavors. Drag or swipe to browse."><div class="cq-row">${copy()}${tail()}</div></div><button class="cq-arr r" type="button" data-cqarr="1" aria-label="Next flavors">›</button></div>`;
   const tr=CQ.tr=document.getElementById("cqTrack"),row=CQ.row=tr.querySelector(".cq-row"),cp=tr.querySelector(".cq-copy");
   CQ.W=cp?cp.getBoundingClientRect().width:0;CQ.x=keep*CQ.W;CQ.v=CQ.rate=0;CQ.drag=false;CQ.acc=0;CQ.smp=[];CQ.hold=performance.now()+400;CQ.ts=0;
   // the running is a browser animation (it keeps going on the graphics thread even when the page is busy): one copy per CQ.D ms at rate 1
@@ -2521,6 +2527,8 @@ function cqMount(el,force,pre){const c=cqCfg(),list=cqList(),on=(pre?c.pre!==fal
   tr.addEventListener("keydown",e=>{if(e.key==="ArrowRight"||e.key==="ArrowLeft"){e.preventDefault();cqGrab();CQ.v+=(e.key==="ArrowRight"?1:-1)*980;hold()}});
   tr.addEventListener("focusin",hold);
   if(window.IntersectionObserver){CQ.io=new IntersectionObserver(e=>{CQ.vis=e[0].isIntersecting},{threshold:0});CQ.io.observe(el)}
+  CQ.ready=false;{const imgs=[...row.querySelectorAll("img")],mine=row,go=()=>{if(CQ.row!==mine)return;CQ.ready=true;CQ.hold=Math.max(CQ.hold,performance.now()+250)};
+    Promise.race([Promise.all(imgs.map(i=>i.decode?i.decode().catch(()=>0):0)),new Promise(r=>setTimeout(r,1500))]).then(go)}
   CQ.raf=requestAnimationFrame(cqLoop)}
 const CQ_REF=90;   // px per second at playback rate 1
 // the animation's clock is the position: time = K copies + the offset inside the current copy
@@ -2530,7 +2538,7 @@ function cqSeek(x){const a=CQ.anim;if(!a||!CQ.W)return;CQ.x=((x%CQ.W)+CQ.W)%CQ.W
 function cqGrab(){const a=CQ.anim;if(!a)return;if(a.playState==="running"){CQ.x=cqPos();a.pause()}CQ.rate=0}
 function cqLoop(ts){CQ.raf=requestAnimationFrame(cqLoop);const a=CQ.anim;if(!CQ.tr||!CQ.W)return;const dt=Math.min(.05,(ts-(CQ.ts||ts))/1000);CQ.ts=ts;
   if(!CQ.vis||document.hidden){if(a&&a.playState==="running"){CQ.x=cqPos();a.pause();CQ.rate=0}return}
-  const c=cqCfg(),t=performance.now();if(!a)return;
+  const c=cqCfg(),t=performance.now();if(!a||!CQ.ready)return;
   if(CQ.drag)return;
   if(Math.abs(CQ.v)>12){if(a.playState==="running"){CQ.x=cqPos();a.pause()}CQ.rate=0;const m=CQ.v*dt;CQ.acc+=m;cqSeek(CQ.x+m);CQ.v*=Math.exp(-3.2*dt);CQ.hold=Math.max(CQ.hold,t+cqNum(c.rs,1.5,0,10)*1000);return}
   CQ.v=0;const run=!CQ.rm&&!CQ.open&&t>=CQ.hold,tg=run?cqNum(c.speed,3,1,10)*18/CQ_REF*(c.dir==="right"?-1:1):0;
