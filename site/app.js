@@ -2153,7 +2153,7 @@ function defaultPre(){return {on:false,max:100,openAt:0,autoOpen:true,
   done:{title:"You're in, {name}!",text:"You're #{rank} of {max}. Your Free Gift Set is waiting for you on opening day.",icon:"🎁",img:"",fx:"gifts",bg:"#ffffff",ink:"#0B0B45",title2:"#000096",codeBg:"#FFF4D6",codeInk:"#000096",note:"This phone remembers it for you. Ordering from another phone? Type this code in the coupon box.",tip:"📸 Tip: take a screenshot of this page",wa:true},
   closed:{icon:"🎉",img:"",fx:"confetti",title:"All {max} Gift Sets are taken!",text:"Thank you for the amazing enthusiasm 💙 Stay tuned, more exciting events are coming soon.",btn:"Follow us on Instagram",link:"",bg:"#000096",ink:"#ffffff"},
   fx:{on:true,mode:"float",imgs:[],n:8,speed:"normal",size:"M",op:55},
-  game:{on:true,imgs:[],gold:"",burnt:"",clock:"",sec:60,speed:"normal",tap:"crumble",bg:"#FFF4D6",end:"You scored {score} points!",cks:[],pts:100,flame:200,add:5,pGold:8,pFlame:10,pTime:4,grow:20,pass:70,max:[],share:"I scored {score} points catching cookies 🍪 Join the {shop} pre-launch: {link}"}}}
+  game:{on:true,pTitle:"Can you beat the Cookie Challenge?",pText:"Tap the falling cookies, grab the golden ones and dodge the flames. Climb 10 levels and win a trophy on our top 5!",pBtn:"Play now",imgs:[],gold:"",burnt:"",clock:"",sec:60,speed:"normal",tap:"crumble",bg:"#FFF4D6",end:"You scored {score} points!",cks:[],pts:100,flame:200,add:5,pGold:8,pFlame:10,pTime:4,grow:20,pass:70,max:[],share:"I scored {score} points catching cookies 🍪 Join the {shop} pre-launch: {link}"}}}
 function preNorm(p){const d=defaultPre(),o=p&&typeof p==="object"?p:{},r=Object.assign({},d,o);
   ["hero","form","gifts","done","closed","fx","game"].forEach(k=>{r[k]=Object.assign({},d[k],o[k]&&typeof o[k]==="object"?o[k]:{})});
   ["items"].forEach(k=>{if(!Array.isArray(r.gifts[k]))r.gifts[k]=[]});if(!Array.isArray(r.fx.imgs))r.fx.imgs=[];if(!Array.isArray(r.game.imgs))r.game.imgs=[];["cks","max"].forEach(k=>{if(!Array.isArray(r.game[k]))r.game[k]=[]});
@@ -2185,6 +2185,21 @@ function preGiftsHTML(P){const G=P.gifts;if(!G.on||!G.items.length)return "";
   const sub=G.mode==="surprise"?G.surText:G.setText;
   return `<section class="pre-gifts" style="--gbx:${hexOk(G.bg,"#ffffff")};--gink:${hexOk(G.ink,"#0B0B45")};--gttl:${hexOk(G.title2,"#000096")};--gtile:${hexOk(G.tile,"#FFF4D6")}"><h3>${G.icon?esc(G.icon)+" ":""}${esc(G.title||"Your Free Gift Set")}</h3>${sub?`<p>${esc(sub)}</p>`:""}
     <div class="pg-grid gfx-${["float","wiggle","spin","pulse","shine","none"].includes(G.fx)?G.fx:"float"}">${G.items.map((g,i)=>`<div class="pg-it" style="--d:${(i*.35).toFixed(2)}s">${g.img?`<img src="${esc(imgOk(g.img))}" alt="">`:`<i aria-hidden="true">🎁</i>`}<span>${esc(g.name||"")}</span></div>`).join("")}</div></section>`}
+/* the game, shown on the page itself: a looping mini preview, an invitation, the top 5 and a big Play button */
+function preGameCardHTML(P){const G=P.game,C=pgmCks(G),art=i=>pgmArt(C[i%C.length]),own=k=>G[k]?`<img src="${esc(imgOk(G[k]))}" alt="" draggable="false">`:"";
+  const ck=(cls,x,t,dl,inner)=>`<i class="pgm-ck pgp-ck ${cls}${(cls==="gold"&&G.gold)||(cls==="flame"&&G.burnt)||(cls==="time"&&G.clock)?" own":""}" style="left:${x}%;--t:${t}s;--dl:${dl}s">${inner}</i>`;
+  const set=[["",8,3.6,-0.4,art(0)],["",24,4.4,-2.1,art(1)],["gold",40,4.0,-1.2,own("gold")||art(0)],["",56,3.4,-2.8,art(2)],["flame",70,4.2,-0.9,own("burnt")||art(1)],["time",84,3.8,-3.0,own("clock")||art(0)],["",92,4.8,-1.7,art(3)]];
+  const bg=hexOk(G.bg,"#FFF4D6"),lv=1;
+  PGM.tops===null&&pgmPageTopsLoad();
+  return `<section class="pgp" style="--gbg:${bg}"><h3>🎮 ${esc(G.pTitle||"Can you beat the Cookie Challenge?")}</h3><p class="pgp-tx">${esc(G.pText||"")}</p>
+    <div class="pgp-stage" aria-hidden="true"><div class="pgp-hud"><span>Lv 1</span><span>🍪 <b>12.400</b></span><span>⏱ 60s</span></div><div class="pgp-bar"><i></i></div>
+      ${set.map(x=>ck(x[0],x[1],x[2],x[3],x[4])).join("")}
+      <span class="pgp-pop p1">+100</span><span class="pgp-pop p2">+200 ✨</span><span class="pgp-pop p3 tm">+5s ⏰</span><span class="pgp-pop p4 cb">x2 combo!</span></div>
+    <div class="pgp-chips"><span>🍪 Tap the cookies</span><span>✨ Golden = double</span><span>⏰ Clock = more time</span><span>🏆 Top 5 win a trophy</span></div>
+    <div id="pgpTops">${pgmTopsHTML(PGM.lv||lv,"")}</div>
+    <button class="pre-btn pre-btn-b pgp-play" type="button" data-pregame><i aria-hidden="true">▶</i> ${esc(G.pBtn||"Play now")}</button><p class="pgp-sm">Free · takes 1 minute · your phone only</p></section>`}
+async function pgmPageTopsLoad(){if(PGM.tl)return;PGM.tl=true;try{PGM.tops=SBH.on&&SBH.gameTops?await SBH.gameTops():(PGM.me.tops||{});PGM.topsErr=false}catch(e){PGM.topsErr=true;PGM.tops=null}PGM.tl=false;
+  const el=document.getElementById("pgpTops");if(el)el.innerHTML=pgmTopsHTML(PGM.lv||1,"")}
 function preFxHTML(P){const F=P.fx;if(!F.on)return "";const imgs=F.imgs.length?F.imgs:[COOKIE_SVG],n=Math.max(2,Math.min(20,+F.n||8)),sz={S:26,M:38,L:54}[F.size]||38,sp={slow:1.6,normal:1,fast:.6}[F.speed]||1;let h="";
   for(let i=0;i<n;i++){const fall=F.mode==="fall"||(F.mode==="both"&&i%2),s=sz*(.7+Math.random()*.6);
     h+=`<i class="${fall?"pfx-fall":"pfx-float"}" style="left:${(Math.random()*94).toFixed(1)}%;${fall?"":`top:${(5+Math.random()*85).toFixed(1)}%;`}width:${s|0}px;height:${s|0}px;--t:${((fall?7:5)+Math.random()*5)*sp}s;--dl:-${(Math.random()*8).toFixed(1)}s;opacity:${Math.max(.1,Math.min(1,(+F.op||55)/100))}"><img src="${esc(F.imgs.length?imgOk(imgs[i%imgs.length]):COOKIE_SVG)}" alt=""></i>`}
@@ -2211,7 +2226,7 @@ function renderPre(force){const v=preView();if(v.hidden)return;const P=DB.prelau
         ${P.form.email!==false?`<input class="pre-in" id="prEmail" type="email" autocomplete="email" maxlength="120" placeholder="Email (optional)">`:""}
         ${PRE.err?`<p class="pre-err" role="alert">${esc(PRE.err)}</p>`:""}<button class="pre-btn" type="submit" ${PRE.busy?"disabled":""}>${PRE.busy?"Saving…":esc(P.form.btn||"Claim my free Gift Set")}</button></form>`;
     body=`<div class="dome" id="preDome"><div class="hm" aria-hidden="true"></div><div class="ho" aria-hidden="true"></div><p class="eyebrow"></p><h1></h1><p class="lede"></p><div class="hero-ctas"><a class="btn btn-white" href="#preForm" data-prego="form"></a><a class="btn btn-line" href="#preGame" data-prego="game"></a></div></div>
-      ${me?reg+preCdHTML(P):preCdHTML(P)+reg}${preGiftsHTML(P)}${P.game.on&&!me?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:P.game.on?`<button class="pre-btn pre-btn-b" type="button" data-pregame>🍪 Play while you wait</button>`:""}`}
+      ${me?reg+preCdHTML(P):preCdHTML(P)+reg}${preGiftsHTML(P)}${P.game.on?preGameCardHTML(P):""}`}
   const pv=preForced()?`<div class="pre-pv" data-notr><b>👁 Preview</b><span>Like a private window: nothing is saved and nobody is registered.</span><div>${[["form","Form"],["done","You're in"],["full","All taken"]].map(([k,l])=>`<button type="button" data-pvst="${k}" aria-pressed="${(k==="done"&&!!me)||(k==="full"&&full)||(k==="form"&&!me&&!full)}">${l}</button>`).join("")}<button type="button" data-pvgame>Game</button></div></div>`:"";
   v.innerHTML=`${preFxHTML(P)}<div class="pre-wrap">${pv}${top}${body}</div>`;
   const dome=v.querySelector("#preDome");if(dome){const h=JSON.parse(JSON.stringify(P.hero));if(!P.game.on)h.btn2="";if(me)h.btn1="";if(!h.bg)h.bg=pg.brand;heroFill(dome,h)}
@@ -2258,7 +2273,7 @@ addEventListener("ddlang",()=>{if(!preView().hidden)renderPre(true)});
 /* pre-launch mini game "Catch the cookies": 10 levels, each a little harder. A level drops the same cookie sequence every time,
    so its highest possible score is exact (every good cookie tapped with a full combo). Top 5 of each level are kept on the
    server; the player's own progress (unlocked level, best scores) stays on their phone. */
-const PGM={run:false,score:0,raf:0,cks:[],combo:0,last:0,acc:0,lt:0,gt:0,endT:0,lv:1,rnd:null,L:null,C:null,html:{},tops:null,topsErr:false,res:null,busy:false,
+const PGM={tl:false,run:false,score:0,raf:0,cks:[],combo:0,last:0,acc:0,lt:0,gt:0,endT:0,lv:1,rnd:null,L:null,C:null,html:{},tops:null,topsErr:false,res:null,busy:false,
   me:{lv:1,best:{},name:"",tops:{}}};
 try{const m=JSON.parse(localStorage.getItem("delidome-game-v2")||"null");if(m&&typeof m==="object")Object.assign(PGM.me,m,{lv:Math.max(1,Math.min(10,+m.lv||1))})}catch(e){}
 PGM.lv=PGM.me.lv;
@@ -2285,8 +2300,16 @@ function pgmLevels(G){return Array.from({length:10},(_,i)=>{const L=pgmLevel(G,i
 async function pgmTopsLoad(){try{PGM.tops=SBH.on&&SBH.gameTops?await SBH.gameTops():(PGM.me.tops||{});PGM.topsErr=false}catch(e){PGM.topsErr=true}
   const ov=document.getElementById("preGame");if(ov&&!ov.hidden&&!PGM.run){const t=ov.querySelector("[data-pgmtops]");if(t)t.outerHTML=pgmTopsHTML(+t.dataset.pgmtops,t.dataset.me||"")}}
 const pgmTop=lv=>(PGM.tops&&PGM.tops[lv])||[];
+// shiny gold / silver / bronze trophy for places 1 to 3 (places 4 and 5 stay blank)
+const PGM_TR={1:["#FFF3B0","#F7C531","#B57A00","Gold"],2:["#F4F7FB","#AEB9C8","#5C6878","Silver"],3:["#FFD9B0","#D58A47","#8C4E1C","Bronze"]};
+function pgmTrophy(r){const c=PGM_TR[r];if(!c)return "";const id="pgt"+r;
+  return `<svg class="pgm-tr t${r}" viewBox="0 0 24 24" role="img" aria-label="${c[3]} trophy"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c[0]}"/><stop offset=".5" stop-color="${c[1]}"/><stop offset="1" stop-color="${c[2]}"/></linearGradient><clipPath id="${id}c"><path d="M7 3h10v6a5 5 0 0 1-10 0z"/><rect x="10.5" y="13" width="3" height="4"/><path d="M7 19h10v2H7z"/></clipPath></defs>
+    <path d="M7 4H3.5v2.2c0 2.2 1.5 3.8 3.6 4.1M17 4h3.5v2.2c0 2.2-1.5 3.8-3.6 4.1" fill="none" stroke="url(#${id})" stroke-width="1.7" stroke-linecap="round"/>
+    <g stroke="rgba(70,45,0,.45)" stroke-width=".6" stroke-linejoin="round"><path d="M7 3h10v6a5 5 0 0 1-10 0z" fill="url(#${id})"/><rect x="10.5" y="13" width="3" height="4" fill="url(#${id})"/><path d="M7 19h10v2H7z" fill="url(#${id})"/></g>
+    <g clip-path="url(#${id}c)"><g transform="skewX(-20)"><rect class="pgt-sh" x="-6" y="0" width="4" height="24" fill="#fff" opacity=".85"/></g></g>
+    <path class="pgt-sp s1" d="M20.5 2l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" fill="#fff"/><path class="pgt-sp s2" d="M3 12l.5 1.3 1.3.5-1.3.5L3 15.6l-.5-1.3-1.3-.5 1.3-.5z" fill="#fff"/></svg>`}
 function pgmTopsHTML(lv,me){const T=pgmTop(lv);return `<div class="pgm-tops" data-pgmtops="${lv}" data-me="${esc(me||"")}"><b>🏆 Top 5 · Level ${lv}</b>${PGM.tops===null?`<p class="pgm-sm">${PGM.topsErr?"Couldn't load the scores.":"Loading…"}</p>`
-  :T.length?`<ol>${T.map((x,i)=>`<li class="${me&&me===x.name+"|"+x.score?"me":""}"><span class="pgm-av" style="animation-delay:${i*.15}s">${PGM_AV[+x.av]||PGM_AV[0]}</span><span class="pgm-nm">${esc(x.name)}</span><b>${pgmN(x.score)}</b></li>`).join("")}</ol>`:`<p class="pgm-sm">No scores yet. Be the first!</p>`}</div>`}
+  :T.length?`<ol>${T.map((x,i)=>`<li class="${me&&me===x.name+"|"+x.score?"me":""}"><span class="pgm-av" style="animation-delay:${i*.15}s">${PGM_AV[+x.av]||PGM_AV[0]}</span><span class="pgm-nmw"><span class="pgm-nm">${esc(x.name)}</span>${pgmTrophy(i+1)}</span><b>${pgmN(x.score)}</b></li>`).join("")}</ol>`:`<p class="pgm-sm">No scores yet. Be the first!</p>`}</div>`}
 function pgmBar(v,need){return `<div class="pgm-bar"><i style="width:${need>0?Math.min(100,Math.round(v/need*100)):0}%"></i></div>`}
 function pgmGoal(lv,best,lvl){return lv<10?`<p class="pgm-goal"><b>${pgmN(best)}</b> / ${pgmN(lvl.need)} to unlock Level ${lv+1}</p>${pgmBar(best,lvl.need)}`:`<p class="pgm-goal"><b>${pgmN(best)}</b> / ${pgmN(lvl.need)} to beat the last level</p>${pgmBar(best,lvl.need)}`}
 window.preGameStart=function(){const G=DB.prelaunch.game;let ov=document.getElementById("preGame");
@@ -3001,7 +3024,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 12:39 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 16:46 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
