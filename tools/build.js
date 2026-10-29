@@ -124,7 +124,7 @@ fs.copyFileSync(R('src/styles.css'),R('admin-site/styles.css'));
   let o=keep.filter(l=>!/^\/\*.*\b(admin|owner|sign-in|team|staff|activity|password|editor)\b.*\*\/$/i.test(l.trim())).join('\n').replace(/\.adminlink(?:::before)?\{[^}]*\}/g,'').replace(/and a shop admin \(sidebar \+ panels\) sharing one mock data store/,'');
   wr('site/styles.css',o);
 }
-for(const f of ['404.html','robots.txt','i18n.js','i18n-dict.js']){fs.copyFileSync(R('src/'+f),R('site/'+f))}
+for(const f of ['404.html','robots.txt','i18n.js','i18n-dict.js','join.html','join.js','join.css']){fs.copyFileSync(R('src/'+f),R('site/'+f))}   // join.*: the standalone affiliator sign-up page (/join)
 wr('site/config.js',rd('src/config.js').replace(/,\n  \/\/ team site only[^\n]*\n  shopUrl:[^\n]*\n/,'\n'));
 fs.copyFileSync(R('src/config.js'),R('admin-site/config.js'));
 wr('admin-site/robots.txt','User-agent: *\nDisallow: /\n');

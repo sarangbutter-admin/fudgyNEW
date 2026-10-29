@@ -1451,31 +1451,9 @@ function rateOrder(o,rt){
     p.reviews.push({id:uid(),user:(o.customer.name.split(' ')[0]||'Customer').slice(0,30),text:(r.comment||'').trim()||'Rated '+r.n+' out of 5',stars:r.n,at:Date.now(),src:'customer',orderId:o.id});o.rated[pid]=r.n});
   saveDB();return Promise.resolve();
 }
-/* --- "Become an affiliator": the apply form and the status page (private link) --- */
-const AP={f:{name:"",phone:"",email:"",handle:"",social:"",why:""},busy:false,err:"",done:null,status:null};
+/* --- "Become an affiliator" now lives on its own page: /join (join.html). Old apply and status links come here and are sent on. --- */
 const AP_KEY="delidome-affapp";
-function apOpen(){AP.err="";AP.done=null;AP.status=null;let tok="";try{tok=localStorage.getItem(AP_KEY)||""}catch(e){}apDraw();$("#apSheet").hidden=false;document.body.style.overflow="hidden";if(tok)apStatus(tok,true)}
-function apClose(){const m=$("#apSheet");if(!m||m.hidden)return;m.hidden=true;document.body.style.overflow=""}
-async function apStatus(tok,quiet){if(!SBH.on)return;try{const r=await SBH.rpcPub("aff_app_status",{p_token:tok});if(r&&r.ok){AP.status=r;apDraw()}else if(!quiet){AP.err="We could not find that application.";apDraw()}}catch(e){}}
-function apDraw(){const c=$("#apCard"),F=AP.f,S=AP.status,shop=location.origin+location.pathname;
-  const head=`<div class="sheet-top"><div><h3>🤝 Become an affiliator</h3></div><button class="x" type="button" data-apclose aria-label="Close">✕</button></div>`;
-  if(!SBH.on){c.innerHTML=head+`<p class="mo-sub">Applications work on the live shop.</p>`;return}
-  if(S&&S.ok){const m=S.status==="approved"?`<div class="mo-pay" style="background:#E6F6EC;border-color:#9AD3AE"><b>✅ Approved!</b><span>Hi ${esc(S.name)}. We sent you your sign-in details${S.username?` (username <b>${esc(S.username)}</b>)`:""}. Please check your WhatsApp or email.</span></div>`
-      :S.status==="rejected"?`<div class="mo-pay" style="background:#FCE3E8"><b>Sorry, not this time</b><span>Hi ${esc(S.name)}. ${S.reason?"Reason: "+esc(S.reason):"We cannot accept your application."}</span></div>`
-      :`<div class="mo-pay"><b>⏳ We are looking at your application</b><span>Hi ${esc(S.name)}. We will answer by WhatsApp or email. You can come back to this page anytime to check.</span></div>`;
-    c.innerHTML=head+m+`<div class="colin" style="margin-top:12px"><button class="btn btn-ghost-blue btn-sm" type="button" data-apclose>Close</button></div>`;return}
-  const f=(l,k,o={})=>`<div class="field"><label>${l}</label>${o.rows?`<textarea data-apf="${k}" rows="${o.rows}" maxlength="${o.max||300}" placeholder="${esc(o.ph||"")}">${esc(F[k])}</textarea>`:`<input data-apf="${k}" ${o.type?`type="${o.type}"`:""} maxlength="${o.max||80}" value="${esc(F[k])}" placeholder="${esc(o.ph||"")}" autocomplete="${o.ac||"off"}">`}</div>`;
-  c.innerHTML=head+(AP.done?`<div class="mo-pay" style="background:#E6F6EC;border-color:#9AD3AE"><b>✅ Application sent!</b><span>Thank you, ${esc(AP.done.name)}. We will answer by WhatsApp or email. Keep this private link to check your result:</span><input class="in" readonly value="${esc(shop+"?affstatus="+AP.done.token)}" onclick="this.select()"></div>`
-    :`<p class="mo-sub" style="margin:0 0 10px">Share our cookies with your followers and earn a commission on every order you bring. Tell us a little about you.</p>
-    <form class="form" id="apForm" novalidate>${f("Your name","name",{ac:"name"})}${f("WhatsApp number","phone",{type:"tel",ac:"tel",max:30})}${f("Email (optional)","email",{type:"email",ac:"email",max:120})}${f("Username you would like (optional)","handle",{max:30,ph:"like alpha"})}${f("Your Instagram / TikTok / website (optional)","social",{rows:2,max:300})}${f("Why do you want to join? How will you share us?","why",{rows:3,max:600})}
-    ${AP.err?`<p class="err" role="alert">${esc(AP.err)}</p>`:""}<button class="btn btn-blue" type="submit" ${AP.busy?"disabled":""}>${AP.busy?"Sending…":"Send my application"}</button></form>`)}
-$("#apSheet").addEventListener("click",e=>{if(e.target.id==="apSheet"||e.target.closest("[data-apclose]"))apClose()});
-$("#apSheet").addEventListener("input",e=>{const k=e.target.dataset.apf;if(k)AP.f[k]=e.target.value});
-$("#apSheet").addEventListener("submit",async e=>{e.preventDefault();if(AP.busy)return;const F=AP.f;
-  if(String(F.name).trim().length<2){AP.err="Please type your name.";apDraw();return}if(normPhone(F.phone).length<7){AP.err="Please type a valid WhatsApp number.";apDraw();return}
-  AP.busy=true;AP.err="";apDraw();
-  try{const r=await withPass("apply",()=>SBH.rpcPub("aff_apply",{p:F}));if(r&&r.token){try{localStorage.setItem(AP_KEY,r.token)}catch(x){}AP.done={name:F.name,token:r.token};AP.f={name:"",phone:"",email:"",handle:"",social:"",why:""}}}
-  catch(er){AP.err=er.message||"Couldn't send. Please try again."}AP.busy=false;apDraw()});
+function apOpen(tok){let t=typeof tok==="string"?tok:"";if(!t){try{t=localStorage.getItem(AP_KEY)||""}catch(e){}}location.replace("join.html"+(t?"?status="+encodeURIComponent(t):""))}
 function openReviews(id){RV.pid=id;RV.stars=0;RV.oid=null;renderReviews();$("#rvSheet").hidden=false;document.body.style.overflow="hidden"}
 function closeReviews(){const m=$("#rvSheet");if(!m||m.hidden)return;m.hidden=true;document.body.style.overflow=""}
 $("#menuGrid").addEventListener("click",e=>{const b=e.target.closest("[data-reviews]");if(b)openReviews(b.dataset.reviews)});
@@ -2914,8 +2892,8 @@ function affCapture(){if(affDone)return;affDone=true;try{
     localStorage.setItem(AFF_KEY,JSON.stringify({code,src,at:Date.now()}));
     if(SBH.on&&SBH.affHit)SBH.affHit(code,vid,src)}
   if(q.get("paid"))setTimeout(dkReturn,1800);
-  if(q.get("apply")==="affiliate")setTimeout(apOpen,600);
-  if(q.get("affstatus")){const tk=q.get("affstatus");try{localStorage.setItem(AP_KEY,tk)}catch(e){}setTimeout(apOpen,600)}
+  if(q.get("apply")==="affiliate")apOpen();
+  if(q.get("affstatus"))apOpen(q.get("affstatus"));
   const sz=parseInt(q.get("size"),10),again=(fn,n=20)=>{const t=setInterval(()=>{let ok=false;try{ok=fn()}catch(e){}if(ok||--n<=0)clearInterval(t)},400)};
   if(to)again(()=>{const c=document.querySelector(`.card[data-id="${CSS.escape(to)}"]`);if(!c)return false;c.scrollIntoView({block:"center",behavior:RM?"auto":"smooth"});c.classList.add("affhl");setTimeout(()=>c.classList.remove("affhl"),2600);return true});
   if(sz>0&&!to)again(()=>{if(!activeSizes().length)return false;if(!activeSizes().some(x=>x.n===sz))return true;if(!S.editId&&S.size!==sz)setSize(sz);
@@ -6578,20 +6556,85 @@ async function affLoadRep(id,mine){const [f,t]=afRange();AF.repLoading=true;
 async function affLoadProds(){try{const r=await SBH.rpc("shop_public",{});AF.prods=(r.products||[]).map(p=>({id:p.id,name:p.name,status:p.status}));AF.sizes=(r.sizes||[]).filter(z=>z.active!==false).map(z=>({n:z.n})).sort((a,b)=>a.n-b.n)}catch(e){AF.prods=[];AF.sizes=[]}
   if(AF.rep){if(document.getElementById("affView"))affRender();else if(A.tab==="affiliates")renderAdmin()}}
 const AF_QUICK={flash:["🔥 Flash sale is on","A flash sale is running now. Share your link so your followers can order while it lasts."],coupon:["🎟 New coupon","A new coupon is live: CODE. Share it with your followers."],feature:["✨ New feature","New for affiliators: "]};
+/* --- Join page (/join): the owner edits the texts, colors, running banner and steps; affiliators see it on the standalone sign-up page --- */
+// keep in step with D in join.js
+const AFJ_DEFAULT={
+  title: "Join our affiliate team", sub: "Share our cookies with your followers and earn money on every order you bring.", heroIcon: "🍪", rate: "10%",
+  bg: "#000096", ink: "#ffffff", accent: "#FFD43B", pageBg: "#F4F5FF",
+  marquee: { on: true, text: "💸 Join and earn! Share our cookies and get paid on every order 🍪 It is free to join ✨ Sign up in 2 minutes 🚀", bg: "#FFD43B", ink: "#000096", speed: "normal" },
+  cta: "Join us now", ctaIcon: "🚀", formTitle: "Apply in 2 minutes", formSub: "We read every application and answer by WhatsApp or email.", btn: "Send my application",
+  thanks: "Thank you! We will answer by WhatsApp or email very soon.",
+  show: { perks: true, earn: true, example: true },
+  perksTitle: "Why join?",
+  perks: [
+    { icon: "🆓", t: "Free to join", d: "No fee, no stock, no risk." },
+    { icon: "🔗", t: "Your own link and coupon", d: "Every order from them is counted for you." },
+    { icon: "💸", t: "Paid by transfer", d: "Your commission goes to your bank or e-wallet." }],
+  earnTitle: "How you earn commission",
+  earn: [
+    { icon: "📝", t: "Apply and get approved", d: "Fill in the form below. When we approve you, you sign in to your own dashboard." },
+    { icon: "🔗", t: "Get your link and coupon", d: "You get a personal share link and a coupon code you can name yourself." },
+    { icon: "📣", t: "Share it", d: "Post it on Instagram, TikTok, Threads or WhatsApp." },
+    { icon: "🛒", t: "Customers order", d: "An order from your link or your coupon is yours. If a customer does both, the coupon wins. Your own orders do not count." },
+    { icon: "💰", t: "You earn {rate} of what they pay for the cookies", d: "The delivery fee is never included. A coupon or flash sale is taken off first." },
+    { icon: "⏳", t: "Wait 7 days after delivery", d: "The 7 days start when the order is delivered, not when it was ordered. If it is cancelled, refunded or has a complaint, the commission is cancelled or recounted." },
+    { icon: "🏦", t: "Get paid", d: "Approved commission is paid by transfer, with a proof, once it reaches the minimum payout." }],
+  exTitle: "Example with 10% commission",
+  example: "Cookies: Rp 85.000\nDelivery fee: Rp 15.000\nFlash sale: − Rp 5.000\nCoupon: − Rp 5.000\nCustomer pays: Rp 90.000\n\nCommission is counted on Rp 90.000 − Rp 15.000 delivery = Rp 75.000\nYour commission: Rp 75.000 × 10% = Rp 7.500"
+};
+const AFJ={cfg:null,draft:null,open:false,busy:false,err:""};
+const afjMerge=(a,b)=>{const o=Object.assign({},a);for(const k in (b||{})){if(b[k]==null)continue;if(a[k]&&typeof a[k]==="object"&&!Array.isArray(a[k])&&typeof b[k]==="object")o[k]=afjMerge(a[k],b[k]);else if(Array.isArray(a[k])){if(Array.isArray(b[k]))o[k]=b[k]}else o[k]=b[k]}return o};
+const afjClone=o=>JSON.parse(JSON.stringify(o));
+const afjGet=(o,k)=>k.split(".").reduce((x,i)=>x==null?x:x[i],o),afjSet=(o,k,v)=>{const ks=k.split("."),l=ks.pop();const t=ks.reduce((x,i)=>x[i],o);t[l]=v};
+async function afjLoad(){if(AFJ.cfg||!SBH.on)return;AFJ.cfg=afjMerge(AFJ_DEFAULT,{});try{const r=await SBH.rpc("aff_join_page",{});AFJ.cfg=afjMerge(AFJ_DEFAULT,r&&r.cfg||{})}catch(e){}if(A.tab==="affiliates"){const y=scrollY;renderAdmin();scrollTo(0,y)}}
+function afjEdHTML(){if(!SBH.on)return "";if(!AFJ.cfg){afjLoad();return ""}const D=AFJ.draft||(AFJ.draft=afjClone(AFJ.cfg)),shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,""),link=shop+"/join";
+  const t=(l,k,o={})=>`<label class="af">${l}${o.rows?`<textarea class="in" rows="${o.rows}" data-afj="${k}" maxlength="${o.max||400}">${esc(afjGet(D,k))}</textarea>`:`<input class="in" data-afj="${k}" maxlength="${o.max||120}" value="${esc(afjGet(D,k))}">`}</label>`;
+  const c=(l,k)=>`<label class="af">${l}<input type="color" data-afj="${k}" value="${esc(afjGet(D,k))}" style="width:100%;height:40px"></label>`;
+  const sw=(l,k)=>`<div style="display:flex;gap:10px;align-items:center"><label class="sw"><input type="checkbox" data-afjchk="${k}" ${afjGet(D,k)?"checked":""} aria-label="${esc(l)}"><span></span></label><span class="stlabel">${l}</span></div>`;
+  const list=(k,max,tl)=>`<div class="pgck-list">${D[k].map((x,i)=>`<div class="lpblock"><div class="grid2"><label class="af">Icon (an emoji)<input class="in" data-afj="${k}.${i}.icon" maxlength="4" value="${esc(x.icon)}"></label>${t(tl,k+"."+i+".t",{max:120})}</div>${t("Text",k+"."+i+".d",{rows:2,max:400})}
+    <div class="colin" style="gap:8px;flex-wrap:wrap">${i?`<button class="ghost sm" type="button" data-afjup="${k}.${i}">↑ Move up</button>`:""}<button class="danger" type="button" data-afjdel="${k}.${i}">Delete</button></div></div>`).join("")}${D[k].length<max?`<button class="ghost" type="button" data-afjadd="${k}" style="justify-self:start">+ Add</button>`:""}</div>`;
+  return `<details class="panel lpsec" id="afJoinEd"${AFJ.open?" open":""}><summary>🎨 Join page for new affiliators (/join)</summary><div style="padding:0 20px 18px;display:grid;gap:10px">
+    <div class="af">Page link (put it in your Instagram bio, stories and WhatsApp)<div class="colin"><input class="in" readonly value="${esc(link)}" onclick="this.select()" style="flex:1"><button class="ghost" type="button" data-afacopy="${esc(link)}">Copy</button><a class="btn btn-ghost-blue btn-sm" href="${esc(link)}" target="_blank" rel="noopener">Open ↗</a></div></div>
+    <p class="note" style="margin:0">Applicants fill in their name, WhatsApp, email, username, password and at least one of Instagram, TikTok or Threads. You approve them in <b>Applications</b> below. In any text, <b>{rate}</b> becomes the commission % you type here.</p>
+    <h3 class="pgh">Top of the page</h3>${t("Title","title",{max:90})}${t("Text under the title","sub",{rows:2})}
+    <div class="grid3">${t("Big icon (emoji)","heroIcon",{max:4})}${t("Commission shown ({rate})","rate",{max:20})}${t("Button text","cta",{max:30})}</div>
+    <div class="grid3">${t("Button icon (emoji)","ctaIcon",{max:4})}${c("Top color","bg")}${c("Text on top color","ink")}</div>
+    <div class="grid2">${c("Button color","accent")}${c("Page background","pageBg")}</div>
+    <h3 class="pgh">🏃 Running banner</h3>${sw("Show the running banner","marquee.on")}${t("Banner text","marquee.text",{rows:2,max:300})}
+    <div class="grid3">${c("Banner color","marquee.bg")}${c("Banner text color","marquee.ink")}<div class="af">Speed<div class="chips" style="margin-top:6px">${[["slow","Slow"],["normal","Normal"],["fast","Fast"]].map(([v,l])=>`<button class="fchip" type="button" data-afjset="marquee.speed|${v}" aria-pressed="${D.marquee.speed===v}">${l}</button>`).join("")}</div></div></div>
+    <h3 class="pgh">⭐ Why join</h3>${sw("Show this section","show.perks")}${t("Heading","perksTitle",{max:80})}${list("perks",6,"Title")}
+    <h3 class="pgh">💰 How to earn commission</h3>${sw("Show this section","show.earn")}${t("Heading","earnTitle",{max:80})}${list("earn",12,"Step")}
+    ${sw("Show the example box","show.example")}${t("Example title","exTitle",{max:90})}${t("Example","example",{rows:9,max:700})}
+    <h3 class="pgh">📝 The form</h3><div class="grid2">${t("Form title","formTitle",{max:80})}${t("Send button text","btn",{max:40})}</div>${t("Text under the form title","formSub",{rows:2})}${t("Message after sending","thanks",{rows:2})}
+    ${AFJ.err?`<p class="err">${esc(AFJ.err)}</p>`:""}
+    <div class="colin" style="gap:8px;flex-wrap:wrap"><button class="ghost" type="button" data-afjreset>Restore the default text</button><button class="btn btn-blue btn-sm" type="button" data-afjsave ${AFJ.busy?"disabled":""}>${AFJ.busy?"Saving…":"Save the page"}</button></div></div></details>`}
+async function afjSave(){AFJ.busy=true;AFJ.err="";renderAdmin();try{const r=await SBH.rpc("admin_aff_join_save",{p:AFJ.draft});AFJ.cfg=afjMerge(AFJ_DEFAULT,r&&r.cfg||AFJ.draft);AFJ.draft=null;toast("Join page saved. It is live now")}catch(er){AFJ.err=er.message||"Couldn't save the page."}AFJ.busy=false;const y=scrollY;renderAdmin();scrollTo(0,y)}
+am.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.afj;if(k&&AFJ.draft)afjSet(AFJ.draft,k,e.target.value)});
+am.addEventListener("change",e=>{const k=e.target.dataset&&e.target.dataset.afjchk;if(k&&AFJ.draft){afjSet(AFJ.draft,k,e.target.checked);AFJ.open=true;const y=scrollY;renderAdmin();scrollTo(0,y)}});
+am.addEventListener("click",e=>{if(A.tab!=="affiliates")return;const sm=e.target.closest("#afJoinEd>summary");if(sm){AFJ.open=!sm.parentNode.open;return}
+  const b=e.target.closest("button");if(!b||!AFJ.draft)return;const d=b.dataset,D=AFJ.draft;
+  if(d.afjsave!==undefined){AFJ.open=true;afjSave();return}
+  if(d.afjset||d.afjadd||d.afjdel||d.afjup||d.afjreset!==undefined){
+    if(d.afjset){const [k,v]=d.afjset.split("|");afjSet(D,k,v)}
+    else if(d.afjadd)D[d.afjadd].push({icon:"⭐",t:"",d:""});
+    else if(d.afjdel){const ks=d.afjdel.split("."),i=+ks.pop();afjGet(D,ks.join(".")).splice(i,1)}
+    else if(d.afjup){const ks=d.afjup.split("."),i=+ks.pop(),L=afjGet(D,ks.join("."));L.splice(i-1,0,L.splice(i,1)[0])}
+    else{AFJ.draft=afjClone(AFJ_DEFAULT);toast("Default text is back. Press Save the page to keep it")}
+    AFJ.open=true;const y=scrollY;renderAdmin();scrollTo(0,y)}});
 /* --- applications to become an affiliator (owner): approve with an account, or reject with a reason --- */
 const AFA={list:null,loading:false,err:"",open:null,f:{},msg:null,busy:false};
 async function afaLoad(){if(AFA.loading||!SBH.on)return;AFA.loading=true;try{AFA.list=await SBH.rpc("admin_aff_apps",{});AFA.err=""}catch(e){AFA.err=e.message;AFA.list=[]}AFA.loading=false;if(A.tab==="affiliates")renderAdmin()}
 const afaPw=()=>{const c="abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";let s="";for(let i=0;i<10;i++)s+=c[Math.floor(Math.random()*c.length)];return s};
 function afaMsgFor(a,kind,d){const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,""),site=location.origin+location.pathname.replace(/[^/]*$/,"");
-  return kind==="approve"?`Hi ${a.name}! Your application to become an affiliator at ${(DB.page&&DB.page.name)||"our shop"} is approved. 🎉\nSign in here: ${site}\nUsername: ${d.username}\nPassword: ${d.password}\nPlease change your password after you sign in. In your dashboard you can also choose your own coupon name.`
+  return kind==="approve"?d.own?`Hi ${a.name}! Your application to become an affiliator at ${(DB.page&&DB.page.name)||"our shop"} is approved. 🎉\nSign in here: ${(shop||site.replace(/\/+$/,""))}/#partner\nUsername: ${d.username}\nPassword: the one you chose when you applied.\nIn your dashboard you can find your share link and choose your own coupon name.`:`Hi ${a.name}! Your application to become an affiliator at ${(DB.page&&DB.page.name)||"our shop"} is approved. 🎉\nSign in here: ${site}\nUsername: ${d.username}\nPassword: ${d.password}\nPlease change your password after you sign in. In your dashboard you can also choose your own coupon name.`
     :`Hi ${a.name}, thank you for applying to become an affiliator at ${(DB.page&&DB.page.name)||"our shop"}. Sorry, we cannot accept your application this time.\nReason: ${d.reason}\nYou are welcome to apply again later.`}
-function afAppsHTML(){const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,""),link=shop+"/?apply=affiliate";
+function afAppsHTML(){const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,""),link=shop+"/join";
   if(AFA.list===null&&!AFA.loading)afaLoad();const L=AFA.list||[],pend=L.filter(x=>x.status==="pending").length,F=AFA.f;
   const wa=(a,t)=>`https://wa.me/${String(a.phone).replace(/\D/g,"").replace(/^0/,"62")}?text=${encodeURIComponent(t)}`;
-  const card=a=>{const open=AFA.open===a.id;return `<div class="pmcard" style="gap:6px"><div class="afhead"><div><b>${esc(a.name)}</b> <span class="note" style="margin:0">${esc(a.phone)}${a.email?" · "+esc(a.email):""}</span><div class="note" style="margin:2px 0 0">${new Date(a.at).toLocaleString()} · ${a.status==="pending"?"⏳ waiting":a.status==="approved"?"✅ approved":"✕ rejected"}${a.handle?" · wants @"+esc(a.handle):""}</div></div></div>
-      ${a.social?`<div class="note" style="margin:0"><b>Social:</b> ${esc(a.social)}</div>`:""}${a.why?`<div class="note" style="margin:0"><b>Why:</b> ${esc(a.why)}</div>`:""}${a.status==="rejected"&&a.reason?`<div class="note" style="margin:0"><b>Reason:</b> ${esc(a.reason)}</div>`:""}
+  const card=a=>{const open=AFA.open===a.id;return `<div class="pmcard" style="gap:6px"><div class="afhead"><div><b>${esc(a.name)}</b> <span class="note" style="margin:0">${esc(a.phone)}${a.email?" · "+esc(a.email):""}</span><div class="note" style="margin:2px 0 0">${new Date(a.at).toLocaleString()} · ${a.status==="pending"?"⏳ waiting":a.status==="approved"?"✅ approved":"✕ rejected"}${a.username?" · username <b>"+esc(a.username)+"</b>":a.handle?" · wants @"+esc(a.handle):""}</div></div></div>
+      ${a.ig||a.tt||a.th?`<div class="note" style="margin:0"><b>Social:</b> ${[["📸",a.ig],["🎵",a.tt],["🧵",a.th]].filter(x=>x[1]).map(x=>x[0]+" "+esc(x[1])).join(" · ")}</div>`:a.social?`<div class="note" style="margin:0"><b>Social:</b> ${esc(a.social)}</div>`:""}${a.why?`<div class="note" style="margin:0"><b>Why:</b> ${esc(a.why)}</div>`:""}${a.status==="rejected"&&a.reason?`<div class="note" style="margin:0"><b>Reason:</b> ${esc(a.reason)}</div>`:""}
       ${a.status==="pending"&&!open?`<div class="colin" style="gap:8px"><button class="btn btn-blue btn-sm" type="button" data-afaopen="${a.id}|approve">Approve</button><button class="btn btn-ghost-blue btn-sm" type="button" data-afaopen="${a.id}|reject">Reject</button></div>`:""}
-      ${open&&F.kind==="approve"?`<div class="grid2"><label class="af">Username<input class="in" data-afaf="username" maxlength="30" value="${esc(F.username||"")}"></label><label class="af">Link code (letters or numbers)<input class="in" data-afaf="code" maxlength="20" value="${esc(F.code||"")}"></label><label class="af">Commission (%)<input class="in" type="number" min="0" max="90" step="0.5" data-afaf="rate" value="${esc(F.rate??10)}"></label><label class="af">Password (they can change it)<input class="in" data-afaf="password" maxlength="40" value="${esc(F.password||"")}"></label></div>
+      ${open&&F.kind==="approve"?`${a.ownPw?`<p class="note" style="margin:0">They chose their own username (<b>${esc(a.username)}</b>) and password, so you only set the link code and the commission.</p>`:""}<div class="grid2">${a.ownPw?"":`<label class="af">Username<input class="in" data-afaf="username" maxlength="30" value="${esc(F.username||"")}"></label>`}<label class="af">Link code (letters or numbers)<input class="in" data-afaf="code" maxlength="20" value="${esc(F.code||"")}"></label><label class="af">Commission (%)<input class="in" type="number" min="0" max="90" step="0.5" data-afaf="rate" value="${esc(F.rate??10)}"></label>${a.ownPw?"":`<label class="af">Password (they can change it)<input class="in" data-afaf="password" maxlength="40" value="${esc(F.password||"")}"></label>`}</div>
         <div class="colin" style="gap:8px"><button class="btn btn-blue btn-sm" type="button" data-afadecide="${a.id}|approve" ${AFA.busy?"disabled":""}>Create the account</button><button class="ghost" type="button" data-afaopen="">Cancel</button></div>`:""}
       ${open&&F.kind==="reject"?`<label class="af">Reason (the applicant sees it)<textarea class="in" rows="2" maxlength="300" data-afaf="reason">${esc(F.reason||"")}</textarea></label><div class="colin" style="gap:8px"><button class="btn btn-blue btn-sm" type="button" data-afadecide="${a.id}|reject" ${AFA.busy?"disabled":""}>Reject</button><button class="ghost" type="button" data-afaopen="">Cancel</button></div>`:""}
       ${AFA.msg&&AFA.msg.id===a.id?`<div class="rvu" style="--ub:#E6F7EC;--ui:#0A4D27"><span aria-hidden="true">💬</span><p style="white-space:pre-wrap">${esc(AFA.msg.text)}</p><a class="btn btn-blue btn-sm" target="_blank" rel="noopener" href="${esc(wa(a,AFA.msg.text))}">Send on WhatsApp</a>${a.email?`<a class="btn btn-ghost-blue btn-sm" href="mailto:${esc(a.email)}?subject=${encodeURIComponent("Your affiliator application")}&body=${encodeURIComponent(AFA.msg.text)}">Send by email</a>`:""}</div>`:""}</div>`};
@@ -6600,7 +6643,7 @@ function afAppsHTML(){const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||""
     ${AFA.err?`<p class="err">${esc(AFA.err)}</p>`:""}<div class="stack" style="gap:8px;margin-top:10px">${L.length?L.map(card).join(""):`<p class="note">${AFA.loading?"Loading…":"No applications yet."}</p>`}</div></section>`}
 document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.afaf;if(k)AFA.f[k]=e.target.value});
 document.addEventListener("click",async e=>{const c=e.target.closest("[data-afacopy]");if(c){try{await navigator.clipboard.writeText(c.dataset.afacopy);toast("Link copied")}catch(x){toast(c.dataset.afacopy)}return}
-  const o=e.target.closest("[data-afaopen]");if(o){const [id,kind]=(o.dataset.afaopen||"").split("|");AFA.msg=null;if(!id){AFA.open=null;AFA.f={}}else{const a=(AFA.list||[]).find(x=>x.id===id)||{};AFA.open=id;AFA.f=kind==="approve"?{kind,username:(a.handle||String(a.name||"").toLowerCase().replace(/[^a-z0-9]+/g,"")).slice(0,30),code:String(a.handle||a.name||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,12),rate:10,password:afaPw()}:{kind,reason:""}}renderAdmin();return}
+  const o=e.target.closest("[data-afaopen]");if(o){const [id,kind]=(o.dataset.afaopen||"").split("|");AFA.msg=null;if(!id){AFA.open=null;AFA.f={}}else{const a=(AFA.list||[]).find(x=>x.id===id)||{};AFA.open=id;AFA.f=kind==="approve"?{kind,own:!!a.ownPw,username:(a.username||a.handle||String(a.name||"").toLowerCase().replace(/[^a-z0-9]+/g,"")).slice(0,30),code:String(a.username||a.handle||a.name||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,20),rate:10,password:a.ownPw?"":afaPw()}:{kind,reason:""}}renderAdmin();return}
   const d=e.target.closest("[data-afadecide]");if(!d)return;const [id,kind]=d.dataset.afadecide.split("|"),a=(AFA.list||[]).find(x=>x.id===id),F=AFA.f;if(!a)return;AFA.busy=true;renderAdmin();
   try{await SBH.rpc("admin_aff_app_decide",{p_id:id,p_action:kind,p_reason:F.reason||"",p:{username:F.username,code:F.code,rate:F.rate,password:F.password}});
     AFA.msg={id,text:afaMsgFor(a,kind,F)};AFA.open=null;AFA.list=null;AF.list=null;toast(kind==="approve"?"Account created. Send them the message below.":"Rejected. You can send them the reason below.")}catch(er){toast(er.message||"Couldn't save.")}
@@ -6690,6 +6733,7 @@ function viewAffiliates(){
       const rows=Object.values(m).sort((a,b)=>b.views-a.views||b.orders-a.orders),tv=rows.reduce((a,r)=>a+r.views,0)||1;
       return `<section class="panel"><h2>Where visitors came from (all affiliators)</h2>${rows.length?`<div class="aftable"><div class="afrow afth afsrc"><span>Source</span><span>Views</span><span>Orders</span><span>Sales</span><span>Top affiliators</span></div>${rows.map(r=>`<div class="afrow afsrc"><span>${esc(AF_SRC[r.src]||r.src)}<i class="afbar" style="width:${Math.round(r.views/tv*100)}%"></i></span><span>${r.views} <small>${Math.round(r.views/tv*100)}%</small></span><span>${r.orders}</span><span>${money(r.sales)}</span><span>${Object.entries(r.who).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([c])=>esc(c)).join(", ")}</span></div>`).join("")}</div>`:`<p class="note">No visits from affiliate links in this period yet.</p>`}</section>`})()}
     ${afFaqEdHTML()}
+    ${afjEdHTML()}
     ${afAppsHTML()}
     ${SBH.on?afResetHTML():""}
     ${afAnnHTML(L)}

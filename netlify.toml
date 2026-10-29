@@ -14,6 +14,12 @@
 [context.production]
   ignore = "exit 0"
 
+# The affiliator sign-up page lives at /join
+[[redirects]]
+  from = "/join"
+  to = "/join.html"
+  status = 200
+
 # Security headers for every page
 [[headers]]
   for = "/*"
