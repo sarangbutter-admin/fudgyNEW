@@ -227,6 +227,51 @@
     });
   };
 
+  /* ================= Cloudflare Turnstile on the sign-in forms ================= */
+  // Supabase Auth checks the token itself once "CAPTCHA protection" is switched on in the Supabase dashboard (Authentication -> Attack Protection)
+  var TSL = { key: undefined, loading: null, help: "" };
+  async function tsLoginKey() {
+    if (TSL.key !== undefined) return TSL.key;
+    try {
+      var pub = await K.rpc("shop_public", {}), st = pub && pub.docs && pub.docs.settings;
+      if (typeof st === "string") st = JSON.parse(st);
+      TSL.help = st && st.affHelpEmail ? String(st.affHelpEmail) : "";
+      var T = st && st.turnstile;
+      TSL.key = (T && T.on && T.siteKey && !(T.where && T.where.login === false)) ? String(T.siteKey) : "";
+    } catch (e) { TSL.key = ""; }
+    return TSL.key;
+  }
+  function tsLoginScript() {
+    if (window.turnstile) return Promise.resolve();
+    return TSL.loading || (TSL.loading = new Promise(function (res, rej) {
+      var s = document.createElement("script"); s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"; s.async = true;
+      s.onload = function () { res(); }; s.onerror = function () { TSL.loading = null; rej(new Error("The security check could not load.")); };
+      document.head.appendChild(s);
+    }));
+  }
+  // under the sign-in button: "Forgot your password? Email us" and the link to apply as an affiliator
+  async function loginHelp(form) {
+    await tsLoginKey();
+    var C = window.DELIDOME_CONFIG || {}, shop = String(C.shopUrl || "").replace(/\/+$/, ""), p = document.createElement("p");
+    p.className = "adl-sub"; p.style.cssText = "margin-top:12px;display:grid;gap:6px";
+    var mail = TSL.help ? '<a href="mailto:' + TSL.help.replace(/"/g, "") + '?subject=' + encodeURIComponent("Forgot password reset") + '&body=' + encodeURIComponent("Hello, I forgot my password. Please reset it.\n\nMy username: (type your username here)\n\nI am writing from the email address I registered with you.") + '">Forgot your password? Email us</a><br><small>Write from your registered email and type your username.</small>' : "Forgot your password? Ask the owner to reset it.";
+    p.innerHTML = '<span>' + mail + '</span>' + (shop ? '<span>Want to become an affiliator? <a href="' + shop + '/join" target="_blank" rel="noopener">Apply here</a></span>' : "");
+    form.appendChild(p);
+  }
+  // adds the widget above the sign-in button; returns { key, token(), reset() }
+  async function tsLoginMount(form) {
+    var h = { key: "", token: function () { return ""; }, reset: function () {} }, key = await tsLoginKey();
+    if (!key) return h;
+    try {
+      await tsLoginScript();
+      var box = document.createElement("div"); box.className = "tslogin"; box.style.cssText = "display:flex;justify-content:center;margin:10px 0 2px";
+      var btn = form.querySelector("button[type=submit]"); btn.parentNode.insertBefore(box, btn);
+      var tok = "", id = window.turnstile.render(box, { sitekey: key, callback: function (t) { tok = t; }, "expired-callback": function () { tok = ""; }, "error-callback": function () { tok = ""; } });
+      h.key = key; h.token = function () { return tok; }; h.reset = function () { tok = ""; try { window.turnstile.reset(id); } catch (e) {} };
+    } catch (e) { h.key = key; h.failed = true; }
+    return h;
+  }
+
   /* ================= owner: sign-in ================= */
   var DOCS = ["settings", "page", "marquee", "announcer", "thanks", "proofpop", "payMethods", "alerts", "label", "badges", "prelaunch", "revrew", "revpool"];
   var COLLS = { sizes: function (o) { return String(o.n); }, categories: function (o) { return o.id; }, addons: function (o) { return o.id; }, sales: function (o) { return o.id; }, coupons: function (o) { return o.id; }, broadcasts: function (o) { return o.id; } };
@@ -257,51 +302,6 @@
       try { await K.login(em, pw, cap); await startAdmin(); }
       catch (ex) { err.textContent = ex.message; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; if (tsh) tsh.reset(); }
     });
-  }
-
-  /* ================= Cloudflare Turnstile on the sign-in forms ================= */
-  // Supabase Auth checks the token itself once "CAPTCHA protection" is switched on in the Supabase dashboard (Authentication -> Attack Protection)
-  var TSL = { key: undefined, loading: null, help: "" };
-  async function tsLoginKey() {
-    if (TSL.key !== undefined) return TSL.key;
-    try {
-      var pub = await K.rpc("shop_public", {}), st = pub && pub.docs && pub.docs.settings;
-      if (typeof st === "string") st = JSON.parse(st);
-      TSL.help = st && st.affHelpEmail ? String(st.affHelpEmail) : "";
-      var T = st && st.turnstile;
-      TSL.key = (T && T.on && T.siteKey && !(T.where && T.where.login === false)) ? String(T.siteKey) : "";
-    } catch (e) { TSL.key = ""; }
-    return TSL.key;
-  }
-  function tsLoginScript() {
-    if (window.turnstile) return Promise.resolve();
-    return TSL.loading || (TSL.loading = new Promise(function (res, rej) {
-      var s = document.createElement("script"); s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"; s.async = true;
-      s.onload = function () { res(); }; s.onerror = function () { TSL.loading = null; rej(new Error("The security check could not load.")); };
-      document.head.appendChild(s);
-    }));
-  }
-  // under the sign-in button: "Forgot your password? Email us" and the link to apply as an affiliator
-  async function loginHelp(form) {
-    await tsLoginKey();
-    var C = window.DELIDOME_CONFIG || {}, shop = String(C.shopUrl || "").replace(/\/+$/, ""), p = document.createElement("p");
-    p.className = "adl-sub"; p.style.cssText = "margin-top:12px;display:grid;gap:6px";
-    var mail = TSL.help ? '<a href="mailto:' + TSL.help.replace(/"/g, "") + '?subject=' + encodeURIComponent("Forgot password reset") + '&body=' + encodeURIComponent("Hello, I forgot my password. Please reset it.\n\nMy username: (type your username here)\n\nI am writing from the email address I registered with you.") + '">Forgot your password? Email us</a><br><small>Write from your registered email and type your username.</small>' : "Forgot your password? Ask the owner to reset it.";
-    p.innerHTML = '<span>' + mail + '</span>' + (shop ? '<span>Want to become an affiliator? <a href="' + shop + '/?apply=affiliate" target="_blank" rel="noopener">Apply here</a></span>' : "");
-    form.appendChild(p);
-  }
-  // adds the widget above the sign-in button; returns { key, token(), reset() }
-  async function tsLoginMount(form) {
-    var h = { key: "", token: function () { return ""; }, reset: function () {} }, key = await tsLoginKey();
-    if (!key) return h;
-    try {
-      await tsLoginScript();
-      var box = document.createElement("div"); box.className = "tslogin"; box.style.cssText = "display:flex;justify-content:center;margin:10px 0 2px";
-      var btn = form.querySelector("button[type=submit]"); btn.parentNode.insertBefore(box, btn);
-      var tok = "", id = window.turnstile.render(box, { sitekey: key, callback: function (t) { tok = t; }, "expired-callback": function () { tok = ""; }, "error-callback": function () { tok = ""; } });
-      h.key = key; h.token = function () { return tok; }; h.reset = function () { tok = ""; try { window.turnstile.reset(id); } catch (e) {} };
-    } catch (e) { h.key = key; h.failed = true; }
-    return h;
   }
 
   var starting = false;
