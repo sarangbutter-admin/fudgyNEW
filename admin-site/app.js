@@ -2316,20 +2316,21 @@ function pgmLevel(G,lv){const f=Math.pow(1+pgmPct(G.grow,20,100)/100,lv-1),gold=
 const pgmDraw=(r,L,n)=>{const x=r()*100,i=Math.floor(r()*n);return {i,kind:x<L.gold?"gold":x<L.gold+L.time?"time":x<L.gold+L.time+L.flame?"flame":""}};
 const PGM_SEED=7936;   // every level uses the same random sequence, so a harder level always holds more points
 const pgmCap=G=>pgmSec(G)*3;   // clock cookies can add time, up to 3x the round length
-// highest possible score of a level: the same cookie sequence the game drops, every good cookie and clock tapped, full combo
-function pgmMax(G,lv){const L=pgmLevel(G,lv),C=pgmCks(G),r=rng(PGM_SEED),add=pgmAdd(G),cap=pgmCap(G);let end=pgmSec(G),taps=0,s=0;
+// highest possible score of a level: the same cookie sequence the game drops, every good cookie and clock tapped.
+// Without the combo bonus it is the target for unlocking; with a full combo it is the ceiling for a top-5 total.
+function pgmMax(G,lv,combo){const L=pgmLevel(G,lv),C=pgmCks(G),r=rng(PGM_SEED),add=pgmAdd(G),cap=pgmCap(G);let end=pgmSec(G),taps=0,s=0;
   for(let k=1;k<50000;k++){const t=k*L.every;if(t>end-.3)break;const d=pgmDraw(r,L,C.length);if(d.kind==="flame")continue;taps++;
-    if(d.kind==="time"){end=Math.min(cap,end+add);continue}s+=C[d.i].pts*(d.kind==="gold"?2:1)*(taps>=6?3:taps>=3?2:1)}
+    if(d.kind==="time"){end=Math.min(cap,end+add);continue}s+=C[d.i].pts*(d.kind==="gold"?2:1)*(combo?(taps>=6?3:taps>=3?2:1):1)}
   return s}
 const pgmNeed=(G,max)=>Math.ceil(max*pgmPct(G.pass,70,100)/100);
-function pgmLevels(G){return Array.from({length:10},(_,i)=>{const L=pgmLevel(G,i+1),max=pgmMax(G,i+1);return Object.assign(L,{max,need:pgmNeed(G,max)})})}
+function pgmLevels(G){return Array.from({length:10},(_,i)=>{const L=pgmLevel(G,i+1),max=pgmMax(G,i+1);return Object.assign(L,{max,need:pgmNeed(G,max),cap:pgmMax(G,i+1,true)})})}
 async function pgmTopsLoad(){try{PGM.tops=SBH.on&&SBH.gameTops?await SBH.gameTops():(PGM.me.tops||{});PGM.topsErr=false}catch(e){PGM.topsErr=true}
   const ov=document.getElementById("preGame");if(ov&&!ov.hidden&&!PGM.run){const t=ov.querySelector("[data-pgmtops]");if(t)t.outerHTML=pgmTopsHTML(+t.dataset.pgmtops,t.dataset.me||"")}}
 const pgmTop=lv=>(PGM.tops&&PGM.tops[lv])||[];
 function pgmTopsHTML(lv,me){const T=pgmTop(lv);return `<div class="pgm-tops" data-pgmtops="${lv}" data-me="${esc(me||"")}"><b>🏆 Top 5 · Level ${lv}</b>${PGM.tops===null?`<p class="pgm-sm">${PGM.topsErr?"Couldn't load the scores.":"Loading…"}</p>`
   :T.length?`<ol>${T.map((x,i)=>`<li class="${me&&me===x.name+"|"+x.score?"me":""}"><span class="pgm-av" style="animation-delay:${i*.15}s">${PGM_AV[+x.av]||PGM_AV[0]}</span><span class="pgm-nm">${esc(x.name)}</span><b>${pgmN(x.score)}</b></li>`).join("")}</ol>`:`<p class="pgm-sm">No scores yet. Be the first!</p>`}</div>`}
 function pgmBar(v,need){return `<div class="pgm-bar"><i style="width:${need>0?Math.min(100,Math.round(v/need*100)):0}%"></i></div>`}
-function pgmGoal(lv,best,lvl){return lv<10?`<p class="pgm-goal"><b>${pgmN(best)}</b> / ${pgmN(lvl.need)} to unlock Level ${lv+1}</p>${pgmBar(best,lvl.need)}`:`<p class="pgm-goal">Best <b>${pgmN(best)}</b> / ${pgmN(lvl.max)} · the last level!</p>${pgmBar(best,lvl.max)}`}
+function pgmGoal(lv,best,lvl){return lv<10?`<p class="pgm-goal"><b>${pgmN(best)}</b> / ${pgmN(lvl.need)} to unlock Level ${lv+1}</p>${pgmBar(best,lvl.need)}`:`<p class="pgm-goal"><b>${pgmN(best)}</b> / ${pgmN(lvl.need)} to beat the last level</p>${pgmBar(best,lvl.need)}`}
 window.preGameStart=function(){const G=DB.prelaunch.game;let ov=document.getElementById("preGame");
   if(!ov){ov=document.createElement("div");ov.id="preGame";ov.setAttribute("role","dialog");ov.setAttribute("aria-label","Catch the cookies");document.body.appendChild(ov);
     ov.addEventListener("pointerdown",pgmTap);ov.addEventListener("click",e=>{const b=e.target.closest("button,a");if(!b)return;const d=b.dataset;
@@ -2347,14 +2348,14 @@ function pgmIntro(){const ov=document.getElementById("preGame"),G=DB.prelaunch.g
 function pgmRules(){const ov=document.getElementById("preGame"),G=DB.prelaunch.game,lv=PGM.lv,lvl=pgmLevels(G)[lv-1],C=pgmCks(G),lo=Math.min(...C.map(c=>c.pts)),hi=Math.max(...C.map(c=>c.pts));
   ov.innerHTML=`<div class="pgm-card"><button class="pgm-x" type="button" data-pgmx aria-label="Close">✕</button><h2>How to play</h2><p class="pgm-sm">Level ${lv} · ${pgmSec(G)} seconds</p>
     <ul class="pgm-rules"><li><i>🍪</i><span>Tap the cookies: <b>+${lo===hi?pgmN(lo):pgmN(lo)+" to "+pgmN(hi)}</b></span></li><li><i>✨</i><span>Golden cookie: <b>double points</b></span></li>
-    ${pgmFlame(G)?`<li><i>🔥</i><span>Flame cookie: <b>−${pgmN(pgmFlame(G))}</b>, don't tap it!</span></li>`:""}<li><i>⏰</i><span>Clock cookie: <b>+${pgmAdd(G)} seconds</b></span></li><li><i>⚡</i><span>Tap fast in a row: <b>x2, then x3</b></span></li></ul>
-    <p class="pgm-goal">${lv<10?`Get <b>${pgmN(lvl.need)}</b> points to unlock Level ${lv+1}`:`Highest possible: <b>${pgmN(lvl.max)}</b>`}</p>
+    ${pgmFlame(G)?`<li><i>🔥</i><span>Flame cookie: <b>−${pgmN(pgmFlame(G))}</b>, don't tap it!</span></li>`:""}<li><i>⏰</i><span>Clock cookie: <b>+${pgmAdd(G)} seconds</b></span></li><li><i>⚡</i><span>Tap fast in a row: <b>combo bonus</b> (x2, x3), added at the end</span></li></ul>
+    <p class="pgm-goal">Get <b>${pgmN(lvl.need)}</b> cookie points to ${lv<10?`unlock Level ${lv+1}`:"beat the last level"}.${PGM.me.lv>1?" Miss it and you drop one level.":""}</p>
     <h3 class="pgm-ready">Ready?</h3><button class="pre-btn" type="button" data-pgmgo>Yes, let's go! 🚀</button><button class="pgm-link" type="button" data-pgmback>Not yet</button></div>`}
 function pgmPlay(){const ov=document.getElementById("preGame"),G=DB.prelaunch.game,lv=PGM.lv;cancelAnimationFrame(PGM.raf);
-  PGM.L=pgmLevel(G,lv);PGM.C=pgmCks(G);PGM.need=pgmLevels(G)[lv-1][lv<10?"need":"max"];PGM.rnd=rng(PGM_SEED);PGM.res=null;
+  PGM.L=pgmLevel(G,lv);PGM.C=pgmCks(G);PGM.need=pgmLevels(G)[lv-1].need;PGM.rnd=rng(PGM_SEED);PGM.res=null;
   ov.innerHTML=`<div class="pgm-stage" id="pgmStage"><div class="pgm-hud"><span>Lv ${lv}</span><span>🍪 <b id="pgmScore">0</b></span><span class="pgm-tm">⏱ <b id="pgmTime">${pgmSec(G)}</b>s</span><button class="pgm-x2" type="button" data-pgmx aria-label="Close">✕</button></div>
-    <div class="pgm-hbar">${pgmBar(0,PGM.need)}</div><div class="pgm-combo" id="pgmCombo"></div></div>`;
-  PGM.cks=[];PGM.score=0;PGM.combo=0;PGM.last=0;PGM.acc=0;PGM.lt=0;PGM.gt=0;PGM.endT=pgmSec(G);PGM.run=true;PGM.raf=requestAnimationFrame(pgmLoop)}
+    <div class="pgm-hbar">${pgmBar(0,PGM.need)}</div><div class="pgm-cb" id="pgmBonus" hidden>⚡ Combo bonus <b>+0</b></div><div class="pgm-combo" id="pgmCombo"></div></div>`;
+  PGM.cks=[];PGM.score=0;PGM.bonus=0;PGM.combo=0;PGM.last=0;PGM.acc=0;PGM.lt=0;PGM.gt=0;PGM.endT=pgmSec(G);PGM.run=true;PGM.raf=requestAnimationFrame(pgmLoop)}
 // cookie pictures: the flavor's own picture (cached), or an uploaded one
 function pgmArt(c){if(c.u)return `<img src="${esc(c.u===COOKIE_SVG?c.u:imgOk(c.u))}" alt="" draggable="false">`;const k=c.p.id;return PGM.html[k]||(PGM.html[k]=plateInner(c.p)||`<img src="${esc(COOKIE_SVG)}" alt="" draggable="false">`)}
 function pgmSpawn(st){const G=DB.prelaunch.game,d=pgmDraw(PGM.rnd,PGM.L,PGM.C.length),c=PGM.C[d.i],kind=d.kind,e=document.createElement("i"),W=st.clientWidth,sz=Math.max(48,Math.min(78,W/6));
@@ -2369,37 +2370,50 @@ function pgmLoop(ts){const st=document.getElementById("pgmStage");if(!st||!PGM.r
   if(PGM.gt>=PGM.endT){pgmOver();return}PGM.raf=requestAnimationFrame(pgmLoop)}
 function pgmTap(ev){if(!PGM.run)return;const st=document.getElementById("pgmStage");if(!st)return;const r=st.getBoundingClientRect(),x=ev.clientX-r.left,y=ev.clientY-r.top;
   const c=PGM.cks.find(c=>!c.dead&&Math.abs(c.x+Math.sin(c.ph)*c.w+c.s/2-x)<c.s*.62&&Math.abs(c.y+c.s/2-y)<c.s*.62);if(!c)return;ev.preventDefault();c.dead=1;c.e.remove();
-  const G=DB.prelaunch.game,now=performance.now();let pts=0;
+  const G=DB.prelaunch.game,now=performance.now();let pts=0,bon=0;
   if(c.kind==="flame"){PGM.combo=0;pts=c.pts}
-  else{PGM.combo=now-PGM.last<750?PGM.combo+1:1;PGM.last=now;if(c.kind==="time")PGM.endT=Math.min(pgmCap(G),PGM.endT+pgmAdd(G));else pts=c.pts*(PGM.combo>=6?3:PGM.combo>=3?2:1)}
+  else{PGM.combo=now-PGM.last<750?PGM.combo+1:1;PGM.last=now;if(c.kind==="time")PGM.endT=Math.min(pgmCap(G),PGM.endT+pgmAdd(G));else{pts=c.pts;bon=c.pts*((PGM.combo>=6?3:PGM.combo>=3?2:1)-1)}}
   PGM.score=Math.max(0,PGM.score+pts);document.getElementById("pgmScore").textContent=pgmN(PGM.score);
+  if(bon){PGM.bonus+=bon;const bb=document.getElementById("pgmBonus");bb.hidden=false;bb.querySelector("b").textContent="+"+pgmN(PGM.bonus)}
   const hb=st.querySelector(".pgm-hbar");if(hb)hb.innerHTML=pgmBar(PGM.score,PGM.need);try{if(navigator.vibrate)navigator.vibrate(c.kind==="flame"?[30,40,30]:15)}catch(e){}
   const fx=G.tap,cx=c.x+Math.sin(c.ph)*c.w+c.s/2,cy=c.y+c.s/2;
   for(let i=0;i<(fx==="crumble"?10:8);i++){const k=document.createElement("i");k.className="pgm-p pgm-"+(fx==="sparkle"?"sp":fx==="hearts"?"ht":"cr")+(c.kind?" "+c.kind:"");k.style.left=cx+"px";k.style.top=cy+"px";k.style.setProperty("--dx",(Math.random()*110-55)+"px");k.style.setProperty("--dy",(Math.random()*110-55)+"px");if(fx==="hearts")k.textContent="💛";if(fx==="sparkle")k.textContent="✨";st.appendChild(k);setTimeout(()=>k.remove(),650)}
-  const p=document.createElement("i");p.className="pgm-pop"+(pts<0?" neg":c.kind==="time"?" tm":"");p.textContent=c.kind==="time"?`+${pgmAdd(G)}s ⏰`:(pts>0?"+":"")+pgmN(pts)+(c.kind==="gold"?" ✨":c.kind==="flame"?" 🔥":"");p.style.left=(cx-14)+"px";p.style.top=(cy-24)+"px";st.appendChild(p);setTimeout(()=>p.remove(),800);
+  const p=document.createElement("i");p.className="pgm-pop"+(pts<0?" neg":c.kind==="time"?" tm":"");p.textContent=c.kind==="time"?`+${pgmAdd(G)}s ⏰`:(pts>0?"+":"")+pgmN(pts)+(c.kind==="gold"?" ✨":c.kind==="flame"?" 🔥":"")+(bon?` ⚡+${pgmN(bon)}`:"");p.style.left=(cx-14)+"px";p.style.top=(cy-24)+"px";st.appendChild(p);setTimeout(()=>p.remove(),800);
   if(PGM.combo===3||PGM.combo===6){const cb=document.getElementById("pgmCombo");cb.textContent=PGM.combo===3?"x2 combo!":"🔥 x3!";cb.classList.remove("on");void cb.offsetWidth;cb.classList.add("on")}}
-function pgmOver(){PGM.run=false;cancelAnimationFrame(PGM.raf);const G=DB.prelaunch.game,lv=PGM.lv,lvl=pgmLevels(G)[lv-1],s=PGM.score,old=+PGM.me.best[lv]||0;
-  if(s>old)PGM.me.best[lv]=s;const unlock=lv<10&&s>=lvl.need&&PGM.me.lv<=lv;if(unlock)PGM.me.lv=lv+1;pgmSave();
-  const T=pgmTop(lv),top=PGM.tops!==null&&!PGM.topsErr&&s>0&&(T.length<5||s>+T[T.length-1].score);
-  PGM.res={lv,s,best:s>old,unlock,top,av:Math.floor(Math.random()*PGM_AV.length),saved:""};pgmEnd();
-  if(top||unlock){const cd=document.querySelector("#preGame .pgm-card");if(cd&&!RM)gmConfetti(cd)}}
+const PGM_WIN=["You did it! 🎉","Amazing! 🥳","Cookie master! 🏆","Sweet victory! 🍪"],PGM_TRY=["So close! 💪","Don't give up! 🍪","You've got this! 🔥","One more try? 😋"];
+const pgmPick=a=>a[Math.floor(Math.random()*a.length)];
+function pgmOver(){PGM.run=false;cancelAnimationFrame(PGM.raf);const G=DB.prelaunch.game,lv=PGM.lv,lvl=pgmLevels(G)[lv-1],s=PGM.score,tot=s+PGM.bonus,old=+PGM.me.best[lv]||0,oldT=+(PGM.me.tot||{})[lv]||0;
+  if(s>old)PGM.me.best[lv]=s;PGM.me.tot=PGM.me.tot||{};if(tot>oldT)PGM.me.tot[lv]=tot;
+  const pass=s>=lvl.need,unlock=pass&&lv<10&&PGM.me.lv<=lv,was=PGM.me.lv;
+  if(unlock)PGM.me.lv=lv+1;if(!pass)PGM.me.lv=Math.max(1,PGM.me.lv-1);   // every miss costs one level (Level 1 stays)
+  const drop=PGM.me.lv<was;PGM.lv=Math.min(PGM.lv,PGM.me.lv);pgmSave();
+  const T=pgmTop(lv),top=PGM.tops!==null&&!PGM.topsErr&&tot>0&&(T.length<5||tot>+T[T.length-1].score);
+  PGM.res={lv,s,bonus:PGM.bonus,tot,best:tot>oldT,pass,unlock,drop,top,head:pgmPick(pass?PGM_WIN:PGM_TRY),av:Math.floor(Math.random()*PGM_AV.length),saved:""};pgmEnd();
+  const cd=document.querySelector("#preGame .pgm-card");if(cd&&!RM&&(pass||top))pgmParty(cd)}
+// a lively celebration: confetti in waves and cookies, stars and party poppers flying up
+function pgmParty(cd){[0,450,900].forEach(t=>setTimeout(()=>{if(cd.isConnected)gmConfetti(cd)},t));
+  const em=["🎉","✨","🍪","⭐","🥳","🎊"];for(let i=0;i<14;i++){const f=document.createElement("i");f.className="pgm-fly";f.textContent=em[i%em.length];
+    f.style.left=(5+Math.random()*90)+"%";f.style.animationDelay=(Math.random()*1.2)+"s";f.style.fontSize=(20+Math.random()*18)+"px";cd.appendChild(f);setTimeout(()=>f.remove(),3200)}}
 function pgmEnd(){const G=DB.prelaunch.game,R=PGM.res,lv=R.lv,lvl=pgmLevels(G)[lv-1],s=R.s;
-  const link=location.origin+location.pathname,txt=preFill(G.share).replace(/\{score\}/g,pgmN(s)).replace(/\{link\}/g,link),ok=lv<10&&PGM.me.lv>lv;
-  document.getElementById("preGame").innerHTML=`<div class="pgm-card"><button class="pgm-x" type="button" data-pgmx aria-label="Close">✕</button><div class="pgm-big">${R.top?"🥳":"🏆"}</div>
-    <h2>${esc(preFill(G.end).replace(/\{score\}/g,pgmN(s)))}</h2><p class="pgm-sm">Level ${lv} · highest possible ${pgmN(lvl.max)}${R.best?" · 🎉 your new best!":""}</p>
-    ${R.unlock?`<p class="pgm-badge">🔓 Level ${lv+1} unlocked!</p>`:lv<10&&!ok?`<p class="pgm-goal">${pgmN(Math.max(0,lvl.need-s))} more to unlock Level ${lv+1}</p>${pgmBar(s,lvl.need)}`:""}
+  const link=location.origin+location.pathname,txt=preFill(G.share).replace(/\{score\}/g,pgmN(R.tot)).replace(/\{link\}/g,link),next=R.pass&&lv<10&&PGM.me.lv>lv;
+  document.getElementById("preGame").innerHTML=`<div class="pgm-card ${R.pass?"win":"try"}"><button class="pgm-x" type="button" data-pgmx aria-label="Close">✕</button><div class="pgm-big">${R.pass?"🏆":"💪"}</div>
+    <h2>${esc(R.head)}</h2><p class="pgm-sm">${esc(preFill(G.end).replace(/\{score\}/g,pgmN(R.tot)))}</p>
+    <div class="pgm-sum"><span>🍪 Cookies <b>${pgmN(s)}</b></span><span>⚡ Combo bonus <b>+${pgmN(R.bonus)}</b></span><span class="t">Total <b>${pgmN(R.tot)}</b></span></div>
+    ${R.pass?`<p class="pgm-badge">${lv<10?(R.unlock?`🔓 Level ${lv+1} unlocked!`:`✅ Level ${lv} cleared!`):"👑 You beat the last level!"}</p>`
+      :`<p class="pgm-goal">Only <b>${pgmN(Math.max(0,lvl.need-s))}</b> more cookie points next time. Tap fast and skip the 🔥!</p>${pgmBar(s,lvl.need)}${R.drop?`<p class="pgm-drop">⬇️ You're back on Level ${PGM.me.lv}. Win it to climb back up!</p>`:""}`}
+    ${R.best?`<p class="pgm-sm">🎉 Your best total on Level ${lv}!</p>`:""}
     ${R.top&&!R.saved?`<form class="pgm-win"><b>You're in the top 5! 🎉</b><span class="pgm-av big">${PGM_AV[R.av]}</span><span class="pgm-sm">This is your player icon</span>
       <input class="in" id="pgmName" maxlength="20" placeholder="Your name" autocomplete="nickname" value="${esc(PGM.me.name||"")}" aria-label="Your name">
       <button class="pre-btn" type="button" data-pgmsave ${PGM.busy?"disabled":""}>${PGM.busy?"Saving…":"Save my name"}</button>${R.err?`<p class="pgm-err">${esc(R.err)}</p>`:""}${preForced()?`<p class="pgm-sm">Preview: the name is not saved.</p>`:""}</form>`:""}
     ${R.saved||!R.top?pgmTopsHTML(lv,R.saved):""}
-    ${ok?`<button class="pre-btn" type="button" data-pgmnext>▶ Level ${lv+1}</button>`:""}<button class="pre-btn${ok?" pre-btn-w":""}" type="button" data-pgmrules>↻ Play again</button>
+    ${next?`<button class="pre-btn" type="button" data-pgmnext>▶ Level ${lv+1}</button>`:""}<button class="pre-btn${next?" pre-btn-w":""}" type="button" data-pgmrules>${R.pass?"↻ Play again":`💪 Try again${R.drop?` (Level ${PGM.lv})`:""}`}</button>
     <a class="pre-btn pre-btn-wa" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">💬 Share my score</a><button class="pgm-link" type="button" data-pgmback>All levels</button></div>`}
 async function pgmSubmit(){const R=PGM.res;if(!R||!R.top||R.saved||PGM.busy)return;const i=document.getElementById("pgmName"),nm=String(i&&i.value||"").replace(/[<>]/g,"").trim().slice(0,20);
   if(!nm){R.err="Type your name first.";pgmEnd();return}PGM.me.name=nm;pgmSave();R.err="";
-  if(preForced()){R.saved=nm+"|"+R.s;pgmEnd();return}
+  if(preForced()){R.saved=nm+"|"+R.tot;pgmEnd();return}
   PGM.busy=true;pgmEnd();
-  try{if(SBH.on&&SBH.gameSubmit)PGM.tops=await SBH.gameSubmit(R.lv,R.s,nm,R.av);else{const L=(PGM.me.tops[R.lv]||[]).concat({name:nm,av:R.av,score:R.s}).sort((a,b)=>b.score-a.score).slice(0,5);PGM.me.tops[R.lv]=L;pgmSave();PGM.tops=PGM.me.tops}
-    R.saved=nm+"|"+R.s}catch(e){R.err=e.message||"Couldn't save. Please try again."}
+  try{if(SBH.on&&SBH.gameSubmit)PGM.tops=await SBH.gameSubmit(R.lv,R.tot,nm,R.av);else{const L=(PGM.me.tops[R.lv]||[]).concat({name:nm,av:R.av,score:R.tot}).sort((a,b)=>b.score-a.score).slice(0,5);PGM.me.tops[R.lv]=L;pgmSave();PGM.tops=PGM.me.tops}
+    R.saved=nm+"|"+R.tot}catch(e){R.err=e.message||"Couldn't save. Please try again."}
   PGM.busy=false;pgmEnd()}
 function pgmClose(){PGM.run=false;cancelAnimationFrame(PGM.raf);const ov=document.getElementById("preGame");if(ov){ov.hidden=true;ov.innerHTML=""}document.body.style.overflow=""}
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&PGM.run){PGM.run=false;cancelAnimationFrame(PGM.raf);const ov=document.getElementById("preGame");if(ov&&!ov.hidden)pgmIntro()}});
@@ -6788,7 +6802,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 00:04 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 00:21 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
@@ -6867,7 +6881,7 @@ function viewPrelaunch(){
     <div class="grid2" style="margin-top:8px"><div class="af">Level 1 speed${chips("game.speed",[["slow","Slow"],["normal","Normal"],["fast","Fast"]])}</div><div class="af">Tap effect${chips("game.tap",[["crumble","Crumble"],["sparkle","Sparkle"],["hearts","Hearts"]])}</div></div>
     <div class="aftable pglv" style="margin-top:10px"><div class="afrow afth"><span>Level</span><span>Fall speed</span><span>Cookies / sec</span><span>🔥 chance</span><span>Highest possible</span><span>To unlock next</span></div>
       ${pgmLevels(G).map(l=>`<div class="afrow"><span>${l.lv}</span><span>${l.sp.toFixed(1)}×</span><span>${(1/l.every).toFixed(1)}</span><span>${Math.round(l.flame)}%</span><span><b>${pgmN(l.max)}</b></span><span>${l.lv<10?pgmN(l.need):"last level"}</span></div>`).join("")}</div>
-    <p class="note">The highest possible score means tapping every good cookie and clock with a full x3 combo. Every play of a level drops the same cookies, so it is exact. Speed, cookies and flame chance grow by the % above each level.</p>
+    <p class="note">The highest possible score means tapping every good cookie and clock. The combo bonus is not counted here: it is added to the player's total at the end (for the top 5), and the unlock check uses the cookie points only. Every play of a level drops the same cookies, so it is exact. A miss drops the player one level (Level 1 stays). Speed, cookies and flame chance grow by the % above each level.</p>
     <div class="grid2" style="margin-top:8px">${col("Game background (buttercream by default)","game.bg","#FFF4D6")}${inp("End text ({score})","game.end",{max:80})}</div>
     ${inp("Share text ({score}, {shop}, {link})","game.share",{rows:2,max:200})}
     ${SBH.on?`<div class="colin" style="margin-top:10px;gap:8px;flex-wrap:wrap"><button class="ghost" type="button" data-pgclear>🗑 Clear all top-5 scores</button><span class="note" style="margin:0">Use it after testing, before you open the page to customers.</span></div>`:""}</section>
@@ -6955,7 +6969,7 @@ am.addEventListener("click",e=>{if(A.tab!=="revrew")return;const b=e.target.clos
 function preGet(k){return k.split(".").reduce((o,x)=>o==null?undefined:o[x],DB.prelaunch)}
 function preSet(k,v){const ks=k.split("."),last=ks.pop();let o=DB.prelaunch;for(const x of ks){if(o[x]==null)o[x]={};o=o[x]}o[last]=v;if(k.startsWith("game."))pgmSyncMax();saveSoon()}
 // the highest possible score of each level travels with the published settings, so the server can turn away impossible top-5 scores
-function pgmSyncMax(){const G=DB.prelaunch.game,m=pgmLevels(G).map(l=>l.max);if(JSON.stringify(m)!==JSON.stringify(G.max)){G.max=m;saveSoon()}}
+function pgmSyncMax(){const G=DB.prelaunch.game,m=pgmLevels(G).map(l=>l.cap);if(JSON.stringify(m)!==JSON.stringify(G.max)){G.max=m;saveSoon()}}
 function preCsv(){const L=(PRA.list&&PRA.list.list)||[],q=v=>{const s=String(v==null?"":v);return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s},d=ms=>ms?preDT(ms).replace("T"," "):"";
   const rows=[["code","type","value","gift","min_spend","box_size","max_uses","per_customer","phone","start","end","active","note","name","rank","registered_at","claimed","order"]];
   L.slice().sort((a,b)=>a.rank-b.rank).forEach(r=>rows.push([r.code,"gift","","Pre-launch Gift Set","","",1,1,normPhone(r.phone)?"62"+normPhone(r.phone):"",d(DB.prelaunch.openAt),d(r.exp),r.status==="expired"?"no":"yes",`${r.name} #${r.rank}`,r.name,r.rank,d(r.at),r.status==="claimed"?"yes":"no",r.order||""]));

@@ -1660,3 +1660,16 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .pgm-cr.flame{background:#FF5A00}.pgm-cr.time{background:#4DD0E1}.pgm-pop.tm{color:#0077B6}
 @media (prefers-reduced-motion:reduce){.pgm-av,.pgm-ck.flame,.pgm-ck.gold::after{animation:none}}
 .pglv .afrow{grid-template-columns:50px repeat(5,minmax(70px,1fr))}
+/* mini game: combo bonus, end of round */
+.pgm-cb{position:absolute;top:66px;left:14px;z-index:5;background:#FFE066;color:#000096;border-radius:99px;padding:3px 10px;font-weight:800;font-size:13px}
+.pgm-sum{display:grid;gap:4px;width:100%;background:#fff;border-radius:14px;padding:10px 12px;font-size:14px}
+.pgm-sum span{display:flex;justify-content:space-between}.pgm-sum .t{border-top:2px dashed rgba(0,0,150,.2);padding-top:6px;font-size:16px;color:#000096}
+.pgm-drop{background:#FDE8E6;color:#B42318;border-radius:12px;padding:8px 10px;font-weight:700;font-size:14px;width:100%}
+.pgm-card.win .pgm-big{animation:pgmwin 1s ease-in-out infinite}.pgm-card.try .pgm-big{animation:pgmtry 1.2s ease-in-out infinite}
+.pgm-card.win h2{animation:pgmpop .6s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pgmwin{0%,100%{transform:translateY(0) rotate(0) scale(1)}25%{transform:translateY(-14px) rotate(-12deg) scale(1.1)}50%{transform:translateY(0) scale(1.15)}75%{transform:translateY(-10px) rotate(12deg) scale(1.1)}}
+@keyframes pgmtry{0%,100%{transform:rotate(0)}30%{transform:rotate(-14deg) scale(1.05)}60%{transform:rotate(10deg)}}
+@keyframes pgmpop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+.pgm-fly{position:absolute;bottom:-30px;font-style:normal;pointer-events:none;z-index:3;animation:pgmfly 2s ease-out forwards;opacity:0}
+@keyframes pgmfly{0%{opacity:0;transform:translateY(0) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translateY(-420px) rotate(220deg)}}
+@media (prefers-reduced-motion:reduce){.pgm-card.win .pgm-big,.pgm-card.try .pgm-big,.pgm-card.win h2{animation:none}}
