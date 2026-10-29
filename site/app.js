@@ -760,7 +760,11 @@ function anMarquee(el,items,AN,now){
   else anCd(el,now);
 }
 /* --- motion helpers --- */
-const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+// "reduce motion" on the phone (also switched on by battery saver on many phones) turns animations off,
+// unless the visitor chose "Turn on animations" (remembered on this phone)
+const MOTION_KEY="delidome-motion",PHONE_RM=matchMedia("(prefers-reduced-motion: reduce)").matches;let motionPref="";try{motionPref=localStorage.getItem(MOTION_KEY)||""}catch(e){}
+if(motionPref==="on")document.documentElement.classList.add("motion-on");
+const RM = PHONE_RM&&motionPref!=="on";
 const pop = new Map();
 const inView = r => r.bottom>0 && r.top<innerHeight;
 function fx(html,cls){const d=document.createElement("div");d.className="fx "+(cls||"");d.innerHTML=html;document.body.appendChild(d);return d}
@@ -1627,7 +1631,7 @@ function gmConfetti(host){
 let gmTimer=null;
 function gmOpen(){
   const m=$("#gmagic");if(!m||m.dataset.open==="1")return;m.dataset.open="1";clearTimeout(gmTimer);if(m.dataset.oid)bbMark(m.dataset.oid);
-  const still=matchMedia("(prefers-reduced-motion:reduce)").matches;
+  const still=RM;
   m.classList.add(still?"opened":"opening");
   const done=()=>{m.classList.remove("opening");m.classList.add("opened");$("#gmGifts").hidden=false;$("#gmT").hidden=true;gmConfetti(m)};
   if(still)done();else setTimeout(done,950);
@@ -2453,7 +2457,7 @@ function pgPanelHTML(){if(!PG.info)return "";const I=PG.info,its=(I.items||[]).f
 const preGiftHTML=(o,cust)=>o.preGift&&cust&&o.preGift.mode==="surprise"&&o.preGift.drawn&&(o.preGift.items||[]).length&&!bbOpened(o.id+"|p")?`<div class="dsec"><h4>🎁 Your pre-launch gift · ${esc(o.preGift.code||"")}</h4>${bbCardHTML(o.id+"|p")}</div>`:o.preGift?`<div class="dsec"><h4>🎁 ${o.preGift.src==="review"?(cust?"Your review reward":"Review reward to pack"):(cust?"Your pre-launch gift":"Pre-launch gift to pack")} · ${esc(o.preGift.code||"")}</h4><div class="gl">${(o.preGift.items||[]).map(g=>giftChip(g)).join("")||giftChip({name:o.preGift.mode==="surprise"&&o.preGift.drawn===false?bbName():o.preGift.soldOut?"Out of stock":o.preGift.title||"Free Gift Set"})}</div>${o.preGift.mode==="surprise"&&o.preGift.drawn===false?`<p class="note" style="margin:8px 0 0">${cust?"Your ${esc(bbName())} is picked when you send your payment proof.":"Not drawn yet. It is picked when the payment proof is sent."}</p>`:o.preGift.soldOut?`<p class="note" style="margin:8px 0 0">${cust?"Sorry, the free gifts ran out.":"No gift left in stock for this order."}</p>`:o.preGift.mode==="surprise"&&o.preGift.pool>1?`<p class="note" style="margin:8px 0 0">Picked at random from ${o.preGift.pool} gifts.</p>`:""}</div>`:"";
 /* ===== Carrousel card: a running row of flavor cards. Tapping + opens a quickview with the owner's detail sections.
    The row pauses while it is touched or slid and while the quickview is open, then runs again after a short wait. ===== */
-const CQ={svg:{},sig:"",host:null,tr:null,row:null,dw:null,W:0,off:0,rt:0,drag:false,moved:false,supp:false,open:false,opener:null,rm:matchMedia("(prefers-reduced-motion: reduce)").matches};
+const CQ={svg:{},sig:"",host:null,tr:null,row:null,dw:null,W:0,off:0,rt:0,drag:false,moved:false,supp:false,open:false,opener:null,rm:RM};
 const CQ_SZ={S:150,M:190,L:240},CQ_DT={bar:"Level",notes:"Taste notes",text:"Good to know",image:"Photo"};
 const cqCfg=()=>(DB.page&&DB.page.cq)||{};
 const cqNum=(v,d,lo,hi)=>{v=+v;return isFinite(v)&&String(v)!==""?Math.max(lo,Math.min(hi,v)):d};
@@ -2550,6 +2554,14 @@ function cqClose(){const m=document.getElementById("cqQv");if(!m||m.hidden)retur
 document.addEventListener("click",e=>{const o=e.target.closest("[data-cqopen]");if(o&&o.closest("#cq,#cqPre")){e.preventDefault();cqOpen(o.dataset.cqopen);return}
   const a=e.target.closest("[data-cqarr]");if(a&&CQ.tr)cqStep(+a.dataset.cqarr)});
 addEventListener("keydown",e=>{if(e.key==="Escape")cqClose()});
+/* the phone asks for less motion: offer the animations with one tap, and a quiet way to switch them off again */
+function motionAsk(){if(!PHONE_RM)return;const set=v=>{try{localStorage.setItem(MOTION_KEY,v)}catch(e){}};
+  if(motionPref==="on"){const f=document.querySelector("footer");if(f&&!f.querySelector("[data-mooff2]")){const a=document.createElement("button");a.type="button";a.className="mo-back";a.dataset.mooff2="";a.textContent="Animations make you dizzy? Turn them off";a.onclick=()=>{set("off");location.reload()};f.appendChild(a)}return}
+  if(motionPref==="off")return;
+  setTimeout(()=>{if(document.querySelector(".mo-ask"))return;const d=document.createElement("div");d.className="mo-ask";d.setAttribute("role","dialog");d.setAttribute("aria-label","Animations");
+    d.innerHTML=`<span>✨ Your phone asks for less motion, so our animations are off.</span><button class="mo-on" type="button" data-moon>Turn on animations</button><button class="mo-x" type="button" data-mox aria-label="No thanks">✕</button>`;
+    d.addEventListener("click",e=>{if(e.target.closest("[data-moon]")){set("on");location.reload()}else if(e.target.closest("[data-mox]")){set("off");d.remove()}});document.body.appendChild(d)},1500)}
+motionAsk();
 function toast(msg){if(typeof toastHook==="function")msg=toastHook(msg);const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,Math.max(1600,msg.length*45))}
 function armed(btn,fn){if(btn.dataset.armed){fn();return}btn.dataset.armed="1";const t=btn.textContent;btn.textContent="Tap again to confirm";btn.classList.add("armed");
   setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent=t;btn.classList.remove("armed")}},3000)}
@@ -3124,7 +3136,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 18:45 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-29 19:22 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

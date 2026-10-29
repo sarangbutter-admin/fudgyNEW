@@ -3,6 +3,7 @@
 (function () {
   "use strict";
   var K = window.SBK, root = document.getElementById("jn"), AP_KEY = "delidome-affapp";
+  try { if (localStorage.getItem("delidome-motion") === "on") document.documentElement.classList.add("motion-on"); } catch (e) {}   // same choice as on the shop
   // keep in step with AFJ_DEFAULT in app.js (the owner's editor)
   var D = {
     title: "Join our affiliate team", sub: "Share our cookies with your followers and earn money on every order you bring.", heroIcon: "🍪", rate: "10%",
@@ -109,7 +110,7 @@
     var s = document.createElement("script"); s.id = "tsjs"; s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"; s.async = true; s.onload = go; document.head.appendChild(s);
   }
   function party() {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches && !document.documentElement.classList.contains("motion-on")) return;
     var em = ["🎉", "✨", "🍪", "⭐", "🥳", "💸"]; for (var i = 0; i < 18; i++) { (function (i) { var f = document.createElement("i"); f.className = "fly"; f.textContent = em[i % em.length]; f.style.left = (4 + Math.random() * 90) + "%"; f.style.fontSize = (22 + Math.random() * 20) + "px"; f.style.animationDelay = (Math.random() * 0.9) + "s"; document.body.appendChild(f); setTimeout(function () { f.remove(); }, 3600); })(i); }
   }
   function check() {

@@ -64,4 +64,4 @@ section>h2{font-size:clamp(20px,5vw,26px);color:var(--blue);margin-bottom:14px;t
 .foot{text-align:center;padding:10px 0 90px;font-size:14px}.foot a{color:var(--blue);font-weight:700}
 .fly{position:fixed;bottom:-30px;font-style:normal;pointer-events:none;z-index:40;animation:jnfly 2.4s ease-out forwards}
 @keyframes jnfly{0%{opacity:0;transform:translateY(0) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translateY(-70vh) rotate(240deg)}}
-@media (prefers-reduced-motion:reduce){.mq-in,.hero-ic,.float,.join,.join i,.join::after,.perk i,.ok .big{animation:none}.mq-in{flex-wrap:wrap;white-space:normal}.fly{display:none}html{scroll-behavior:auto}}
+@media (prefers-reduced-motion:reduce){html:not(.motion-on) .mq-in,html:not(.motion-on) .hero-ic,html:not(.motion-on) .float,html:not(.motion-on) .join,html:not(.motion-on) .join i,html:not(.motion-on) .join::after,html:not(.motion-on) .perk i,html:not(.motion-on) .ok .big{animation:none}html:not(.motion-on) .mq-in{flex-wrap:wrap;white-space:normal}html:not(.motion-on) .fly{display:none}html:not(.motion-on){scroll-behavior:auto}}
