@@ -186,6 +186,8 @@
   // Edge Functions (courier prices etc.); admin = true sends the team sign-in
   H.preStatus = function () { return K.rpc("prelaunch_public", {}); };
   H.preReg = function (n, p, e) { return K.rpc("prelaunch_register", { p_name: n, p_phone: p, p_email: e || "" }); };
+  H.gameTops = function () { return K.rpc("game_tops", {}); };
+  H.gameSubmit = function (lv, score, name, av) { return K.rpc("game_submit", { p_lv: lv, p_score: score, p_name: name, p_av: av }); };
   H.banMsg = function () { return K.rpc("ban_msg", {}); };
   H.fn = function (name, body, admin) { return K.fn(name, body, !!admin); };
 
