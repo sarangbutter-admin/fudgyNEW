@@ -125,7 +125,8 @@
   H.rvStatus = function () { return K.rpc("admin_rv_status", {}, true); };
   H.dokuCreate = async function (id, group, pass) { var d = await K.fn("doku", { action: "create", id: id, token: tk(id), group: group, pass: pass || "" }); if (d && d.error) throw new Error(d.error); return d; };
   H.rpcPub = function (name, args) { return K.rpc(name, args, false); };
-  H.changePassword = function (o, n) { return K.changePassword(o, n); };
+  // the server checks the old password itself, so this works even when Supabase asks sign-in forms for a security token
+  H.changePassword = function (o, n) { return K.rpc("aff_change_pw", { p_old: o, p_new: n }, true); };
   H.tsVerify = async function (token, action) { var d = await K.fn("turnstile", { action: action, token: token }); if (!d || d.error || !d.pass) throw new Error((d && d.error) || "The security check failed. Please try again."); return d; };
   H.tsGet = function () { return K.rpc("admin_ts_get", {}, true); };
   H.tsSave = function (p) { return K.rpc("admin_ts_save", { p: p }, true); };
