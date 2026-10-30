@@ -3058,10 +3058,18 @@ function afFaqHTML(r){const L=afFaqList();return `<section class="panel"><h2>FAQ
 const afTabsHTML=()=>`<div class="chips aftabs" role="tablist">${[["dash","📊 Dashboard"],["faq","❓ FAQ"]].map(([k,l])=>`<button class="fchip" type="button" role="tab" data-aftab="${k}" aria-selected="${AF.tab===k}" aria-pressed="${AF.tab===k}">${l}</button>`).join("")}</div>`;
 async function afCpnLoad(){try{AFM.cpn=await SBH.rpc("aff_coupon_info",{})}catch(e){AFM.cpn={ok:false}}affRender()}
 function afCpnText(c){const d=c.type==="freedelivery"?"free delivery":c.type==="amount"?money(+c.value)+" off":(+c.value)+"% off";return d+(+c.minSpend>0?" on orders from "+money(+c.minSpend):"")+(c.stack?", also on flash sales":", not on flash sales")+(c.endsAt?", until "+esc(String(c.endsAt).replace("T"," ")):"")}
+function afGiveHTML(c){if(!(+c.giveMax>0))return "";const g=AFM.gd!=null?+AFM.gd:+c.give,base=+c.baseValue,rate=+c.rate,opts=[];for(let x=0;x<=+c.giveMax+1e-9;x+=0.5)opts.push(x);
+  const dirty=g!==+c.give;
+  return `<div class="afgive" style="margin:10px 0;padding:10px 12px;border:1px dashed currentColor;border-radius:12px"><b>🤝 Share my commission</b>
+    <p class="note" style="margin:4px 0 8px">Give some of your commission to your customers as extra discount. Orders that use your coupon then earn you less. Orders that come from your link without the coupon still earn the full ${rate}%.</p>
+    <label class="af">Points I give to my customers<select class="in" id="afGive">${opts.map(x=>`<option value="${x}" ${x===g?"selected":""}>${x}%${x===0?" (none)":""}</option>`).join("")}</select></label>
+    <p class="sub" style="margin:8px 0 0">Customers with your coupon get <b>${base+g}% off</b>${g>0?` (${base}% + ${g}% from you)`:""}. You earn <b>${Math.max(0,rate-g)}%</b> on those orders and <b>${rate}%</b> on orders from your link without the coupon.</p>
+    <div class="colin" style="margin-top:8px"><button class="btn btn-blue btn-sm" type="button" data-afgivesave ${AFM.busy||!dirty?"disabled":""}>${AFM.busy?"Saving…":"Save"}</button></div></div>`}
 function afCouponHTML(){const c=AFM.cpn;if(!c||!c.ok)return "";const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,"");
   return `<section class="panel"><h2 style="margin:0 0 6px">🎟️ My coupon</h2>${!c.ready?`<p class="sub">Coupons are not ready yet. The shop sets the discount first, then you can choose your coupon name here.</p>`
     :`<div class="afcpdef"><span aria-hidden="true">🎁</span><div>Discount for your customers<b>${afCpnText(c)}</b><small>Set by the shop. It is added to your coupon automatically.</small></div></div>
     <p class="sub" style="margin:0 0 8px">${c.coupon?`Your code <b>${esc(c.coupon)}</b>`:"You do not have a coupon name yet."} Customers who type it get <b>${afCpnText(c)}</b>. You earn <b>${+c.rate}%</b> of the order. Your link is remembered for 30 days, so orders from customers who came through it also count.</p>
+    ${afGiveHTML(c)}
     ${c.canName?(()=>{const lock=!!c.coupon&&!AFM.edit,wait=c.coupon&&+c.changedAt>0?Math.ceil((3600000-(Date.now()-c.changedAt))/60000):0;
       return `<div class="colin" style="flex-wrap:wrap;gap:8px"><input class="in${lock?" locked":""}" id="afCpIn" maxlength="20" placeholder="Choose a name, like ALPHA001" value="${esc(c.coupon||"")}" style="flex:1;min-width:180px;text-transform:uppercase" ${lock?`readonly aria-label="Your coupon name (locked)"`:""}>
       ${lock?`<button class="btn btn-ghost-blue btn-sm" type="button" data-afcpedit>✏️ Change coupon</button>`:`<button class="btn btn-blue btn-sm" type="button" data-afcpsave ${AFM.busy?"disabled":""}>${AFM.busy?"Saving…":c.coupon?"Save new name":"Save"}</button>${c.coupon?`<button class="ghost" type="button" data-afcpcancel>Cancel</button>`:""}`}</div>
@@ -3128,7 +3136,9 @@ function afBellClick(e){const tb=e.target.closest("[data-afntab]");if(tb){AFN.ta
   else if(AFN.open&&!e.target.closest(".afpop")){AFN.open=false;afBellDraw()}}
 function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
+    v.addEventListener("change",e=>{if(e.target&&e.target.id==="afGive"){AFM.gd=+e.target.value;affRender()}});
     v.addEventListener("click",async e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);const tb=e.target.closest("[data-aftab]");if(tb){AF.tab=tb.dataset.aftab;affRender();scrollTo(0,0);return}if(e.target.closest("[data-afout]"))SBH.signOut();
+      if(e.target.closest("[data-afgivesave]")){const g=AFM.gd;AFM.busy=true;AFM.msg="";affRender();try{AFM.cpn=await SBH.rpc("aff_give_save",{p_give:g});AFM.gd=null;AFM.msg="Saved. Your customers get "+AFM.cpn.value+"% off and you earn "+Math.max(0,+AFM.cpn.rate-+AFM.cpn.give)+"% on coupon orders."}catch(er){AFM.msg=er.message||"Couldn't save."}AFM.busy=false;affRender();return}
       if(e.target.closest("[data-afcpedit]")){AFM.edit=true;AFM.msg="";affRender();const i=document.getElementById("afCpIn");if(i){i.focus();i.select()}return}
       if(e.target.closest("[data-afcpcancel]")){AFM.edit=false;AFM.msg="";affRender();return}
       if(e.target.closest("[data-afcpsave]")){const code=(document.getElementById("afCpIn")||{}).value||"";AFM.busy=true;AFM.msg="";affRender();try{AFM.cpn=await SBH.rpc("aff_coupon_save",{p_code:code});AFM.msg="Saved. Your coupon is "+AFM.cpn.coupon+".";AFM.edit=false}catch(er){AFM.msg=er.message||"Couldn't save.";const i=document.getElementById("afCpIn");if(i)i.value=code}AFM.busy=false;affRender();if(AFM.edit){const i=document.getElementById("afCpIn");if(i){i.value=code;i.focus()}}}
@@ -3137,10 +3147,10 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-30 06:46 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-30 16:22 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
-const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
+const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
 const sig = (now=Date.now()) => DB.sales.map(s=>saleStatus(s,now)).join();
 let view=null;
 function route(){
