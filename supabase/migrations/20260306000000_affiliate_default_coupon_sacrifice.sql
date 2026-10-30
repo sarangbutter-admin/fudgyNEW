@@ -101,7 +101,7 @@ begin
   insert into public.private_kv (key, data, updated_at) values ('aff_cdef', r, public.now_ms())
     on conflict (key) do update set data = excluded.data, updated_at = excluded.updated_at;
   if coalesce((p ->> 'all')::boolean, false) then
-    update public.affiliates set crule = coalesce(crule, '{}'::jsonb) - 'type' - 'value' - 'minSpend' - 'maxUses' - 'startsAt' - 'endsAt' - 'onePerPhone' - 'stack';
+    update public.affiliates set crule = coalesce(crule, '{}'::jsonb) - 'type' - 'value' - 'minSpend' - 'maxUses' - 'startsAt' - 'endsAt' - 'onePerPhone' - 'stack' where true;
   end if;
   for x in select id from public.affiliates where coalesce(coupon, '') <> '' loop perform public.aff_sync_coupon(x.id); n := n + 1; end loop;
   perform public.log_act('Affiliate coupon default changed', case ty when 'percent' then v::text || '%' when 'amount' then 'amount ' || v::text else 'free delivery' end
@@ -126,8 +126,7 @@ begin
   if coalesce(btrim(new.coupon), '') = '' then new.coupon := public.aff_default_name(new.id, new.username); end if;
   return new;
 end $$;
-drop trigger if exists affiliates_default_coupon_trg on public.affiliates;
-create trigger affiliates_default_coupon_trg before insert on public.affiliates for each row execute function public.affiliates_default_coupon();
+create or replace trigger affiliates_default_coupon_trg before insert on public.affiliates for each row execute function public.affiliates_default_coupon();
 
 -- keep the coupons list in step whenever an affiliator is added or their coupon / commission / status / sharing changes
 create or replace function public.affiliates_sync_trg() returns trigger
@@ -136,8 +135,7 @@ begin
   perform public.aff_sync_coupon(new.id);
   return null;
 end $$;
-drop trigger if exists affiliates_sync_trg on public.affiliates;
-create trigger affiliates_sync_trg after insert or update of coupon, rate, status, give on public.affiliates for each row execute function public.affiliates_sync_trg();
+create or replace trigger affiliates_sync_trg after insert or update of coupon, rate, status, give on public.affiliates for each row execute function public.affiliates_sync_trg();
 
 revoke all on function public.aff_give_eff(public.affiliates), public.aff_default_name(text, text), public.affiliates_default_coupon(), public.affiliates_sync_trg() from public, anon, authenticated;
 revoke all on function public.aff_give_save(numeric) from public, anon;
