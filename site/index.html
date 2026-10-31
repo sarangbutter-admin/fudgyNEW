@@ -11,13 +11,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="styles.css">
-<style>body.dd-load #storeView,body.dd-load .bar,body.dd-load #fab,body.dd-load .toast{visibility:hidden}body:not(.dd-load) #ddSplash{opacity:0;visibility:hidden;pointer-events:none}
-#ddSplash{position:fixed;left:0;top:0;right:0;bottom:0;z-index:5000;display:grid;place-content:center;justify-items:center;gap:16px;background:#fff;color:#000096;transition:opacity .35s ease,visibility 0s linear .35s}
+<style>body.dd-load #storeView,body.dd-load .bar,body.dd-load #fab,body.dd-load .toast{visibility:hidden}body:not(.dd-load) #ddSplash{display:none}
+#ddSplash{position:fixed;left:0;top:0;right:0;bottom:0;z-index:5000;display:grid;place-content:center;justify-items:center;gap:16px;background:#fff;color:#000096;opacity:0;animation:ddin .01s linear .18s forwards}
 #ddSplash svg{width:104px;height:auto;overflow:visible}
 #ddSplash b{font:800 26px/1 Unbounded,"Instrument Sans",system-ui,sans-serif;letter-spacing:-.02em}
 #ddSplash b span{display:inline-block;animation:ddhop 1.5s ease-in-out infinite;animation-delay:calc(var(--i)*.07s)}
 #ddSplash .lid{transform-box:fill-box;transform-origin:100% 100%;animation:ddlid 1.5s ease-in-out infinite}
 #ddSplash .ck{transform-box:fill-box;transform-origin:50% 100%;animation:ddck 1.5s ease-in-out infinite}
+@keyframes ddin{to{opacity:1}}
+#ddSplash .lg{display:block;width:auto;height:auto;max-width:130px;max-height:130px;object-fit:contain;animation:ddbob 1.5s ease-in-out infinite}
+@keyframes ddbob{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-10px) rotate(-4deg)}60%{transform:translateY(0) rotate(3deg)}}
 @keyframes ddlid{0%,100%{transform:translateY(0) rotate(0)}35%,65%{transform:translateY(-5px) rotate(-16deg)}}
 @keyframes ddck{0%,25%,75%,100%{transform:translateY(2px) scale(.3);opacity:0}45%,55%{transform:none;opacity:1}}
 @keyframes ddhop{0%,40%,100%{transform:translateY(0)}20%{transform:translateY(-7px)}}
@@ -26,6 +29,7 @@
 </head>
 <body class="dd-load">
 <div id="ddSplash" role="status" aria-label="Loading"><svg viewBox="0 0 30 24" aria-hidden="true"><circle class="ck" cx="15" cy="17" r="4.6" fill="#C98A4B"/><circle cx="13.4" cy="16.2" r=".7" fill="#4a2a10"/><circle cx="16.6" cy="17.6" r=".7" fill="#4a2a10"/><circle cx="15" cy="15.4" r=".6" fill="#4a2a10"/><g class="lid"><path d="M3 21a12 12 0 0 1 24 0Z" fill="currentColor"/><circle cx="15" cy="5" r="2.6" fill="currentColor"/></g><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="currentColor"/></svg><b aria-hidden="true"><span style="--i:0">d</span><span style="--i:1">e</span><span style="--i:2">l</span><span style="--i:3">i</span><span style="--i:4">d</span><span style="--i:5">o</span><span style="--i:6">m</span><span style="--i:7">e</span></b></div>
+<script src="splash.js"></script>
 
 <!-- ================= SHOP ================= -->
 <div id="storeView">

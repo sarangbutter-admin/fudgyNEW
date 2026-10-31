@@ -151,5 +151,5 @@
   boot();
 })();
 
-window.addEventListener("load",()=>setTimeout(()=>document.body.classList.add("jn-ready"),250));
+(()=>{const go=()=>document.body.classList.add("jn-ready");if(document.readyState==="complete")go();else window.addEventListener("load",go)})();
 setTimeout(()=>document.body.classList.add("jn-ready"),6000);

@@ -72,14 +72,17 @@ input,textarea{-webkit-appearance:none;appearance:none}
 body{padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 
 /* loading logo */
-#ddSplash{position:fixed;left:0;top:0;right:0;bottom:0;z-index:5000;display:grid;place-content:center;justify-items:center;gap:16px;background:#fff;color:#000096;transition:opacity .35s ease,visibility 0s linear .35s}
+#ddSplash{position:fixed;left:0;top:0;right:0;bottom:0;z-index:5000;display:grid;place-content:center;justify-items:center;gap:16px;background:#fff;color:#000096;opacity:0;animation:ddin .01s linear .18s forwards}
 #ddSplash svg{width:104px;height:auto;overflow:visible}
 #ddSplash b{font:800 26px/1 Unbounded,"Instrument Sans",system-ui,sans-serif;letter-spacing:-.02em}
 #ddSplash b span{display:inline-block;animation:ddhop 1.5s ease-in-out infinite;animation-delay:calc(var(--i)*.07s)}
 #ddSplash .lid{transform-box:fill-box;transform-origin:100% 100%;animation:ddlid 1.5s ease-in-out infinite}
 #ddSplash .ck{transform-box:fill-box;transform-origin:50% 100%;animation:ddck 1.5s ease-in-out infinite}
+@keyframes ddin{to{opacity:1}}
+#ddSplash .lg{display:block;width:auto;height:auto;max-width:130px;max-height:130px;object-fit:contain;animation:ddbob 1.5s ease-in-out infinite}
+@keyframes ddbob{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-10px) rotate(-4deg)}60%{transform:translateY(0) rotate(3deg)}}
 @keyframes ddlid{0%,100%{transform:translateY(0) rotate(0)}35%,65%{transform:translateY(-5px) rotate(-16deg)}}
 @keyframes ddck{0%,25%,75%,100%{transform:translateY(2px) scale(.3);opacity:0}45%,55%{transform:none;opacity:1}}
 @keyframes ddhop{0%,40%,100%{transform:translateY(0)}20%{transform:translateY(-7px)}}
 @media (prefers-reduced-motion:reduce){html:not(.motion-on) #ddSplash *{animation:none!important}}
-body.jn-ready #ddSplash{opacity:0;visibility:hidden;pointer-events:none}
+body.jn-ready #ddSplash{display:none}

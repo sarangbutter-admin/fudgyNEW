@@ -5488,6 +5488,7 @@ function renderLanding(){
   const nm=pg.name||"delidome";document.title=`${nm} Cookie Boxes`;
   $("#brandTxt").textContent=nm;$("#ftBrand").textContent=nm;$(".top .logo").setAttribute("aria-label",`${nm} home`);
   const lg=safeMedia(pg.logo);const mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG;$("#logoMark").innerHTML=mark;$("#ftMark").innerHTML=mark;
+  try{localStorage.setItem("dd-splash-v1",JSON.stringify({logo:lg||"",name:nm,brand:pg.brand,show:pg.nameShow!==false}))}catch(e){}   // the loading screen shows the latest logo next time
   lpFavicon(pg);applyHeader();applyBrandSize();applyXtra();applyBgx();applySnow();renderMarquee($("#marq2"),pg.mq2);
   heroFill($("#dome"),pg.hero);
   // strip
