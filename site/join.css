@@ -69,3 +69,4 @@ section>h2{font-size:clamp(20px,5vw,26px);color:var(--blue);margin-bottom:14px;t
 /* Safari / iPhone friendly */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation}
 input,textarea{-webkit-appearance:none;appearance:none}
+body{padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);padding-bottom:env(safe-area-inset-bottom,0px)}

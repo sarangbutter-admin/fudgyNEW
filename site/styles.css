@@ -399,7 +399,7 @@ footer a{color:var(--white)}
 .bar{display:none}
 @media (max-width:900px){
   body.in-store{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
-  .bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:55;justify-content:space-between;align-items:center;gap:12px;background:var(--blue);color:var(--white);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+  .bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:55;justify-content:space-between;align-items:center;gap:12px;background:var(--blue);color:var(--white);padding:12px calc(16px + env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) calc(16px + env(safe-area-inset-left,0px))}
   .bar strong{font-family:var(--display);font-size:19px;display:block;font-variant-numeric:tabular-nums}
   .bar small{font-size:12px;opacity:.8}
   .bar .btn{background:var(--white);color:var(--blue);border-color:var(--white);padding:11px 18px;font-size:14px}
@@ -1818,3 +1818,6 @@ input[type=text],input[type=tel],input[type=email],input[type=password],input[ty
   .boxpanel .cta[disabled],.bar .btn[disabled]{background:rgba(255,255,255,.18)}
   .tool:hover:not([disabled]),.cpn-ch button:hover{background:rgba(255,255,255,.14)}
 }
+
+/* the page extends under Safari's own bars (viewport-fit=cover): keep the content clear of the status bar / notch, and let the bottom bar rise above Safari's toolbar */
+body{padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
