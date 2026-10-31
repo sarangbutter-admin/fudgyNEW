@@ -618,7 +618,7 @@ function ctaState(){
 /* guide: after the time is chosen, scroll to the extras and blink an arm tip until they choose an extra or "No extras"; then guide them to the courier */
 function guideExtras(){const blk=$("#extrasBlock");if(!blk||blk.hidden||S.extrasDone||!(S.day&&S.time))return;S.extraTip=true;renderStore();setTimeout(()=>scrollToEl(blk),80)}
 function guideCourier(){S.extraTip=false;if(S.mode!=="delivery"){renderStore();return}S.courierTip=!!(bsOn()&&bsPending(S));renderStore();
-  setTimeout(()=>{const t=$("#csTip")||$("#bsRow");if(t)scrollToEl(t)},150)}
+  setTimeout(()=>{const t=$("#bsRow");if(!t)return;const y=t.getBoundingClientRect().top+scrollY-innerHeight*0.45;scrollTo({top:Math.max(0,y),behavior:RM?"instant":"smooth"})},150)}
 /* extras that need a gift note: Gift wrap and Greeting card (the owner sets the type of each extra). Other extras do not show the note box. */
 const addonKind=a=>a.kind||(/wrap/i.test(a.name||"")?"giftwrap":/card|greeting/i.test(a.name||"")?"greeting":"other");
 const noteNeeded=()=>S.addons.some(id=>{const a=DB.addons.find(x=>x.id===id);return a&&addonKind(a)!=="other"});
@@ -690,7 +690,7 @@ function renderStore(){
     L+=`<div><dt>${OPT_NAME[optOf(S)]}${q.feeWas&&q.fdSale?" "+cdlHTML(q.fdSale.end):""}</dt><dd>${q.feePending?"Choose a courier":q.feeWas?`<s class="fdwas">${money(q.feeWas)}</s> ${q.fee?`<b class="fdnow">${money(q.fee)}</b>`:fbHTML("Del")}`:q.fee?money(q.fee):fbHTML("Del")}</dd></div>`;
     if(S.day)L+=`<div><dt>When</dt><dd>${S.mode!=="pickup"&&S.speed==="sameday"?(samedayOpen()?"Today (sameday)"+(S.time&&S.time!=="Same day"?", "+esc(S.time):""):"Sameday (after the cut-off)"):fmtDay(S.day)+(S.time?", "+esc(S.time):"")}</dd></div>`;
     if(bsOn()&&S.mode==="delivery"){const sh=bsShip(S);
-      L+=`<div class="bscour${q.feePending?" need":""}${S.courierTip&&q.feePending&&!BSD.busy?" tipped":""}" id="bsRow"><dt>Courier</dt><dd>${S.courierTip&&q.feePending&&!BSD.busy?`<span class="armtip" id="csTip"><span aria-hidden="true">👇</span><span>Tap <b>Choose courier</b> to see the prices.</span></span>`:""}<button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?esc(scName())+" · Change":"🛵 Choose courier"}</button></dd></div>`}
+      L+=`<div class="bscour${q.feePending?" need":""}${S.courierTip&&q.feePending&&!BSD.busy?" tipped":""}" id="bsRow"><dt>Courier</dt><dd>${S.courierTip&&q.feePending&&!BSD.busy?`<span class="armtip" id="csTip" role="status">👇 Now choose a courier</span>`:""}<button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?esc(scName())+" · Change":"🛵 Choose courier"}</button></dd></div>`}
   }
   $("#lines").innerHTML=L;
   renderCoupon(q);renderGiftBox();

@@ -1624,7 +1624,7 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 
 /* the courier tip floats above the Choose courier button: it never moves the button */
 #bsRow{position:relative}
-.bscour .armtip{position:absolute;left:auto;right:0;bottom:calc(100% + 9px);transform:none;display:flex;align-items:center;gap:6px;width:max-content;max-width:min(260px,calc(100vw - 48px));white-space:normal;text-align:left;border-radius:14px;animation:armTipFade .18s ease-out}
+.bscour .armtip{position:absolute;left:auto;right:0;bottom:calc(100% + 9px);transform:none;white-space:nowrap;animation:armTipFade .18s ease-out}
 .bscour .armtip::after{left:auto;right:34px;margin-left:0}
 /* affiliator dashboard tabs + FAQ */
 .aftabs{margin:0}
