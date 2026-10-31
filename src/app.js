@@ -3130,16 +3130,20 @@ function promoStats(a,b){
     fdN:fdO.length,fdAmt:sum(fdO,delSaved),bb,bbOrders:cl.filter(o=>(o.gifts||[]).some(g=>g&&g.random)).length,rwWon:won.length,rwDraws:rw.length,
     cpN:cp.length,cpSales:sum(cp,o=>o.total),cpAmt:sum(cp,o=>(+o.couponDisc||0)+(cpType(o)==="freedelivery"?delSaved(o):0))};
 }
-function promoPanel(a,b){
-  const P=promoStats(a,b),plural=(n,w)=>`${n} ${w}${n===1?"":"s"}`;
+function promoPanel(a,b,rng){
+  const P=promoStats(a,b),Q=rng?promoStats(rng[0],rng[1]):null,plural=(n,w)=>`${n} ${w}${n===1?"":"s"}`,num=v=>String(Math.round(v));
+  // comparison with the earlier period (Performance tab): dir 1 = more is better, 0 = neutral
+  const dl=(k,dir,fmt)=>{if(!Q)return "";const x=P[k],y=Q[k],d=x-y,cls=!d||!dir?"":(d>0)===(dir>0)?" up":" down",ar=d>0?"▲":d<0?"▼":"=";
+    return `<span class="pcd${cls}">${!d?"= same":`${ar} ${fmt(Math.abs(d))}${y?` (${d>0?"+":"−"}${Math.abs(Math.round(d/y*100))}%)`:""}`} · was ${fmt(y)}</span>`};
+  const t=(n,l,sub,k,dir,fmt)=>`<div class="db-k" style="cursor:default"><strong>${n}</strong><small>${l}</small>${sub?`<small style="opacity:.75">${sub}</small>`:""}${dl(k,dir,fmt)}</div>`;
   return `<section class="panel"><h2>Promotions</h2><p class="sub">Orders placed in the dates above that were not cancelled, so a promo counts the day the customer used it.</p>
-    <div class="db-kpis" style="margin-top:12px">
-      ${kpiTile(money(P.flSales),"Total sales from any flash sale",plural(P.flN,"order"))}${kpiTile(money(P.flAmt),"Total live flash sale claimed amount","discount given to customers")}
-      ${kpiTile(money(P.fdAmt),"Total live free delivery claimed amount",plural(P.fdN,"delivery order"))}${kpiTile(P.bb,"Total live blindbox claimed",plural(P.bbOrders,"order"))}
-      ${kpiTile(P.rwWon,"Total blindbox reward claimed",`rewards won from reviews (${P.rwDraws} draw${P.rwDraws===1?"":"s"})`)}${kpiTile(P.cpN,"Total coupon claimed","orders that used a coupon")}
-      ${kpiTile(money(P.cpSales),"Total sales from coupon","order totals with a coupon")}${kpiTile(money(P.cpAmt),"Total coupon claimed amount","discount given by coupons")}
+    <div class="db-kpis perf" style="margin-top:12px">
+      ${t(money(P.flSales),"Total sales from any flash sale",plural(P.flN,"order"),"flSales",1,money)}${t(money(P.flAmt),"Total live flash sale claimed amount","discount given to customers","flAmt",0,money)}
+      ${t(money(P.fdAmt),"Total live free delivery claimed amount",plural(P.fdN,"delivery order"),"fdAmt",0,money)}${t(P.bb,"Total live blindbox claimed",plural(P.bbOrders,"order"),"bb",0,num)}
+      ${t(P.rwWon,"Total blindbox reward claimed",`rewards won from reviews (${P.rwDraws} draw${P.rwDraws===1?"":"s"})`,"rwWon",0,num)}${t(P.cpN,"Total coupon claimed","orders that used a coupon","cpN",0,num)}
+      ${t(money(P.cpSales),"Total sales from coupon","order totals with a coupon","cpSales",1,money)}${t(money(P.cpAmt),"Total coupon claimed amount","discount given by coupons","cpAmt",0,money)}
     </div>
-    <p class="note" style="margin:10px 0 0">Free delivery amount = the courier price minus what the customer paid (the Biteship price saved on the order, or your current Store Courier price). Free-delivery coupons are counted under coupons. Coupons include affiliator coupons.</p></section>`}
+    <p class="note" style="margin:10px 0 0">${Q?"Compared with the earlier period you picked. Green = more sales from promos. Grey = neutral (more discount given is not good or bad). ":""}Free delivery amount = the courier price minus what the customer paid (the Biteship price saved on the order, or your current Store Courier price). Free-delivery coupons are counted under coupons. Coupons include affiliator coupons.</p></section>`}
 function viewDashSales(){
   const [a,b]=srRange(),inR=ms=>ms>=a&&ms<b;
   const when=o=>o.completedAt||(o.refund&&o.refund.at)||o.paidAt||o.createdAt||0;
@@ -3217,7 +3221,7 @@ function viewDashPerf(){
       ${t(pf(s.cpRate),"Complaint rate","","cpRate",-1,"pct")}${t(s.cpDone,"Complaints resolved","good","cpDone",1)}
       ${t(s.cpOpen,"Complaints not resolved","","cpOpen",-1)}${t(s.avg===null?"–":s.avg.toFixed(1)+" ★",`Average rating (${s.nrev} review${s.nrev===1?"":"s"})`,"","avg",1,"star")}
     </div>
-    <p class="note" style="margin:12px 0 0">Orders by order date · complaints and reviews by the date they were sent. Payment rate = paid ÷ placed. Completion rate = delivered or picked up ÷ placed. Complaint rate = complaints ÷ delivered or picked up.${P?" Green = better than before, red = worse. pts = percentage points.":""}</p></section></div>`;
+    <p class="note" style="margin:12px 0 0">Orders by order date · complaints and reviews by the date they were sent. Payment rate = paid ÷ placed. Completion rate = delivered or picked up ÷ placed. Complaint rate = complaints ÷ delivered or picked up.${P?" Green = better than before, red = worse. pts = percentage points.":""}</p></section>${promoPanel(a,b,rng)}</div>`;
 }
 // live and upcoming flash sales / promos, with orders placed while each one runs
 function dashSalesHTML(){const now=Date.now(),live=DB.sales.filter(s=>saleStatus(s,now)==="live").sort((a,b)=>a.end-b.end),soon=DB.sales.filter(s=>saleStatus(s,now)==="scheduled").sort((a,b)=>a.start-b.start).slice(0,3);
