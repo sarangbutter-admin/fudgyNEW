@@ -64,6 +64,7 @@ const routeEnd=SRC.indexOf('addEventListener("hashchange",route);');
 if(routeStart<0||routeEnd<0)throw new Error('route not found');
 adm=SRC.slice(0,routeStart)+`let view=null;
 function route(){
+  document.body.classList.remove("dd-load");   // the admin has no shop data to wait for: end the loading screen as soon as the app starts
   if(view==="admin")return;
   view="admin";
   $("#storeView").hidden=true;$("#adminView").hidden=false;document.body.classList.remove("in-store");
