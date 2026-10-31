@@ -3114,6 +3114,32 @@ function moreInsights(set){
     ${top.length?`<ol class="rank">${top.map((c,i)=>`<li><span class="rk-n">${i+1}</span><span class="rk-l">${esc(c.name)} <small class="note">(${c.n} order${c.n===1?"":"s"})</small></span><span class="rk-v">${money(c.spent)}</span></li>`).join("")}</ol>`:`<div class="empty">Nothing in this period.</div>`}
     <p class="note" style="margin:10px 0 0">Repeat customers have 2 or more paid orders in total. Discounts are flash sales plus coupons. Top customers are ranked by what they spent after refunds.</p></section>`;
 }
+/* promotions: flash sales, delivery promos, blind boxes and coupons, for orders placed in [a,b) that were not cancelled */
+function promoStats(a,b){
+  const inR=ms=>ms>=a&&ms<b,cl=DB.orders.filter(o=>o.status!=="cancelled"&&inR(o.createdAt||0)),st=DB.settings;
+  // the courier price before any delivery promo: the saved Biteship price, else the Store Courier price
+  const rawFee=o=>o.mode!=="delivery"?0:(o.bship&&+o.bship.price>0)?+o.bship.price:o.speed==="sameday"?(+(st.samedayFee??st.deliveryFee)||0):storeFee(o.size);
+  const cpType=o=>{const c=o.coupon?DB.coupons.find(x=>String(x.code).toUpperCase()===String(o.coupon).toUpperCase()):null;return c?c.type:""};
+  const delSaved=o=>Math.max(0,r2(rawFee(o)-(+o.fee||0)));
+  const fl=cl.filter(o=>o.sale&&(+o.discount||0)>0),cp=cl.filter(o=>o.coupon&&String(o.coupon).trim());
+  const fdO=cl.filter(o=>cpType(o)!=="freedelivery"&&delSaved(o)>0);
+  let bb=0;cl.forEach(o=>{bb+=new Set((o.gifts||[]).filter(g=>g&&g.random).map(g=>g.promoId||g.promo||"x")).size});
+  const rw=DB.orders.filter(o=>o.rv&&inR(o.rv.at||0)),won=rw.filter(o=>o.rv.st==="win");
+  const sum=(l,f)=>l.reduce((x,o)=>x+(f(o)||0),0);
+  return {flN:fl.length,flSales:sum(fl,o=>o.total),flAmt:sum(fl,o=>o.discount),
+    fdN:fdO.length,fdAmt:sum(fdO,delSaved),bb,bbOrders:cl.filter(o=>(o.gifts||[]).some(g=>g&&g.random)).length,rwWon:won.length,rwDraws:rw.length,
+    cpN:cp.length,cpSales:sum(cp,o=>o.total),cpAmt:sum(cp,o=>(+o.couponDisc||0)+(cpType(o)==="freedelivery"?delSaved(o):0))};
+}
+function promoPanel(a,b){
+  const P=promoStats(a,b),plural=(n,w)=>`${n} ${w}${n===1?"":"s"}`;
+  return `<section class="panel"><h2>Promotions</h2><p class="sub">Orders placed in the dates above that were not cancelled, so a promo counts the day the customer used it.</p>
+    <div class="db-kpis" style="margin-top:12px">
+      ${kpiTile(money(P.flSales),"Total sales from any flash sale",plural(P.flN,"order"))}${kpiTile(money(P.flAmt),"Total live flash sale claimed amount","discount given to customers")}
+      ${kpiTile(money(P.fdAmt),"Total live free delivery claimed amount",plural(P.fdN,"delivery order"))}${kpiTile(P.bb,"Total live blindbox claimed",plural(P.bbOrders,"order"))}
+      ${kpiTile(P.rwWon,"Total blindbox reward claimed",`rewards won from reviews (${P.rwDraws} draw${P.rwDraws===1?"":"s"})`)}${kpiTile(P.cpN,"Total coupon claimed","orders that used a coupon")}
+      ${kpiTile(money(P.cpSales),"Total sales from coupon","order totals with a coupon")}${kpiTile(money(P.cpAmt),"Total coupon claimed amount","discount given by coupons")}
+    </div>
+    <p class="note" style="margin:10px 0 0">Free delivery amount = the courier price minus what the customer paid (the Biteship price saved on the order, or your current Store Courier price). Free-delivery coupons are counted under coupons. Coupons include affiliator coupons.</p></section>`}
 function viewDashSales(){
   const [a,b]=srRange(),inR=ms=>ms>=a&&ms<b;
   const when=o=>o.completedAt||(o.refund&&o.refund.at)||o.paidAt||o.createdAt||0;
@@ -3135,6 +3161,7 @@ function viewDashSales(){
         ${kpiTile(money(net),"Total net sales","gross − delivery fee − refund",true)}
         ${kpiTile(ownerCancel,"Total owner cancelled orders","cancelled by the owner or staff")}
       </div></section>
+    ${promoPanel(a,b)}
     <section class="panel"><h2>Most picked box</h2><p class="sub">Number of orders for each box size, top selling first.</p>${rankList(sizes,"orders")}</section>
     <section class="panel"><h2>Total order random</h2><p class="sub">Orders where the customer used Random fill, Shuffle or "fill the rest for me".</p>
       <div class="db-kpis" style="margin-top:8px">${kpiTile(shuf,"Orders using random",n?Math.round(shuf/n*100)+"% of orders":"")}</div></section>
