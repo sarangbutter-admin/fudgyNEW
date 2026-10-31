@@ -1804,6 +1804,7 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .custom .cbadges{position:absolute;top:-12px;right:12px;display:flex;gap:4px;z-index:1}
 .custom .cbg{background:var(--red);color:var(--white);font-size:11px;font-weight:700;border-radius:var(--r-pill);padding:3px 9px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,60,.22)}
 .custom .cbg.gift{background:#C8102E}
+.custom .cbg.blind{background:#6D28D9}
 .custom .cbunder{position:absolute;left:50%;bottom:-11px;transform:translateX(-50%);display:flex;gap:4px;z-index:1}
 .custom .cbunder .cdl{background:#fff;border:1px solid rgba(0,0,150,.14);box-shadow:0 1px 4px rgba(0,0,60,.16)}
 .custom.hascd{margin-bottom:16px}
