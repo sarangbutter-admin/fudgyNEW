@@ -1366,7 +1366,7 @@ function bsStoreOpt(){if(!bsFallback()||BSD.busy)return "";
   if(!bsWho())return "";                                   // no WhatsApp number yet: the Store Courier is not offered
   if(!(BSD.opts.length||BSD.err||BSD.tried))return "";     // the customer has to find the address on the map (or try the Biteship couriers) first
   const fd=S.mode==="delivery"?freeDelSale(S.size):null,fee=storeFee(S.size),promo=!!(fd&&fdApply(fd,fee,"store")<fee),fb=(DB.settings.scShow||"always")==="fallback";
-  if(fb&&!promo&&BSD.opts.length&&!BSD.err)return S.bsSkip?bsStoreBtn():"";   // "only when prices can't load", unless a delivery promo makes it the better deal
+  if(fb&&BSD.opts.length&&!BSD.err)return S.bsSkip?bsStoreBtn():"";   // "only when prices can't load", unless a delivery promo makes it the better deal
   return bsStoreBtn()}
 function bsStoreBtn(){const t=DB.settings,fee=storeFee(S.size),fd=freeDelSale(S.size),sel=!!S.bsSkip,promo=fd&&fdApply(fd,fee,"store")<fee;
   return `<button type="button" class="bsopt bsstore${sel?" sel":""}${promo?" promo":""}" data-bsskip aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(scName())}</b>${promo?`<em class="bspromo">${fd.kind==="amount"?(fdApply(fd,fee,"store")>0?esc(money(fd.amount))+" OFF":"FREE DELIVERY"):"FREE DELIVERY"}</em>`:""}${t.scNote?`<small>${esc(t.scNote)}</small>`:""}${promo?`<small>${cdlHTML(fd.end)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,fee,"store")}</span></button>`}

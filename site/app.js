@@ -1352,7 +1352,7 @@ function bsStoreOpt(){if(!bsFallback()||BSD.busy)return "";
   if(!bsWho())return "";                                   // no WhatsApp number yet: the Store Courier is not offered
   if(!(BSD.opts.length||BSD.err||BSD.tried))return "";     // the customer has to find the address on the map (or try the Biteship couriers) first
   const fd=S.mode==="delivery"?freeDelSale(S.size):null,fee=storeFee(S.size),promo=!!(fd&&fdApply(fd,fee,"store")<fee),fb=(DB.settings.scShow||"always")==="fallback";
-  if(fb&&!promo&&BSD.opts.length&&!BSD.err)return S.bsSkip?bsStoreBtn():"";   // "only when prices can't load", unless a delivery promo makes it the better deal
+  if(fb&&BSD.opts.length&&!BSD.err)return S.bsSkip?bsStoreBtn():"";   // "only when prices can't load", unless a delivery promo makes it the better deal
   return bsStoreBtn()}
 function bsStoreBtn(){const t=DB.settings,fee=storeFee(S.size),fd=freeDelSale(S.size),sel=!!S.bsSkip,promo=fd&&fdApply(fd,fee,"store")<fee;
   return `<button type="button" class="bsopt bsstore${sel?" sel":""}${promo?" promo":""}" data-bsskip aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(scName())}</b>${promo?`<em class="bspromo">${fd.kind==="amount"?(fdApply(fd,fee,"store")>0?esc(money(fd.amount))+" OFF":"FREE DELIVERY"):"FREE DELIVERY"}</em>`:""}${t.scNote?`<small>${esc(t.scNote)}</small>`:""}${promo?`<small>${cdlHTML(fd.end)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,fee,"store")}</span></button>`}
@@ -3156,7 +3156,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-31 20:46 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-31 20:48 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
