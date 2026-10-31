@@ -1590,7 +1590,7 @@ $("#coForm").addEventListener("submit",e=>{
       if(pNote||pImg)SBH.placeInfo(o.id,pNote,pImg).catch(err=>toast("Order placed, but the driver note or photo didn't save: "+err.message));
       addMine(o.id);S.editId=null;saveCart();renderDone(o,!!ed);
       S=fresh();$("#coForm").reset();saveCart();sanitizeCart();renderStoreStatic();renderStore();renderEditBar();renderBag();
-    }).catch(err=>{if(err.message==="BANNED"){$("#coErr").hidden=true;banShow()}else{$("#coErr").textContent=err.message;$("#coErr").hidden=false}SBH.loadShop(true)}).finally(()=>{window.__tsPass=undefined;if(btn)btn.disabled=false});
+    }).catch(err=>{if(err.message==="BANNED"){$("#coErr").hidden=true;banShow()}else{$("#coErr").textContent=err.message;$("#coErr").hidden=false;if(/courier/i.test(err.message||"")&&bsOn()&&S.mode==="delivery"){S.ship=null;BSD.err=err.message;BSD.tried=true;bsDraw();renderCoSummary();renderStore()}}SBH.loadShop(true)}).finally(()=>{window.__tsPass=undefined;if(btn)btn.disabled=false});
     return}
   let o;
   if(ed){releaseHold(ed);Object.assign(ed,fields,{editedAt:Date.now()});o=ed;takeHold(o)}
