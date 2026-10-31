@@ -333,18 +333,29 @@ function quote(c,db=DB,{at=Date.now(),withDelivery=true}={}){
   const couponDisc=cp&&cp.ok?cp.discount:0;
   const fdSale=at&&c.mode==="delivery"?freeDelSale(c.size,at,db):null;
   const shipQ=withDelivery?bsShip(c,at||Date.now(),db):null,cpFree=!!(cp&&cp.ok&&cp.freeDel);
-  const noFee=cpFree||!!(fdSale&&fdSale.kind!=="amount"&&fdSale.scope!=="store");   // a free promo for every courier: no need to pick a courier to know the price
+  const fdAll=at&&c.mode==="delivery"?db.sales.find(x=>isFD(x)&&saleStatus(x,at)==="live"&&fdApplies(x,c.size,db)&&x.kind!=="amount"&&!fdKinds(x))||null:null;
+  const noFee=cpFree||!!fdAll;   // a free promo for every courier: no need to pick a courier to know the price
   const feePending=withDelivery&&c.mode==="delivery"&&!noFee&&!shipQ&&bsPending(c,db);
   const feeRaw=withDelivery&&c.mode==="delivery"?(shipQ?+shipQ.price:feePending?0:(c.speed==="sameday"?(db.settings.samedayFee??db.settings.deliveryFee):storeFee(c.size,db))):0;
-  const fee=cpFree||feePending?(cpFree?0:feeRaw):fdApply(fdSale,feeRaw,shipQ?"bite":"store"),feeWas=fee<feeRaw?feeRaw:0;
-  return {ship:shipQ,feePending,feeWas,base,sale,fdSale,discount,surcharge,addons,fee,coupon:cp&&cp.ok?cp.coupon:null,couponDisc,couponErr:cp&&!cp.ok?cp.err:"",total:r2(base-discount-couponDisc+surcharge+addons+fee)};
+  const fdUsed=fdAll||(at&&c.mode==="delivery"&&!feePending?fdFor(c.size,shipQ||"store",feeRaw,at,db):null);
+  const fee=cpFree||feePending?(cpFree?0:feeRaw):fdAll?0:fdApply(fdUsed,feeRaw,shipQ||"store"),feeWas=fee<feeRaw?feeRaw:0;
+  return {ship:shipQ,feePending,feeWas,base,sale,fdSale:fdUsed||fdSale,discount,surcharge,addons,fee,coupon:cp&&cp.ok?cp.coupon:null,couponDisc,couponErr:cp&&!cp.ok?cp.err:"",total:r2(base-discount-couponDisc+surcharge+addons+fee)};
 }
-const saleOffText = s => isFD(s)?(s.kind==="amount"?`${money(s.amount)} off delivery`:"Free delivery")+(s.scope==="store"?` (${scName()})`:""):isGift(s)?"Free gifts":s.type==="percent"?`${s.value}% off`:`${money(s.value)} off`;
+const saleOffText = s => isFD(s)?(s.kind==="amount"?`${money(s.amount)} off delivery`:"Free delivery")+(fdKinds(s)?` (${fdKindsText(s)})`:""):isGift(s)?"Free gifts":s.type==="percent"?`${s.value}% off`:`${money(s.value)} off`;
 function giftAppliesText(s){const ps=[...new Set(s.rules.map(r=>+r.from===+r.to&&DB.sizes.some(z=>z.n===+r.from)?`box of ${r.from}`:`custom boxes of ${r.from} to ${r.to}`))];
   return ps.length>1?ps.slice(0,-1).join(", ")+" and "+ps[ps.length-1]:ps[0]}
-const fdx=D=>({scope:D.dscope==="store"?"store":"all",kind:D.dkind==="amount"?"amount":"free",amount:D.dkind==="amount"?Math.max(0,Math.round(+D.damount||0)):0});
+const fdx=D=>{const k=(D.dkinds||[]).filter(x=>FD_KINDS.includes(x));return {scope:k.length===1&&k[0]==="store"?"store":"all",kinds:k,kind:D.dkind==="amount"?"amount":"free",amount:D.dkind==="amount"?Math.max(0,Math.round(+D.damount||0)):0}};
 /* a delivery promo takes the delivery price down: free or an amount off. src "bite" = a Biteship courier, "store" = the Store Courier / sameday. A "store only" promo leaves Biteship prices alone. */
-const fdApply=(s,fee,src)=>!s||(s.scope==="store"&&src==="bite")?fee:s.kind==="amount"?Math.max(0,r2(fee-(+s.amount||0))):0;
+/* delivery promo filter: kinds = which delivery options get it (empty = all). "store" = the Store Courier, then Biteship services by their codes: sameday, instant, car (instant car) */
+const FD_KINDS=["store","sameday","instant","car"];
+const bsPromoKind=x=>{const t=String([x.courier,x.service].join(" ")).toLowerCase();if(/(^|[^a-z])(car|mpv|van|truck|pickup|mobil)([^a-z]|$)/.test(t))return "car";if(/same[ _-]?day/.test(t))return "sameday";if(/instant|gojek|grab|lalamove|borzo|deliveree|bike|motor|ojek/.test(t))return "instant";return "regular"};
+const fdKey=src=>src==="store"?"store":src&&typeof src==="object"?bsPromoKind(src):"bite";
+const fdKinds=s=>Array.isArray(s.kinds)&&s.kinds.length?s.kinds:(s.scope==="store"?["store"]:null);
+const fdApply=(s,fee,src)=>{if(!s)return fee;const k=fdKinds(s);if(k&&!k.includes(fdKey(src)))return fee;return s.kind==="amount"?Math.max(0,r2(fee-(+s.amount||0))):0};
+const fdFor=(n,src,fee,at=Date.now(),db=DB)=>{let best=null,bv=fee;db.sales.forEach(x=>{if(!isFD(x)||saleStatus(x,at)!=="live"||!fdApplies(x,n,db))return;const v=fdApply(x,fee,src);if(v<bv){bv=v;best=x}});return best};
+const fdStoreOnly=s=>{const k=s&&fdKinds(s);return !!(k&&k.length===1&&k[0]==="store")};
+const FD_LBL={sameday:"Sameday",instant:"Instant",car:"Instant car"};
+const fdKindsText=s=>{const k=fdKinds(s);return k?k.map(x=>x==="store"?scName():FD_LBL[x]||x).join(", "):""};
 const fdPriceHTML=(s,fee,src)=>{const n=fdApply(s,fee,src);return n<fee?`<s class="fdwas">${money(fee)}</s> <b class="fdnow">${n>0?money(n):"FREE"}</b>`:money(fee)};
 function fdListText(s){const a=(s.sizes||[]).slice().sort((x,y)=>x-y).map(n=>`box of ${n}`);if(s.custom)a.push("custom boxes");return a.length>1?a.slice(0,-1).join(", ")+" and "+a[a.length-1]:(a[0]||"no box")}
 const saleAppliesText = s => isGift(s)&&giftHasRules(s)?giftAppliesText(s):s.appliesTo==="all"?"every box":s.appliesTo==="list"?fdListText(s):`the box of ${s.appliesTo}`;
@@ -1339,22 +1350,23 @@ function bsDraw(){
   $("#bsPick").textContent=BSD.mapOpen?"✓ Done with the map":"🗺️ Pick on the map";
   pl.hidden=!BSD.label;pl.innerHTML=BSD.label?`📍 ${esc(BSD.label)} · <a href="https://www.openstreetmap.org/?mlat=${esc(BSD.lat)}&mlon=${esc(BSD.lng)}#map=17/${esc(BSD.lat)}/${esc(BSD.lng)}" target="_blank" rel="noopener">Check on the map</a>`:"";
   if(BSD.busy){o.innerHTML=bsBusyHTML()}
-  else{const fd=S.mode==="delivery"?freeDelSale(S.size):null,fee0=storeFee(S.size),promoStore=!!(fd&&fdApply(fd,fee0,"store")<fee0),store=bsStoreOpt();
+  else{const dm=S.mode==="delivery",fdS=dm?fdFor(S.size,"store",storeFee(S.size)):null,storeTop=fdStoreOnly(fdS),store=bsStoreOpt();
+    const fdPx=x=>{const f=dm?fdFor(S.size,x,x.price):null;return f?fdApply(f,x.price,x):x.price};
     // cheapest first (the index stays the position in BSD.opts so the click handler still finds the courier)
-    const rows=BSD.opts.map((x,i)=>({x,i})).sort((a,b)=>fdApply(fd,a.x.price,"bite")-fdApply(fd,b.x.price,"bite")||a.x.price-b.x.price);
-    o.innerHTML=rows.map(({x,i})=>{const sel=!!(S.ship&&S.ship.sig===x.sig&&!S.bsSkip),k=bsKind(x),b=BS_KINDS[k];
-      return `<button type="button" class="bsopt${sel?" sel":""}${b?" bsk-"+k:""}" data-bsopt="${i}" aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(x.courierName||x.courier)}</b> ${esc(x.serviceName||x.service)}${b?` <em class="bsbadge ${b.cls}"><i aria-hidden="true">${b.ic}</i>${b.t}</em>`:""}${x.eta?`<small>${esc(x.eta)}</small>`:""}${fd&&fdApply(fd,x.price,"bite")<x.price?`<small>${cdlHTML(fd.end)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,x.price,"bite")}</span></button>`}).join("")
-      +store}
+    const rows=BSD.opts.map((x,i)=>({x,i})).sort((a,b)=>fdPx(a.x)-fdPx(b.x)||a.x.price-b.x.price);
+    o.innerHTML=(storeTop?store:"")+rows.map(({x,i})=>{const sel=!!(S.ship&&S.ship.sig===x.sig&&!S.bsSkip),k=bsKind(x),b=BS_KINDS[k],fd=dm?fdFor(S.size,x,x.price):null;
+      return `<button type="button" class="bsopt${sel?" sel":""}${b?" bsk-"+k:""}" data-bsopt="${i}" aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(x.courierName||x.courier)}</b> ${esc(x.serviceName||x.service)}${b?` <em class="bsbadge ${b.cls}"><i aria-hidden="true">${b.ic}</i>${b.t}</em>`:""}${x.eta?`<small>${esc(x.eta)}</small>`:""}${fd?`<small>${cdlHTML(fd.end)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,x.price,x)}</span></button>`}).join("")
+      +(storeTop?"":store)}
   const msg=BSD.err&&!BSD.busy?BSD.err:"";er.hidden=!msg;er.textContent=msg;
 }
 // "Store Courier" in the courier list: always, or only when courier prices can't load (the owner chooses). Free while a free-delivery promo covers this box.
 function bsStoreOpt(){if(!bsFallback()||BSD.busy)return "";
   if(!bsWho())return "";                                   // no WhatsApp number yet: the Store Courier is not offered
   if(!(BSD.opts.length||BSD.err||BSD.tried))return "";     // the customer has to find the address on the map (or try the Biteship couriers) first
-  const fd=S.mode==="delivery"?freeDelSale(S.size):null,fee=storeFee(S.size),promo=!!(fd&&fdApply(fd,fee,"store")<fee),fb=(DB.settings.scShow||"always")==="fallback";
-  if(fb&&BSD.opts.length&&!BSD.err)return S.bsSkip?bsStoreBtn():"";   // "only when prices can't load", unless a delivery promo makes it the better deal
+  const fee=storeFee(S.size),fd=S.mode==="delivery"?fdFor(S.size,"store",fee):null,fb=(DB.settings.scShow||"always")==="fallback";
+  if(fb&&!fdStoreOnly(fd)&&BSD.opts.length&&!BSD.err)return S.bsSkip?bsStoreBtn():"";   // "only when prices can't load", unless a delivery promo makes it the better deal
   return bsStoreBtn()}
-function bsStoreBtn(){const t=DB.settings,fee=storeFee(S.size),fd=freeDelSale(S.size),sel=!!S.bsSkip,promo=fd&&fdApply(fd,fee,"store")<fee;
+function bsStoreBtn(){const t=DB.settings,fee=storeFee(S.size),fd=S.mode==="delivery"?fdFor(S.size,"store",fee):null,sel=!!S.bsSkip,promo=!!fd;
   return `<button type="button" class="bsopt bsstore${sel?" sel":""}${promo?" promo":""}" data-bsskip aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(scName())}</b>${promo?`<em class="bspromo">${fd.kind==="amount"?(fdApply(fd,fee,"store")>0?esc(money(fd.amount))+" OFF":"FREE DELIVERY"):"FREE DELIVERY"}</em>`:""}${t.scNote?`<small>${esc(t.scNote)}</small>`:""}${promo?`<small>${cdlHTML(fd.end)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,fee,"store")}</span></button>`}
 async function bsRates(){
   if(!(BSD.area||BSD.lat)||BSD.busy)return;
@@ -3156,7 +3168,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-31 20:48 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-31 20:54 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
