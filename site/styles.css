@@ -1789,3 +1789,8 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 
 /* Safari: the carousel and other moving layers stay inside their own box, so they can never paint over the fixed bottom bar */
 .cq-track,.marq,.flash{isolation:isolate}
+
+/* small "time left" chip on timed offers */
+.cdl{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;line-height:1;padding:3px 6px;border-radius:999px;background:rgba(0,0,150,.09);color:var(--brand,#000096);font-variant-numeric:tabular-nums;white-space:nowrap;vertical-align:middle}
+.size .cdl.sz{margin-top:2px;justify-self:center;font-size:9.5px;padding:2px 5px}
+.bsopt small .cdl{margin-top:2px}

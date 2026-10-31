@@ -19,7 +19,7 @@ const KEEP=new Set(['toast','applyBgx','admName','mqIsVideo','mqTap','mqVids','m
  'LP_DEFAULT_SVG','defaultPage','deepFill','LP_STACK','SOC_KINDS','SOC_SVG','SOC_NAME','socialUrl','socialsHTML','safeUrl','safeMedia','lpFaces','lpEnsureFonts','lpFamily','videoHTML','HERO_SPOTS','HERO_FX','heroCkShow','heroCkN','heroCkx','heroFloats','heroFill','heroShapes','heroList','heroNorm','ytId','vimeoId','isVideoSrc','HERO_BP','HR_RATIO','HB_SHAPES','HB_FX','heroCar','heroMsg','heroRatio','heroLayout','heroRz','HEX_OK','HERO_FRAMES','HDR_SHAPES','HDR_ISHAPES','HDR_BAR','applyHeader','favKey','lpFavicon','renderLanding','sig','lastSig']);
 const decl=t=>{let m;if((m=t.match(/^(?:async\s+)?function\s*\*?\s*(\w+)/)))return[m[1]];
   if((m=t.match(/^(?:const|let|var)\s+([^=;]+?)\s*=/m)))return m[1].match(/[\w$]+/g)||[];return[]};
-const shopClock=`let lastSig=sig();\nsetInterval(()=>{const now=Date.now(),s=sig(now);if(s!==lastSig)renderStore();else updateFlash(now);lastSig=s},1000);`;
+const shopClock=`let lastSig=sig();\nsetInterval(()=>{const now=Date.now(),s=sig(now);if(s!==lastSig)renderStore();else{updateFlash(now);tickCdl(now)}lastSig=s},1000);`;
 const customerRoute=`function route(){
   if(!SBH.on||SBH.loaded)document.body.classList.remove("dd-load");
   if(view===null&&SBH.on&&!SBH.loaded){view="store";SBH.loadShop();return}

@@ -45,6 +45,10 @@ const fmtDay = s => fromYmd(s).toLocaleDateString(LOC(),{weekday:"short",month:"
 const fmtHour = h => h===0?"12am":h<12?h+"am":h===12?"12pm":(h-12)+"pm";
 const fmtDT = ms => new Date(ms).toLocaleString(LOC(),{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
 function fmtDur(ms){ms=Math.max(0,ms);const s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),x=s%60,p=n=>String(n).padStart(2,"0");return (d?d+"d ":"")+`${p(h)}:${p(m)}:${p(x)}`}
+/* small "time left" chip for every timed offer (flash sale, discount, delivery promo, coupon with an end date) */
+function cdlText(ms){ms=Math.max(0,ms);const t=Math.floor(ms/1000),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),x=t%60,p=n=>String(n).padStart(2,"0");return d?`${d}d ${h}h`:h?`${h}h ${p(m)}m`:`${p(m)}:${p(x)}`}
+const cdlHTML=(end,cls="",ic="⏱")=>{end=+end;return end>Date.now()&&isFinite(end)?`<span class="cdl${cls?" "+cls:""}" data-cdl="${end}" data-cdi="${ic}">${ic} ${cdlText(end-Date.now())}</span>`:""};
+function tickCdl(now=Date.now()){document.querySelectorAll("[data-cdl]").forEach(el=>{const l=+el.dataset.cdl-now,t=l>0?(el.dataset.cdi||"⏱")+" "+cdlText(l):"Ended";if(el.textContent!==t)el.textContent=t})}
 function fmtAgo(ms){const m=Math.round((Date.now()-ms)/60000);if(m<1)return "just now";if(m<60)return m+" min ago";const h=Math.round(m/60);if(h<24)return h+" hr ago";return Math.round(h/24)+" d ago"}
 const fmtShort = ms => new Date(ms).toLocaleDateString(LOC(),{month:"short",day:"numeric"});
 const starStr = n => "★".repeat(n)+"☆".repeat(5-n);
@@ -626,15 +630,15 @@ function renderStore(){
    if(t.customOn){const on=validCustom(S.size),n=on?S.size:snapCustom(S.cv||t.customMin);S.cv=n;
     const base=basePrice(n),sale=bestSale(n),now=sale?r2(base-saleDiscount(sale,base)):base;
     cb.dataset.on=on;
-    cb.innerHTML=`<h4>Need a bigger box?</h4><p>Build your own from ${t.customMin} cookies, in steps of ${t.customStep}. ${money(t.customPer)} per cookie.</p>${freeDelSale(n)?`<span class="fdnote">🚚 Free delivery on this box</span>`:""}
+    cb.innerHTML=`<h4>Need a bigger box?</h4><p>Build your own from ${t.customMin} cookies, in steps of ${t.customStep}. ${money(t.customPer)} per cookie.</p>${freeDelSale(n)?`<span class="fdnote">🚚 ${freeDelSale(n).kind==="amount"?esc(money(freeDelSale(n).amount))+" off delivery on this box":"Free delivery on this box"}</span> ${cdlHTML(freeDelSale(n).end,"","🚚")}`:""}${sale?` ${cdlHTML(sale.end,"","🏷")}`:""}
     <div class="crow"><div class="stepper" role="group" aria-label="Custom box size"><button type="button" data-cstep="-1" aria-label="Fewer cookies" ${n<=t.customMin?"disabled":""}>−</button><input id="cvIn" type="number" inputmode="numeric" min="${t.customMin}" max="${t.customMax}" step="${t.customStep}" value="${n}" aria-label="Number of cookies"><button type="button" data-cstep="1" aria-label="More cookies" ${n+t.customStep>t.customMax?"disabled":""}>+</button></div>
     <span class="cprice num">${sale?`<s style="opacity:.6;font-weight:400">${money(base)}</s> `:""}${money(now)}</span>
     <button class="btn btn-blue btn-sm cuse" type="button" data-cuse ${on?"disabled":""}>${on?"Selected":`Use box of ${n}`}</button></div>${giftPlan(n).length?`<div class="gifthint inl"><span class="ic" aria-hidden="true">🎁</span><span class="t">Free gift with ${n} cookies!</span><button class="gifthint-b" type="button" data-giftsee="${n}">See gifts ›</button></div>`:""}`}}
   // sizes (with live sale prices)
   const fdOn=activeSizes().some(z=>freeDelSale(z.n));$("#sizes").classList.toggle("fdon",fdOn);
-  {const h=$("#fdHint");if(h){const live=DB.sales.filter(x=>isFD(x)&&saleStatus(x,Date.now())==="live");h.hidden=!live.length;h.innerHTML=live.map(x=>`<span>🚚 <b>${esc(x.name)}</b>: free delivery on ${esc(saleAppliesText(x))}</span>`).join("")}}
+  {const h=$("#fdHint");if(h){const live=DB.sales.filter(x=>isFD(x)&&saleStatus(x,Date.now())==="live");h.hidden=!live.length;h.innerHTML=live.map(x=>`<span>🚚 <b>${esc(x.name)}</b>: ${x.kind==="amount"?esc(money(x.amount))+" off delivery":"free delivery"} on ${esc(saleAppliesText(x))} ${cdlHTML(x.end)}</span>`).join("")}}
   $("#sizes").innerHTML = activeSizes().map(s=>{const sale=bestSale(s.n),now=sale?r2(s.price-saleDiscount(sale,s.price)):s.price,fd=freeDelSale(s.n);
-    return `<button class="size" type="button" data-size="${s.n}" aria-pressed="${s.n===S.size}">${fd?`<span class="fdtag">🚚 <b>Free delivery</b></span>`:""}${sale?`<span class="saletag">${sale.type==="percent"?"−"+sale.value+"%":"Sale"}</span>`:""}${giftPlan(s.n).length?`<span class="saletag gifttag${sale?" l":""}">🎁<b class="gt"> Gift</b></span>`:""}<strong>${s.n}</strong><small>COOKIES</small><span class="num">${sale?`<s>${money(s.price)}</s>`:""}${money(now)}</span></button>`}).join("");
+    return `<button class="size" type="button" data-size="${s.n}" aria-pressed="${s.n===S.size}">${fd?`<span class="fdtag">🚚 <b>${fd.kind==="amount"?"−"+esc(money(fd.amount))+" delivery":"Free delivery"}</b></span>`:""}${sale?`<span class="saletag">${sale.type==="percent"?"−"+sale.value+"%":"Sale"}</span>`:""}${giftPlan(s.n).length?`<span class="saletag gifttag${sale?" l":""}">🎁<b class="gt"> Gift</b></span>`:""}<strong>${s.n}</strong><small>COOKIES</small><span class="num">${sale?`<s>${money(s.price)}</s>`:""}${money(now)}</span>${sale?cdlHTML(sale.end,"sz","🏷"):""}${fd?cdlHTML(fd.end,"sz","🚚"):""}</button>`}).join("");
   renderGiftHint();renderBarExtras();renderFab();
   document.querySelectorAll(".card").forEach(c=>{const st=c.querySelector(".stepper");if(!st)return;const n=countOf(c.dataset.id);st.querySelector("output").textContent=n;c.classList.toggle("has",n>0);
     st.querySelector('[data-act="dec"]').disabled=n===0;const inc=st.querySelector('[data-act="inc"]'),lim=n>=stockLeft(prod(c.dataset.id));inc.disabled=lim;inc.classList.toggle("off",!lim&&full());inc.setAttribute("aria-disabled",String(lim||full()))});
@@ -664,13 +668,13 @@ function renderStore(){
   $("#bpCount").textContent=`${boxN()} of ${S.size}`;
   $("#pillCount").textContent=`${boxN()}/${S.size}`;
   let L=`<div><dt>Box of ${S.size}</dt><dd>${money(q.base)}</dd></div>`;
-  if(q.sale)L+=`<div class="saleln"><dt>${esc(q.sale.name)} (${saleOffText(q.sale)})</dt><dd>−${money(q.discount)}</dd></div>`;
+  if(q.sale)L+=`<div class="saleln"><dt>${esc(q.sale.name)} (${saleOffText(q.sale)}) ${cdlHTML(q.sale.end)}</dt><dd>−${money(q.discount)}</dd></div>`;
   giftLines(S.size).forEach(t=>{L+=`<div class="saleln giftln"><dt>${esc(t)}</dt><dd>${fbHTML("Gift")}</dd></div>`});
   if(q.coupon&&q.couponDisc>0)L+=`<div class="saleln"><dt>Coupon ${esc(q.coupon.code)}</dt><dd>−${money(q.couponDisc)}</dd></div>`;
   if(q.surcharge>0)L+=`<div><dt>Premium flavors</dt><dd>+${money(q.surcharge)}</dd></div>`;
   if(S.step===2){
     S.addons.forEach(id=>{const a=DB.addons.find(x=>x.id===id);if(a)L+=`<div><dt class="withlv">${lvAddon(a,18,true)}${esc(a.name)}</dt><dd>${addonPr(a)}</dd></div>`});
-    L+=`<div><dt>${OPT_NAME[optOf(S)]}</dt><dd>${q.feePending?"Choose a courier":q.feeWas?`<s class="fdwas">${money(q.feeWas)}</s> ${q.fee?`<b class="fdnow">${money(q.fee)}</b>`:fbHTML("Del")}`:q.fee?money(q.fee):fbHTML("Del")}</dd></div>`;
+    L+=`<div><dt>${OPT_NAME[optOf(S)]}${q.feeWas&&q.fdSale?" "+cdlHTML(q.fdSale.end):""}</dt><dd>${q.feePending?"Choose a courier":q.feeWas?`<s class="fdwas">${money(q.feeWas)}</s> ${q.fee?`<b class="fdnow">${money(q.fee)}</b>`:fbHTML("Del")}`:q.fee?money(q.fee):fbHTML("Del")}</dd></div>`;
     if(S.day)L+=`<div><dt>When</dt><dd>${S.mode!=="pickup"&&S.speed==="sameday"?(samedayOpen()?"Today (sameday)"+(S.time&&S.time!=="Same day"?", "+esc(S.time):""):"Sameday (after the cut-off)"):fmtDay(S.day)+(S.time?", "+esc(S.time):"")}</dd></div>`;
     if(bsOn()&&S.mode==="delivery"){const sh=bsShip(S);
       L+=`<div class="bscour${q.feePending?" need":""}${S.courierTip&&q.feePending&&!BSD.busy?" tipped":""}" id="bsRow"><dt>Courier</dt><dd>${S.courierTip&&q.feePending&&!BSD.busy?`<span class="armtip" id="csTip"><span aria-hidden="true">👇</span><span>Tap <b>Choose courier</b> to see the prices.</span></span>`:""}<button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?esc(scName())+" · Change":"🛵 Choose courier"}</button></dd></div>`}
@@ -849,7 +853,7 @@ addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#giftSheet")&&!$("#giftSh
 function renderCoupon(q){
   const ap=$("#cpnAp"),f=$("#cpnForm"),ch=$("#cpnCh");if(!ap)return;
   const on=!!(S.coupon&&q.coupon);
-  if(on){ap.hidden=false;ap.innerHTML=`<span>🎟 <b>${esc(q.coupon.code)}</b> applied${q.couponDisc>0?` · −${money(q.couponDisc)}`:q.coupon.type==="freedelivery"?(S.mode==="delivery"?" · free delivery":" · free delivery when you pick delivery"):""}</span><button type="button" data-cpnrm aria-label="Remove coupon">✕</button>`}else ap.hidden=true;
+  if(on){ap.hidden=false;ap.innerHTML=`<span>🎟 <b>${esc(q.coupon.code)}</b> applied${q.couponDisc>0?` · −${money(q.couponDisc)}`:q.coupon.type==="freedelivery"?(S.mode==="delivery"?" · free delivery":" · free delivery when you pick delivery"):""}${q.coupon.endsAt&&Date.parse(q.coupon.endsAt)>0?" "+cdlHTML(Date.parse(q.coupon.endsAt)):""}</span><button type="button" data-cpnrm aria-label="Remove coupon">✕</button>`}else ap.hidden=true;
   f.hidden=on;
   {let pa=$("#pgAp");if(!pa){pa=document.createElement("div");pa.id="pgAp";pa.className="pg-ap";ap.parentNode.insertBefore(pa,ap)}
     pa.hidden=!PG.code;pa.innerHTML=PG.code?`<span>🎁 <b>${esc(PG.code)}</b> ✓ ${esc((PG.info&&PG.info.mode!=="surprise"&&(PG.info.items||[]).map(g=>g&&g.name).filter(Boolean).join(", "))||(PG.info&&PG.info.title)||"Free Gift Set")}</span><button type="button" data-pgrm aria-label="Remove gift code">✕</button>`:""}
@@ -1334,7 +1338,7 @@ function bsDraw(){
     // cheapest first (the index stays the position in BSD.opts so the click handler still finds the courier)
     const rows=BSD.opts.map((x,i)=>({x,i})).sort((a,b)=>fdApply(fd,a.x.price,"bite")-fdApply(fd,b.x.price,"bite")||a.x.price-b.x.price);
     o.innerHTML=(promoStore?store:"")+rows.map(({x,i})=>{const sel=!!(S.ship&&S.ship.sig===x.sig&&!S.bsSkip),k=bsKind(x),b=BS_KINDS[k];
-      return `<button type="button" class="bsopt${sel?" sel":""}${b?" bsk-"+k:""}" data-bsopt="${i}" aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(x.courierName||x.courier)}</b> ${esc(x.serviceName||x.service)}${b?` <em class="bsbadge ${b.cls}"><i aria-hidden="true">${b.ic}</i>${b.t}</em>`:""}${x.eta?`<small>${esc(x.eta)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,x.price,"bite")}</span></button>`}).join("")
+      return `<button type="button" class="bsopt${sel?" sel":""}${b?" bsk-"+k:""}" data-bsopt="${i}" aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(x.courierName||x.courier)}</b> ${esc(x.serviceName||x.service)}${b?` <em class="bsbadge ${b.cls}"><i aria-hidden="true">${b.ic}</i>${b.t}</em>`:""}${x.eta?`<small>${esc(x.eta)}</small>`:""}${fd&&fdApply(fd,x.price,"bite")<x.price?`<small>${cdlHTML(fd.end)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,x.price,"bite")}</span></button>`}).join("")
       +(promoStore?"":store)}
   const msg=BSD.err&&!BSD.busy?BSD.err:"";er.hidden=!msg;er.textContent=msg;
 }
@@ -1346,7 +1350,7 @@ function bsStoreOpt(){if(!bsFallback()||BSD.busy)return "";
   if(fb&&!promo&&BSD.opts.length&&!BSD.err)return S.bsSkip?bsStoreBtn():"";   // "only when prices can't load", unless a delivery promo makes it the better deal
   return bsStoreBtn()}
 function bsStoreBtn(){const t=DB.settings,fee=storeFee(S.size),fd=freeDelSale(S.size),sel=!!S.bsSkip,promo=fd&&fdApply(fd,fee,"store")<fee;
-  return `<button type="button" class="bsopt bsstore${sel?" sel":""}${promo?" promo":""}" data-bsskip aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(scName())}</b>${promo?`<em class="bspromo">${fd.kind==="amount"?esc(money(fd.amount))+" OFF":"FREE DELIVERY"}</em>`:""}${t.scNote?`<small>${esc(t.scNote)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,fee,"store")}</span></button>`}
+  return `<button type="button" class="bsopt bsstore${sel?" sel":""}${promo?" promo":""}" data-bsskip aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(scName())}</b>${promo?`<em class="bspromo">${fd.kind==="amount"?(fdApply(fd,fee,"store")>0?esc(money(fd.amount))+" OFF":"FREE DELIVERY"):"FREE DELIVERY"}</em>`:""}${t.scNote?`<small>${esc(t.scNote)}</small>`:""}${promo?`<small>${cdlHTML(fd.end)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,fee,"store")}</span></button>`}
 async function bsRates(){
   if(!(BSD.area||BSD.lat)||BSD.busy)return;
   const who=bsWho();if(!who){BSD.err="Type your WhatsApp number first, then we can show courier prices.";bsDraw();return}
@@ -1394,12 +1398,12 @@ function renderCoSummary(){
   const q=quote(S),counts=countItems(S.box);
   $("#summary").innerHTML=`<div><span>Box of ${S.size}</span><span class="num">${money(q.base)}</span></div>`+
     Object.entries(counts).map(([id,n])=>{const p=prod(id);return `<div class="m"><span>${n} × ${esc(p.name)}</span><span>${p.surcharge>0?"+"+money(p.surcharge*n):""}</span></div>`}).join("")+
-    (q.sale?`<div class="sl"><span>${esc(q.sale.name)} (${saleOffText(q.sale)})</span><span class="num">−${money(q.discount)}</span></div>`:"")+
+    (q.sale?`<div class="sl"><span>${esc(q.sale.name)} (${saleOffText(q.sale)}) ${cdlHTML(q.sale.end)}</span><span class="num">−${money(q.discount)}</span></div>`:"")+
     giftLines(S.size).map(t=>`<div class="sl"><span>${esc(t)}</span><span class="num">${fbHTML("Gift")}</span></div>`).join("")+
     (PG.info?`<div class="sl"><span>🎁 ${(()=>{const nm=(PG.info.items||[]).map(g=>g&&g.name).filter(Boolean).join(", ");return nm&&PG.info.mode!=="surprise"?"Free reward: <b>"+esc(nm)+"</b>":esc(PG.info.title||"Free Gift Set")})()} · ${esc(PG.code)}</span><span class="num">${fbHTML("Gift")}</span></div>`:"")+
     (q.coupon&&q.couponDisc>0?`<div class="sl"><span>Coupon ${esc(q.coupon.code)}</span><span class="num">−${money(q.couponDisc)}</span></div>`:"")+
     S.addons.map(id=>{const a=DB.addons.find(x=>x.id===id);return a?`<div><span class="withlv">${lvAddon(a,22,true)}${esc(a.name)}</span><span class="num">${addonPr(a)}</span></div>`:""}).join("")+
-    `<div><span>${OPT_NAME[optOf(S)]}</span><span class="num">${q.feePending?"Choose a courier below":q.feeWas?`<s class="fdwas">${money(q.feeWas)}</s> ${q.fee?`<b class="fdnow">${money(q.fee)}</b>`:fbHTML("Del")}`:q.fee?money(q.fee):fbHTML("Del")}</span></div>`+
+    `<div><span>${OPT_NAME[optOf(S)]}${q.feeWas&&q.fdSale?" "+cdlHTML(q.fdSale.end):""}</span><span class="num">${q.feePending?"Choose a courier below":q.feeWas?`<s class="fdwas">${money(q.feeWas)}</s> ${q.fee?`<b class="fdnow">${money(q.fee)}</b>`:fbHTML("Del")}`:q.fee?money(q.fee):fbHTML("Del")}</span></div>`+
     `<div><span>When</span><span>${esc(whenTxt(S))}</span></div>`+
     (S.note?`<div><span>Note</span><span style="text-align:right">${esc(S.note)}</span></div>`:"")+
     `<div class="t"><span>Total</span><span class="num">${money(q.total)}</span></div>`;
@@ -3147,7 +3151,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-30 19:23 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-31 16:43 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
@@ -3171,4 +3175,4 @@ if(!hadCart&&!SBH.on)S.box=["bb","bb","dc","rv"];
 expireOrders();
 route();setTimeout(()=>document.body.classList.remove("dd-load"),8000); // never leave the page hidden if the shop is slow to answer
 let lastSig=sig();
-setInterval(()=>{const now=Date.now(),s=sig(now);if(s!==lastSig)renderStore();else updateFlash(now);lastSig=s},1000);
+setInterval(()=>{const now=Date.now(),s=sig(now);if(s!==lastSig)renderStore();else{updateFlash(now);tickCdl(now)}lastSig=s},1000);
