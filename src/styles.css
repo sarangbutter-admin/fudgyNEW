@@ -1898,18 +1898,17 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .bssumrow.need{border:2px solid #C8102E!important;background:#FDECEC!important;color:#8A1020;animation:bsneed 1.3s ease-in-out infinite}
 @keyframes bsneed{50%{box-shadow:0 0 0 4px rgba(200,16,46,.28)}}
 .bssumrow.busy{border:2px solid #FFB000!important;background:#FFF8E1!important;animation:none!important}
-/* arm tip: a blinking guide above the next thing to do */
-.armtip{position:relative;display:flex;align-items:center;gap:10px;background:#0B0B45;color:#fff;border-radius:14px;padding:11px 14px;margin:0 0 14px;font-size:14px;font-weight:700;line-height:1.3;animation:armblink 1s ease-in-out infinite}
-.armtip::after{content:"";position:absolute;left:28px;bottom:-7px;width:14px;height:14px;background:#0B0B45;transform:rotate(45deg);border-radius:2px}
-.armtip span:first-child{font-size:22px;animation:bsflash .9s ease-in-out infinite}
-@keyframes armblink{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,.0)}50%{box-shadow:0 0 0 5px rgba(255,209,102,.9)}}
+/* guide tips (extras, gift note): the same simple yellow tip as "Tap again to shuffle", sitting in the page above the next step */
+#exTip,#gnTip{position:relative;left:auto;bottom:auto;transform:none;display:flex;align-items:center;gap:6px;width:fit-content;max-width:100%;white-space:normal;margin:0 0 12px;border-radius:14px;padding:7px 12px;animation:armTipFade .18s ease-out}
+#exTip::after,#gnTip::after{left:22px;margin-left:0}
+.armtip span:first-child{font-size:14px}
+@keyframes armTipFade{from{opacity:0}}
 .extra.noextra{border-style:dashed}.extra.noextra[aria-pressed="true"]{background:#EEF0FF;border-color:#000096}
 
 /* the courier tip floats above the Choose courier button: it never moves the button */
 #bsRow{position:relative}
-.bscour .armtip{position:absolute;right:0;bottom:calc(100% + 10px);z-index:6;margin:0;width:max-content;max-width:min(260px,calc(100vw - 48px));font-size:13px;padding:8px 12px;white-space:normal}
-.bscour .armtip{text-align:left;background:#FFD166;color:#0B0B45;font-weight:800}.bscour .armtip::after{left:auto;right:34px;background:#FFD166}
-@keyframes armblinky{50%{box-shadow:0 0 0 5px rgba(255,255,255,.85)}}.bscour .armtip{animation:armblinky 1s ease-in-out infinite}
+.bscour .armtip{position:absolute;left:auto;right:0;bottom:calc(100% + 9px);transform:none;display:flex;align-items:center;gap:6px;width:max-content;max-width:min(260px,calc(100vw - 48px));white-space:normal;text-align:left;border-radius:14px;animation:armTipFade .18s ease-out}
+.bscour .armtip::after{left:auto;right:34px;margin-left:0}
 /* affiliator dashboard tabs + FAQ */
 .aftabs{margin:0}
 .affaq details p{white-space:pre-line;max-width:none;color:var(--ink)}
