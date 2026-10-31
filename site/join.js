@@ -150,3 +150,6 @@
   }
   boot();
 })();
+
+window.addEventListener("load",()=>setTimeout(()=>document.body.classList.add("jn-ready"),250));
+setTimeout(()=>document.body.classList.add("jn-ready"),6000);
