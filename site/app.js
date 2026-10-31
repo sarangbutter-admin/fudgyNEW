@@ -618,7 +618,7 @@ function ctaState(){
 }
 /* guide: after the time is chosen, scroll to the extras and blink an arm tip until they choose an extra or "No extras"; then guide them to the courier */
 function guideExtras(){const blk=$("#extrasBlock");if(blk&&blk.hidden&&S.day&&S.time&&S.mode==="delivery"){guideCourier();return}if(!blk||blk.hidden||S.extrasDone||!(S.day&&S.time))return;S.extraTip=true;renderStore();setTimeout(()=>scrollToEl(blk),80)}
-const scrollMid=el=>{if(!el)return;const y=el.getBoundingClientRect().top+scrollY-innerHeight*0.45;scrollTo({top:Math.max(0,y),behavior:RM?"instant":"smooth"})};
+const scrollMid=el=>{if(!el)return;const y=el.getBoundingClientRect().top+scrollY-innerHeight*0.45;jumpTo(Math.max(0,y),!RM)};
 function guideCourier(){S.extraTip=false;if(S.mode!=="delivery"){renderStore();return}S.courierTip=!!(bsOn()&&bsPending(S));renderStore();
   setTimeout(()=>scrollMid($("#bsRow")),150)}
 /* extras that need a gift note: Gift wrap and Greeting card (the owner sets the type of each extra). Other extras do not show the note box. */
@@ -1112,10 +1112,11 @@ function fbHTML(kind){const t=DB.settings,D=FB_DEF[kind],p="fb"+kind;
   return `<span class="fbadge" style="--fb-bg:${hexOk(t[p+"Bg"],D.bg)};--fb-ink:${hexOk(t[p+"Ink"],D.ink)}">${lvHTML(o,D.icon,18)}<b>${esc(txt)}</b></span>`}
 const addonPr=a=>a.price>0?"+"+money(a.price):fbHTML("Extra");
 function clearBox(){if(!boxN())return;S.shuf=0;S.box.forEach((_,i)=>ghostOut(i));S.box=[];S.auto=[];S.step=1;renderStore()}
+function jumpTo(y,smooth){try{window.scrollTo({top:y,behavior:smooth?"smooth":"instant"})}catch(e){window.scrollTo(0,y)}}   // older Safari does not know "instant"
 function scrollToEl(el){
   const go=()=>{const fl=$("#flash"),head=$(".top").getBoundingClientRect().height+(fl.hidden||fl.parentNode===$(".top")?0:fl.getBoundingClientRect().height);
     const y=el.getBoundingClientRect().top+window.scrollY-head-16;
-    window.scrollTo({top:Math.max(0,y),behavior:"instant"})};
+    jumpTo(Math.max(0,y))};
   go();requestAnimationFrame(go);setTimeout(go,120);setTimeout(go,400);
 }
 /* closing the box: a full box is closed (lid with the logo, ribbon and bow) before the customer chooses a day.
@@ -3168,7 +3169,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-31 20:54 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-31 21:36 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

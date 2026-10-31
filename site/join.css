@@ -65,3 +65,7 @@ section>h2{font-size:clamp(20px,5vw,26px);color:var(--blue);margin-bottom:14px;t
 .fly{position:fixed;bottom:-30px;font-style:normal;pointer-events:none;z-index:40;animation:jnfly 2.4s ease-out forwards}
 @keyframes jnfly{0%{opacity:0;transform:translateY(0) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translateY(-70vh) rotate(240deg)}}
 @media (prefers-reduced-motion:reduce){html:not(.motion-on) .mq-in,html:not(.motion-on) .hero-ic,html:not(.motion-on) .float,html:not(.motion-on) .join,html:not(.motion-on) .join i,html:not(.motion-on) .join::after,html:not(.motion-on) .perk i,html:not(.motion-on) .ok .big{animation:none}html:not(.motion-on) .mq-in{flex-wrap:wrap;white-space:normal}html:not(.motion-on) .fly{display:none}html:not(.motion-on){scroll-behavior:auto}}
+
+/* Safari / iPhone friendly */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation}
+input,textarea{-webkit-appearance:none;appearance:none}

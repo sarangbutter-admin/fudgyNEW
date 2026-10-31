@@ -30,7 +30,7 @@ p{margin:0}
 .num{font-variant-numeric:tabular-nums}
 
 /* Header */
-.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:color-mix(in srgb,var(--white) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--ice-2)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--white);background:color-mix(in srgb,var(--white) 92%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid var(--ice-2)}
 .top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px}
 .top-actions{display:flex;align-items:center;gap:8px}
 .logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--blue);font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-.02em}
@@ -1578,7 +1578,7 @@ body.aff-on #adminView,body.aff-on #storeView{display:none}
 
 /* ================= pre-launch page ================= */
 .pre-on #storeView,.pre-on .bar,.pre-on #fab,.pre-on .gifthint{display:none!important}
-#preView{min-height:100vh;background:var(--pbg,#FFF4D6);color:var(--pink,#0B0B45);font-family:var(--body);position:relative;overflow-x:hidden}
+#preView{min-height:100vh;min-height:100dvh;background:var(--pbg,#FFF4D6);color:var(--pink,#0B0B45);font-family:var(--body);position:relative;overflow-x:hidden}
 #preView[hidden]{display:none}
 .pre-wrap{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:0 14px 40px;display:grid;gap:16px}
 .pre-top{display:flex;align-items:center;gap:9px;padding:12px 2px 0;font-family:var(--display);font-size:20px;color:var(--pacc,#000096)}
@@ -2100,3 +2100,14 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 .custom .cbunder{position:absolute;left:50%;bottom:-11px;transform:translateX(-50%);display:flex;gap:4px;z-index:1}
 .custom .cbunder .cdl{background:#fff;border:1px solid rgba(0,0,150,.14);box-shadow:0 1px 4px rgba(0,0,60,.16)}
 .custom.hascd{margin-bottom:16px}
+
+/* Safari / iPhone friendly (no change to the look on other browsers) */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation}
+input[type=text],input[type=tel],input[type=email],input[type=password],input[type=search],input[type=number],input[type=url],textarea{-webkit-appearance:none;appearance:none}
+@supports (-webkit-touch-callout:none){input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),select,textarea{font-size:16px}}
+@supports not (background:color-mix(in srgb,red 50%,blue)){
+  .slots{background:rgba(255,255,255,.1)}
+  .cpn-f{background:rgba(255,255,255,.12)}
+  .boxpanel .cta[disabled],.bar .btn[disabled]{background:rgba(255,255,255,.18)}
+  .tool:hover:not([disabled]),.cpn-ch button:hover{background:rgba(255,255,255,.14)}
+}
