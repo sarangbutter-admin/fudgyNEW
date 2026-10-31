@@ -691,7 +691,7 @@ function renderStore(){
     L+=`<div><dt>${OPT_NAME[optOf(S)]}${q.feeWas&&q.fdSale?" "+cdlHTML(q.fdSale.end):""}</dt><dd>${q.feePending?"Choose a courier":q.feeWas?`<s class="fdwas">${money(q.feeWas)}</s> ${q.fee?`<b class="fdnow">${money(q.fee)}</b>`:fbHTML("Del")}`:q.fee?money(q.fee):fbHTML("Del")}</dd></div>`;
     if(S.day)L+=`<div><dt>When</dt><dd>${S.mode!=="pickup"&&S.speed==="sameday"?(samedayOpen()?"Today (sameday)"+(S.time&&S.time!=="Same day"?", "+esc(S.time):""):"Sameday (after the cut-off)"):fmtDay(S.day)+(S.time?", "+esc(S.time):"")}</dd></div>`;
     if(bsOn()&&S.mode==="delivery"){const sh=bsShip(S);
-      L+=`<div class="bscour${q.feePending?" need":""}${S.courierTip&&q.feePending&&!BSD.busy?" tipped":""}" id="bsRow"><dt>Courier</dt><dd>${S.courierTip&&q.feePending&&!BSD.busy?`<span class="armtip" id="csTip" role="status">👇 Now choose a courier</span>`:""}<button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?esc(scName())+" · Change":"🛵 Choose courier"}</button></dd></div>`}
+      L+=`<div class="bscour${q.feePending?" need":""}${S.courierTip&&bsPending(S)&&!BSD.busy?" tipped":""}" id="bsRow"><dt>Courier</dt><dd>${S.courierTip&&bsPending(S)&&!BSD.busy?`<span class="armtip" id="csTip" role="status">👇 Now choose a courier</span>`:""}<button type="button" class="bscbtn" data-bscourier>${sh?`${esc((sh.courierName||sh.courier)+" "+(sh.serviceName||sh.service))} · Change`:S.bsSkip?esc(scName())+" · Change":"🛵 Choose courier"}</button></dd></div>`}
   }
   $("#lines").innerHTML=L;
   renderCoupon(q);renderGiftBox();
