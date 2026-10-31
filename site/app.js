@@ -1342,9 +1342,9 @@ function bsDraw(){
   else{const fd=S.mode==="delivery"?freeDelSale(S.size):null,fee0=storeFee(S.size),promoStore=!!(fd&&fdApply(fd,fee0,"store")<fee0),store=bsStoreOpt();
     // cheapest first (the index stays the position in BSD.opts so the click handler still finds the courier)
     const rows=BSD.opts.map((x,i)=>({x,i})).sort((a,b)=>fdApply(fd,a.x.price,"bite")-fdApply(fd,b.x.price,"bite")||a.x.price-b.x.price);
-    o.innerHTML=(promoStore?store:"")+rows.map(({x,i})=>{const sel=!!(S.ship&&S.ship.sig===x.sig&&!S.bsSkip),k=bsKind(x),b=BS_KINDS[k];
+    o.innerHTML=rows.map(({x,i})=>{const sel=!!(S.ship&&S.ship.sig===x.sig&&!S.bsSkip),k=bsKind(x),b=BS_KINDS[k];
       return `<button type="button" class="bsopt${sel?" sel":""}${b?" bsk-"+k:""}" data-bsopt="${i}" aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(x.courierName||x.courier)}</b> ${esc(x.serviceName||x.service)}${b?` <em class="bsbadge ${b.cls}"><i aria-hidden="true">${b.ic}</i>${b.t}</em>`:""}${x.eta?`<small>${esc(x.eta)}</small>`:""}${fd&&fdApply(fd,x.price,"bite")<x.price?`<small>${cdlHTML(fd.end)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,x.price,"bite")}</span></button>`}).join("")
-      +(promoStore?"":store)}
+      +store}
   const msg=BSD.err&&!BSD.busy?BSD.err:"";er.hidden=!msg;er.textContent=msg;
 }
 // "Store Courier" in the courier list: always, or only when courier prices can't load (the owner chooses). Free while a free-delivery promo covers this box.
@@ -3156,7 +3156,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-31 20:42 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-31 20:46 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

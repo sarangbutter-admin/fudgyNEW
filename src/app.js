@@ -1356,9 +1356,9 @@ function bsDraw(){
   else{const fd=S.mode==="delivery"?freeDelSale(S.size):null,fee0=storeFee(S.size),promoStore=!!(fd&&fdApply(fd,fee0,"store")<fee0),store=bsStoreOpt();
     // cheapest first (the index stays the position in BSD.opts so the click handler still finds the courier)
     const rows=BSD.opts.map((x,i)=>({x,i})).sort((a,b)=>fdApply(fd,a.x.price,"bite")-fdApply(fd,b.x.price,"bite")||a.x.price-b.x.price);
-    o.innerHTML=(promoStore?store:"")+rows.map(({x,i})=>{const sel=!!(S.ship&&S.ship.sig===x.sig&&!S.bsSkip),k=bsKind(x),b=BS_KINDS[k];
+    o.innerHTML=rows.map(({x,i})=>{const sel=!!(S.ship&&S.ship.sig===x.sig&&!S.bsSkip),k=bsKind(x),b=BS_KINDS[k];
       return `<button type="button" class="bsopt${sel?" sel":""}${b?" bsk-"+k:""}" data-bsopt="${i}" aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(x.courierName||x.courier)}</b> ${esc(x.serviceName||x.service)}${b?` <em class="bsbadge ${b.cls}"><i aria-hidden="true">${b.ic}</i>${b.t}</em>`:""}${x.eta?`<small>${esc(x.eta)}</small>`:""}${fd&&fdApply(fd,x.price,"bite")<x.price?`<small>${cdlHTML(fd.end)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,x.price,"bite")}</span></button>`}).join("")
-      +(promoStore?"":store)}
+      +store}
   const msg=BSD.err&&!BSD.busy?BSD.err:"";er.hidden=!msg;er.textContent=msg;
 }
 // "Store Courier" in the courier list: always, or only when courier prices can't load (the owner chooses). Free while a free-delivery promo covers this box.
