@@ -1793,11 +1793,12 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 /* small "time left" chip on timed offers */
 .cdl{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;line-height:1;padding:3px 6px;border-radius:999px;background:rgba(0,0,150,.09);color:var(--brand,#000096);font-variant-numeric:tabular-nums;white-space:nowrap;vertical-align:middle}
 .bsopt small .cdl{margin-top:2px}
-/* box menu: the tags and the countdowns sit OUTSIDE the circle, under it */
-.size .szunder{position:absolute;left:50%;top:calc(100% + 4px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;z-index:1;pointer-events:none}
-.size .szunder .fdtag{position:static;left:auto;bottom:auto;transform:none}
-.size .szunder .cdl,.size[aria-pressed="true"] .szunder .cdl{background:#fff;color:#000096;border:1px solid rgba(0,0,150,.14);box-shadow:0 1px 4px rgba(0,0,60,.16)}
-.sizes{row-gap:max(22px,calc(var(--under,0px) + 8px));margin-bottom:var(--under,0px)}
+/* offers under the box menu: flash sale first, gift second, free delivery third (each with its countdown) */
+.salehint{display:grid;gap:4px;margin-top:10px;background:#FDE8EB;color:#C8102E;border:1.5px solid #F2A9B5;border-radius:12px;padding:8px 12px;font-size:13px;line-height:1.35}.salehint[hidden]{display:none}
+.salehint .cdl{background:rgba(200,16,46,.10);color:#C8102E}
+.gifthint .cdl{background:rgba(217,168,0,.22);color:#000096;margin-left:4px}
+.fdhint .cdl{background:rgba(10,107,52,.12);color:#0A6B34}
+.gifthint + .fdhint{margin-top:10px}
 /* custom box: flash sale + gift badges on the top edge, countdowns on the bottom edge */
 .custom{position:relative}
 .custom .cbadges{position:absolute;top:-12px;right:12px;display:flex;gap:4px;z-index:1}
