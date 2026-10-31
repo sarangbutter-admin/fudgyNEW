@@ -1792,5 +1792,17 @@ html.bgx-aff body.aff-on #affView{background:transparent}
 
 /* small "time left" chip on timed offers */
 .cdl{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;line-height:1;padding:3px 6px;border-radius:999px;background:rgba(0,0,150,.09);color:var(--brand,#000096);font-variant-numeric:tabular-nums;white-space:nowrap;vertical-align:middle}
-.size .cdl.sz{margin-top:2px;justify-self:center;font-size:9.5px;padding:2px 5px}
 .bsopt small .cdl{margin-top:2px}
+/* box menu: the tags and the countdowns sit OUTSIDE the circle, under it */
+.size .szunder{position:absolute;left:50%;top:calc(100% + 4px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;z-index:1;pointer-events:none}
+.size .szunder .fdtag{position:static;left:auto;bottom:auto;transform:none}
+.size .szunder .cdl,.size[aria-pressed="true"] .szunder .cdl{background:#fff;color:#000096;border:1px solid rgba(0,0,150,.14);box-shadow:0 1px 4px rgba(0,0,60,.16)}
+.sizes{row-gap:max(22px,calc(var(--under,0px) + 8px));margin-bottom:var(--under,0px)}
+/* custom box: flash sale + gift badges on the top edge, countdowns on the bottom edge */
+.custom{position:relative}
+.custom .cbadges{position:absolute;top:-12px;right:12px;display:flex;gap:4px;z-index:1}
+.custom .cbg{background:var(--red);color:var(--white);font-size:11px;font-weight:700;border-radius:var(--r-pill);padding:3px 9px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,60,.22)}
+.custom .cbg.gift{background:#C8102E}
+.custom .cbunder{position:absolute;left:50%;bottom:-11px;transform:translateX(-50%);display:flex;gap:4px;z-index:1}
+.custom .cbunder .cdl{background:#fff;border:1px solid rgba(0,0,150,.14);box-shadow:0 1px 4px rgba(0,0,60,.16)}
+.custom.hascd{margin-bottom:16px}
