@@ -3115,27 +3115,34 @@ function afFaqFill(s,r){const c=(r&&r.cfg)||AF.cfg||{min:20000,day:4};
 function afFaqHTML(r){const L=afFaqList();return `<section class="panel"><h2>FAQ</h2><p class="sub">How you earn and how your commission is counted.</p>
   <div class="faq affaq">${L.map((f,i)=>`<details ${i===0?"open":""}><summary>${esc(afFaqFill(f.q,r))}</summary><p>${esc(afFaqFill(f.a,r))}</p></details>`).join("")}</div></section>`}
 const afTabsHTML=()=>`<div class="chips aftabs" role="tablist">${[["dash","📊 Dashboard"],["faq","❓ FAQ"]].map(([k,l])=>`<button class="fchip" type="button" role="tab" data-aftab="${k}" aria-selected="${AF.tab===k}" aria-pressed="${AF.tab===k}">${l}</button>`).join("")}</div>`;
-async function afCpnLoad(){try{AFM.cpn=await SBH.rpc("aff_coupon_info",{})}catch(e){AFM.cpn={ok:false}}affRender()}
+function afGiveTimer(){clearTimeout(AFM.tm);const c=AFM.cpn;if(c&&c.ok&&+c.give>0&&+c.giveUntil>0)AFM.tm=setTimeout(afCpnLoad,Math.max(1500,Math.min(2147e6,+c.giveUntil-Date.now()+1500)))}
+async function afCpnLoad(){try{AFM.cpn=await SBH.rpc("aff_coupon_info",{})}catch(e){AFM.cpn={ok:false}}afGiveTimer();affRender()}
 function afCpnText(c){const d=c.type==="freedelivery"?"free delivery":c.type==="amount"?money(+c.value)+" off":(+c.value)+"% off";return d+(+c.minSpend>0?" on orders from "+money(+c.minSpend):"")+(c.stack?", also on flash sales":", not on flash sales")+(c.endsAt?", until "+esc(String(c.endsAt).replace("T"," ")):"")}
-function afGiveHTML(c){if(!(+c.giveMax>0))return "";const max=+c.giveMax,g=AFM.gd!=null?+AFM.gd:+c.give,base=+c.baseValue,rate=+c.rate,dirty=g!==+c.give;
-  const pct=max?g/max*100:0,gv=rate?g/rate*100:0;
+const GIVE_DUR=[[0,"No end"],[30,"30 min"],[60,"1 hour"],[120,"2 hours"],[1440,"1 day"],[4320,"3 days"],[10080,"7 days"],[43200,"30 days"]];
+function afGiveHTML(c){if(!(+c.giveMax>0))return "";const max=+c.giveMax,g=AFM.gd!=null?+AFM.gd:+c.give,base=+c.baseValue,rate=+c.rate,dirty=g!==+c.give||AFM.gm!=null;
+  const pct=max?g/max*100:0,gv=rate?g/rate*100:0,cap=+c.giveCap||0,live=+c.giveUntil>Date.now()&&+c.give>0,gm=AFM.gm!=null?+AFM.gm:live?-1:(cap>0?Math.min(cap,GIVE_DUR.filter(x=>x[0]>0&&x[0]<=cap).pop()[0]):0);
+  const durs=GIVE_DUR.filter(x=>cap>0?x[0]>0&&x[0]<=cap:true);
   return `<div class="afgive" id="afGiveBox" style="--p:${pct}%">
     <span class="afg-sp s1" aria-hidden="true">✨</span><span class="afg-sp s2" aria-hidden="true">💖</span><span class="afg-sp s3" aria-hidden="true">✨</span>
     <div class="afg-h"><span class="afg-ic" aria-hidden="true">🤝</span><div><b>Share my commission</b><small>Give your followers a bigger discount. You trade some of your commission for it.</small></div></div>
+    ${live?`<div class="afg-on">🔥 Sacrifice mode is ON ${cdlHTML(c.giveUntil,"","⏱")}</div>`:+c.give>0?`<div class="afg-on">🔥 Sacrifice mode is ON · no end time</div>`:""}
     <div class="afg-big"><span>Your customers get</span><strong id="afgBig">${base+g}% off</strong><small id="afgBase">${g>0?`${base}% from the shop + <b>${g}% from you</b> 💝`:`${base}% from the shop. Slide to add more!`}</small></div>
     <input class="afg-rg" id="afGive" type="range" min="0" max="${max}" step="0.5" value="${g}" aria-label="Points of my commission I give to my customers">
     <div class="afg-ends"><span>Keep it all</span><span>Give up to ${max}%</span></div>
     <div class="afg-split" aria-hidden="true"><i class="keep" id="afgKeep" style="width:${100-gv}%"></i><i class="gave" id="afgGave" style="width:${gv}%"></i></div>
     <div class="afg-leg"><span><i class="d keep"></i>You keep <b id="afgE1">${Math.max(0,rate-g)}%</b> on coupon orders</span><span><i class="d gave"></i>Shared <b id="afgE2">${g}%</b></span></div>
-    <p class="afg-note">Orders from your link <b>without</b> the coupon still earn the full <b>${rate}%</b>.</p>
-    <button class="afg-save" type="button" data-afgivesave ${AFM.busy||!dirty?"disabled":""}><span>${AFM.busy?"Saving…":"Save my choice"}</span></button></div>`}
+    <div class="afg-dur"><b>How long?</b><small>${cap>0?"The shop allows up to "+(durs[durs.length-1]||[0,""])[1]+".":"Pick a short time for a quick live sale."}</small><div class="afg-chips" role="group" aria-label="How long the boost lasts">${durs.map(([m,l])=>`<button type="button" class="afg-c${m===gm?" on":""}" data-afgm="${m}" aria-pressed="${m===gm}">${m>0&&m<=120?"⚡ ":""}${l}</button>`).join("")}</div></div>
+    <p class="afg-note">Orders from your link <b>without</b> the coupon still earn the full <b>${rate}%</b>. When the time ends, your commission goes back to normal by itself.</p>
+    <button class="afg-save" type="button" data-afgivesave ${AFM.busy||!dirty?"disabled":""}><span>${AFM.busy?"Saving…":g>0?"Start sacrifice mode":"Save my choice"}</span></button></div>`}
+function afSacHTML(){const c=AFM.cpn;if(!c||!c.ok||!(+c.give>0))return "";const live=+c.giveUntil>Date.now(),part=`<span>🔥 SACRIFICE MODE ON</span><span>Your customers get <b>${+c.value}% off</b></span><span>You earn <b>${Math.max(0,+c.rate-+c.give)}%</b> on coupon orders</span>${live?`<span>${cdlHTML(c.giveUntil,"","⏱")} left</span>`:`<span>no end time</span>`}`;
+  return `<div class="afsac" role="status" aria-label="Sacrifice mode is on"><div class="afsac-t"><div>${part}${part}</div><div aria-hidden="true">${part}${part}</div></div></div>`}
 function afGiveLive(g){const c=AFM.cpn;if(!c)return;const max=+c.giveMax,base=+c.baseValue,rate=+c.rate,$i=id=>document.getElementById(id);AFM.gd=g;
   const box=$i("afGiveBox");if(!box)return;box.style.setProperty("--p",(max?g/max*100:0)+"%");
   const big=$i("afgBig");big.textContent=(base+g)+"% off";big.classList.remove("pop");void big.offsetWidth;big.classList.add("pop");
   $i("afgBase").innerHTML=g>0?`${base}% from the shop + <b>${g}% from you</b> 💝`:`${base}% from the shop. Slide to add more!`;
   const gv=rate?g/rate*100:0;$i("afgKeep").style.width=(100-gv)+"%";$i("afgGave").style.width=gv+"%";
   $i("afgE1").textContent=Math.max(0,rate-g)+"%";$i("afgE2").textContent=g+"%";
-  const sv=box.querySelector("[data-afgivesave]");if(sv&&!AFM.busy)sv.disabled=g===+c.give}
+  const sv=box.querySelector("[data-afgivesave]");if(sv&&!AFM.busy)sv.disabled=g===+c.give&&AFM.gm==null}
 const afOffText=c=>c.type==="freedelivery"?"free delivery":c.type==="amount"?money(+c.value)+" off":(+c.value)+"% off";
 function afShareData(c,ch){const code=(SBH.aff&&SBH.aff.code)||(AF.rep&&AF.rep.aff&&AF.rep.aff.code)||"",shop=(DB.page&&DB.page.name)||"Delidome",link=code?afLink(code,"",ch,c.coupon):afShop();
   const text=`Use my code ${c.coupon} to get ${afOffText(c)} at ${shop}! 🍪`;return {link,text,msg:text+" "+link}}
@@ -3231,7 +3238,8 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
     v.addEventListener("input",e=>{if(e.target&&e.target.id==="afGive")afGiveLive(+e.target.value)});
     v.addEventListener("click",async e=>{if(await afShareClick(e))return;afBellClick(e);afClick(e,v,true);afPayClick(e);const tb=e.target.closest("[data-aftab]");if(tb){AF.tab=tb.dataset.aftab;affRender();scrollTo(0,0);return}if(e.target.closest("[data-afout]"))SBH.signOut();
-      if(e.target.closest("[data-afgivesave]")){const g=AFM.gd;AFM.busy=true;AFM.msg="";affRender();try{AFM.cpn=await SBH.rpc("aff_give_save",{p_give:g});AFM.gd=null;AFM.msg="Saved. Your customers get "+AFM.cpn.value+"% off and you earn "+Math.max(0,+AFM.cpn.rate-+AFM.cpn.give)+"% on coupon orders."}catch(er){AFM.msg=er.message||"Couldn't save."}AFM.busy=false;affRender();return}
+      if(e.target.closest("[data-afgivesave]")){const g=AFM.gd;AFM.busy=true;AFM.msg="";affRender();try{AFM.cpn=await SBH.rpc("aff_give_set",{p_give:g,p_mins:AFM.gm!=null?AFM.gm:((+(AFM.cpn||{}).giveUntil>Date.now()&&+(AFM.cpn||{}).give>0)?null:(+((AFM.cpn||{}).giveCap)>0?GIVE_DUR.filter(x=>x[0]>0&&x[0]<=+AFM.cpn.giveCap).pop()[0]:0))});AFM.gd=null;AFM.gm=null;afGiveTimer();AFM.msg="Saved. Your customers get "+AFM.cpn.value+"% off and you earn "+Math.max(0,+AFM.cpn.rate-+AFM.cpn.give)+"% on coupon orders."}catch(er){AFM.msg=er.message||"Couldn't save."}AFM.busy=false;affRender();return}
+      {const gm=e.target.closest("[data-afgm]");if(gm){AFM.gm=+gm.dataset.afgm;affRender();return}}
       if(e.target.closest("[data-afcpedit]")){AFM.edit=true;AFM.msg="";affRender();const i=document.getElementById("afCpIn");if(i){i.focus();i.select()}return}
       if(e.target.closest("[data-afcpcancel]")){AFM.edit=false;AFM.msg="";affRender();return}
       if(e.target.closest("[data-afcpsave]")){const code=(document.getElementById("afCpIn")||{}).value||"";AFM.busy=true;AFM.msg="";affRender();try{AFM.cpn=await SBH.rpc("aff_coupon_save",{p_code:code});AFM.msg="Saved. Your coupon is "+AFM.cpn.coupon+".";AFM.edit=false}catch(er){AFM.msg=er.message||"Couldn't save.";const i=document.getElementById("afCpIn");if(i)i.value=code}AFM.busy=false;affRender();if(AFM.edit){const i=document.getElementById("afCpIn");if(i){i.value=code;i.focus()}}}
@@ -3240,8 +3248,8 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-01 08:24 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
-  <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-01 08:32 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  <main class="afmain">${afSacHTML()}${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
 const sig = (now=Date.now()) => DB.sales.map(s=>saleStatus(s,now)).join();
