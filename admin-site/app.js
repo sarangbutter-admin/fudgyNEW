@@ -6884,10 +6884,33 @@ function afGiveLive(g){const c=AFM.cpn;if(!c)return;const max=+c.giveMax,base=+c
   const gv=rate?g/rate*100:0;$i("afgKeep").style.width=(100-gv)+"%";$i("afgGave").style.width=gv+"%";
   $i("afgE1").textContent=Math.max(0,rate-g)+"%";$i("afgE2").textContent=g+"%";
   const sv=box.querySelector("[data-afgivesave]");if(sv&&!AFM.busy)sv.disabled=g===+c.give}
+/* share my coupon: WhatsApp, Instagram, Threads, X, Facebook, Telegram, TikTok, email, the phone's own share sheet, and copy buttons */
+const afOffText=c=>c.type==="freedelivery"?"free delivery":c.type==="amount"?money(+c.value)+" off":(+c.value)+"% off";
+function afShareData(c,ch){const code=(SBH.aff&&SBH.aff.code)||(AF.rep&&AF.rep.aff&&AF.rep.aff.code)||"",shop=(DB.page&&DB.page.name)||"Delidome",link=code?afLink(code,"",ch,c.coupon):afShop();
+  const text=`Use my code ${c.coupon} to get ${afOffText(c)} at ${shop}! 🍪`;return {link,text,msg:text+" "+link}}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){try{const a=document.createElement("textarea");a.value=t;a.style.cssText="position:fixed;left:-999px;top:0";document.body.appendChild(a);a.select();const ok=document.execCommand("copy");a.remove();return ok}catch(x){return false}}}
+const AFSH=[["wa","WhatsApp","💬","#25D366"],["ig","Instagram","📸","linear-gradient(45deg,#F9A825,#E1306C,#7B2FF7)"],["th","Threads","🧵","#101010"],["x","X","𝕏","#101010"],["fb","Facebook","f","#1877F2"],["tg","Telegram","✈️","#229ED9"],["tt","TikTok","🎵","#101010"],["mail","Email","✉️","#6B7280"],["more","More…","⤴","#000096"]];
+function afShareHTML(c){if(!c||!c.ok||!c.coupon)return "";
+  const btn=([k,l,ic,bg])=>{const d=afShareData(c,k),e=encodeURIComponent,enc={wa:`https://wa.me/?text=${e(d.msg)}`,x:`https://twitter.com/intent/tweet?text=${e(d.text)}&url=${e(d.link)}`,fb:`https://www.facebook.com/sharer/sharer.php?u=${e(d.link)}&quote=${e(d.text)}`,th:`https://www.threads.net/intent/post?text=${e(d.msg)}`,tg:`https://t.me/share/url?url=${e(d.link)}&text=${e(d.text)}`,mail:`mailto:?subject=${e("A coupon for you")}&body=${e(d.msg)}`}[k];
+    const inner=`<i style="background:${bg}" aria-hidden="true">${ic}</i><span>${l}</span>`;
+    return enc?`<a class="afsh-b" href="${esc(enc)}" target="_blank" rel="noopener" data-afsh-open="${k}">${inner}</a>`:`<button class="afsh-b" type="button" data-afsh="${k}">${inner}</button>`};
+  return `<div class="afshare"><div class="afsh-code"><div><small>Your coupon code</small><b id="afShCode">${esc(c.coupon)}</b></div><button class="afsh-copy" type="button" data-afcode>📋 Copy code</button></div>
+    <p class="afsh-t">Share it and your followers get <b>${afOffText(c)}</b>. The link fills your coupon in for them.</p>
+    <div class="afsh-grid">${AFSH.map(btn).join("")}</div>
+    <div class="afsh-more"><button class="ghost" type="button" data-afsh="copymsg">Copy message</button><button class="ghost" type="button" data-afsh="copylink">Copy link</button></div></div>`}
+async function afShareClick(e){const cd=e.target.closest("[data-afcode]"),b=e.target.closest("[data-afsh]");if(!cd&&!b)return false;const c=AFM.cpn;if(!c||!c.coupon)return true;
+  if(cd){toast(await copyText(c.coupon)?"Code "+c.coupon+" copied":"Couldn't copy. Your code is "+c.coupon);return true}
+  const k=b.dataset.afsh,d=afShareData(c,k==="copymsg"||k==="copylink"?"web":k);
+  if(k==="copylink"){toast(await copyText(d.link)?"Link copied":"Couldn't copy the link");return true}
+  if(k==="copymsg"){toast(await copyText(d.msg)?"Message copied":"Couldn't copy the message");return true}
+  if(k==="ig"||k==="tt"){const url=k==="ig"?"https://www.instagram.com/":"https://www.tiktok.com/";const w=window.open(url,"_blank","noopener");toast(await copyText(d.msg)?(k==="ig"?"Caption copied. Paste it in your post, story or bio.":"Caption copied. Paste it in your video description."):"Open the app and type your code "+c.coupon);return true}
+  if(k==="more"){if(navigator.share){try{await navigator.share({title:"A coupon for you",text:d.text,url:d.link})}catch(x){}}else toast(await copyText(d.msg)?"Message copied":"Sharing isn't available here");return true}
+  return true}
 function afCouponHTML(){const c=AFM.cpn;if(!c||!c.ok)return "";const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,"");
   return `<section class="panel"><h2 style="margin:0 0 6px">🎟️ My coupon</h2>${!c.ready?`<p class="sub">Coupons are not ready yet. The shop sets the discount first, then you can choose your coupon name here.</p>`
     :`<div class="afcpdef"><span aria-hidden="true">🎁</span><div>Discount for your customers<b>${afCpnText(c)}</b><small>Set by the shop. It is added to your coupon automatically.</small></div></div>
     <p class="sub" style="margin:0 0 8px">${c.coupon?`Your code <b>${esc(c.coupon)}</b>`:"You do not have a coupon name yet."} Customers who type it get <b>${afCpnText(c)}</b>. You earn <b>${+c.rate}%</b> of the order. Your link is remembered for 30 days, so orders from customers who came through it also count.</p>
+    ${afShareHTML(c)}
     ${afGiveHTML(c)}
     ${c.canName?(()=>{const lock=!!c.coupon&&!AFM.edit,wait=c.coupon&&+c.changedAt>0?Math.ceil((3600000-(Date.now()-c.changedAt))/60000):0;
       return `<div class="colin" style="flex-wrap:wrap;gap:8px"><input class="in${lock?" locked":""}" id="afCpIn" maxlength="20" placeholder="Choose a name, like ALPHA001" value="${esc(c.coupon||"")}" style="flex:1;min-width:180px;text-transform:uppercase" ${lock?`readonly aria-label="Your coupon name (locked)"`:""}>
@@ -7252,7 +7275,7 @@ function afBellClick(e){const tb=e.target.closest("[data-afntab]");if(tb){AFN.ta
 function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
     v.addEventListener("input",e=>{if(e.target&&e.target.id==="afGive")afGiveLive(+e.target.value)});
-    v.addEventListener("click",async e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);const tb=e.target.closest("[data-aftab]");if(tb){AF.tab=tb.dataset.aftab;affRender();scrollTo(0,0);return}if(e.target.closest("[data-afout]"))SBH.signOut();
+    v.addEventListener("click",async e=>{if(await afShareClick(e))return;afBellClick(e);afClick(e,v,true);afPayClick(e);const tb=e.target.closest("[data-aftab]");if(tb){AF.tab=tb.dataset.aftab;affRender();scrollTo(0,0);return}if(e.target.closest("[data-afout]"))SBH.signOut();
       if(e.target.closest("[data-afgivesave]")){const g=AFM.gd;AFM.busy=true;AFM.msg="";affRender();try{AFM.cpn=await SBH.rpc("aff_give_save",{p_give:g});AFM.gd=null;AFM.msg="Saved. Your customers get "+AFM.cpn.value+"% off and you earn "+Math.max(0,+AFM.cpn.rate-+AFM.cpn.give)+"% on coupon orders."}catch(er){AFM.msg=er.message||"Couldn't save."}AFM.busy=false;affRender();return}
       if(e.target.closest("[data-afcpedit]")){AFM.edit=true;AFM.msg="";affRender();const i=document.getElementById("afCpIn");if(i){i.focus();i.select()}return}
       if(e.target.closest("[data-afcpcancel]")){AFM.edit=false;AFM.msg="";affRender();return}
@@ -7262,7 +7285,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-01 08:22 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-01 08:24 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

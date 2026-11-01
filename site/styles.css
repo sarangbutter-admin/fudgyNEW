@@ -1863,3 +1863,15 @@ body{padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-l
 @keyframes afgShake{0%,70%,100%{transform:rotate(0)}76%{transform:rotate(-14deg)}84%{transform:rotate(12deg)}92%{transform:rotate(-8deg)}}
 @keyframes afgPop{0%{transform:scale(.8)}60%{transform:scale(1.18)}100%{transform:scale(1)}}@keyframes afgShine{to{left:120%}}
 @media (prefers-reduced-motion:reduce){html:not(.motion-on) .afgive::before,html:not(.motion-on) .afg-sp,html:not(.motion-on) .afg-ic,html:not(.motion-on) .afg-big strong,html:not(.motion-on) .afg-save::after{animation:none!important}}
+
+/* affiliator: share my coupon */
+.afshare{margin:12px 0;padding:14px;border-radius:18px;background:linear-gradient(135deg,#EEF0FF,#F7F2FF);box-shadow:inset 0 0 0 2px #fff,0 4px 14px rgba(0,0,150,.12)}
+.afsh-code{display:flex;align-items:center;justify-content:space-between;gap:10px}.afsh-code small{display:block;font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.65}
+.afsh-code b{display:block;font-size:26px;letter-spacing:.06em;color:#000096;word-break:break-all}
+.afsh-copy{flex:none;border:0;border-radius:99px;padding:11px 16px;font:inherit;font-weight:800;font-size:14px;color:#fff;background:#000096;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,150,.3)}.afsh-copy:active{transform:scale(.96)}
+.afsh-t{margin:8px 0 10px;font-size:13px}
+.afsh-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.afsh-b{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 4px;border:0;border-radius:14px;background:#fff;color:#0B0B45;font:inherit;font-size:12.5px;font-weight:700;text-decoration:none;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,60,.14);transition:transform .12s}
+.afsh-b:active{transform:scale(.95)}.afsh-b:hover{transform:translateY(-2px)}
+.afsh-b i{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:19px;font-weight:800;color:#fff}
+.afsh-more{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.afsh-more .ghost{flex:1;min-width:130px}
