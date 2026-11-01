@@ -625,11 +625,15 @@ function ctaState(){
   const left=S.size-boxN();
   if(S.step===1) return left>0?{label:`Pick ${left} more`,dis:false,go:"pick"}:!S.closed?{label:"🔒 Close the box",dis:false,go:"close"}:{label:"Choose a day",dis:false,go:"step2"};
   if(!S.day||!S.time) return {label:optOf(S)==="sameday"?"Pick a time for today":"Pick a day and time",dis:false,go:"when"};
+  if(needExtras())return {label:"Choose your extras",dis:false,go:"extras"};
   if(orpFarKm()!==null)return {label:"Outside our delivery area",dis:false,go:"farblock"};
   if(bsPending(S))return {label:`Checkout (${money(total())})`,dis:false,go:"needcourier"};
   return {label:`Checkout (${money(total())})`,dis:false,go:"checkout"};
 }
 /* guide: after the time is chosen, scroll to the extras and blink an arm tip until they choose an extra or "No extras"; then guide them to the courier */
+// extras exist and the customer has not picked one (or "No extras") yet
+const needExtras=()=>S.step===2&&!!S.day&&!!S.time&&!$("#extrasBlock").hidden&&!S.extrasDone&&!S.addons.length&&!S.editId;
+function toExtras(){S.extraTip=true;renderStore();setTimeout(()=>scrollMid($("#extrasBlock")),80)}
 function guideExtras(){const blk=$("#extrasBlock");if(blk&&blk.hidden&&S.day&&S.time&&S.mode==="delivery"){guideCourier();return}if(!blk||blk.hidden||S.extrasDone||!(S.day&&S.time))return;S.extraTip=true;renderStore();setTimeout(()=>scrollToEl(blk),80)}
 const scrollMid=el=>{if(!el)return;const y=el.getBoundingClientRect().top+scrollY-innerHeight*0.45;jumpTo(Math.max(0,y),!RM)};
 function guideCourier(){S.extraTip=false;if(S.mode!=="delivery"){renderStore();return}S.courierTip=!!(bsOn()&&bsPending(S));renderStore();
@@ -711,7 +715,7 @@ function renderStore(){
   renderCoupon(q);renderGiftBox();
   $("#total").textContent=money(total());
   const c=ctaState();
-  for(const b of [$("#panelCta"),$("#barCta")]){b.textContent=c.label;b.disabled=c.dis;b.dataset.go=c.go||"";b.classList.toggle("ready",!c.dis&&c.go!=="when"&&c.go!=="needcourier"&&c.go!=="farblock");b.classList.toggle("pickmore",c.go==="pick");b.classList.toggle("closecta",c.go==="close")}
+  for(const b of [$("#panelCta"),$("#barCta")]){b.textContent=c.label;b.disabled=c.dis;b.dataset.go=c.go||"";b.classList.toggle("ready",!c.dis&&c.go!=="when"&&c.go!=="needcourier"&&c.go!=="farblock"&&c.go!=="extras");b.classList.toggle("pickmore",c.go==="pick");b.classList.toggle("closecta",c.go==="close")}
   if(c.go!=="needcourier"){const m=$("#ctaMsg");if(m)m.hidden=true}
   $("#clearBtn").disabled=!boxN();
   $("#randBtn").disabled=!availProducts().length;
@@ -1073,14 +1077,19 @@ function orpCardHTML(t,km){
   return `${pic}<h3 id="orpTitle">${esc(g("Title","Sorry, that's a bit far"))}</h3>${txt?`<p>${esc(txt).replace(/\n/g,"<br>")}</p>`:""}<div class="cw-act"><button class="btn btn-blue" type="button" data-orpx>${esc(g("Ok","OK, close"))}</button>${link?`<a class="btn btn-ghost-blue" href="${esc(link)}" target="_blank" rel="noopener">${esc(g("CtaLabel","Contact us"))}</a>`:""}</div>`;
 }
 // straight-line distance in km from the shop (latitude / longitude set in Delivery & courier) to the address the customer found on the map
-function orpDist(){const t=DB.settings,a=parseFloat(t.shopLat),b=parseFloat(t.shopLng),y=parseFloat(BSD.lat),x=parseFloat(BSD.lng);if(![a,b,x,y].every(isFinite))return null;
+function orpDist(){const t=DB.settings,a=parseFloat(t.shopLat),b=parseFloat(t.shopLng),y=parseFloat(BSD.lat||(BSD.far&&BSD.far.lat)),x=parseFloat(BSD.lng||(BSD.far&&BSD.far.lng));if(![a,b,x,y].every(isFinite))return null;
   const R=6371,r=d=>d*Math.PI/180,dl=r(y-a),dg=r(x-b),h=Math.sin(dl/2)**2+Math.cos(r(a))*Math.cos(r(y))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
 // true while delivery is blocked: the pop-up is on, "stop the order" is on, and the address the customer found is farther than the radius
-function orpFarKm(){const t=DB.settings;if(t.orpOn===false||t.orpBlock===false||S.mode!=="delivery"||!BSD.lat)return null;const km=orpDist(),lim=+t.deliveryKm;return km!==null&&lim>0&&km>lim?km:null}
+function orpFarKm(){const t=DB.settings;if(t.orpOn===false||t.orpBlock===false||S.mode!=="delivery"||!(BSD.lat||BSD.far))return null;const km=orpDist(),lim=+t.deliveryKm;return km!==null&&lim>0&&km>lim?km:null}
 function showOrpNow(){const km=orpDist();$("#orpCard").innerHTML=orpCardHTML(DB.settings,km);$("#orpSheet").hidden=false;setTimeout(()=>{const b=$("#orpCard [data-orpx]");b&&b.focus()},60)}
+// only an area was picked from the list (no address on the map): look up where that area is, quietly, so the radius can still be checked
+async function orpLocate(){const t=DB.settings;if(BSD.lat||BSD.far||!BSD.area||t.orpOn===false||!isFinite(parseFloat(t.shopLat))||!isFinite(parseFloat(t.shopLng)))return;
+  const who=bsWho(),area=BSD.area;if(!who)return;
+  try{const r=await SBH.fn("biteship",{action:"geocode",pass:await tsPass("courier"),phone:who.phone,email:who.email,address:"",area:area.name});
+    if(r&&r.found&&BSD.area===area&&!BSD.lat){BSD.far={lat:r.lat,lng:r.lng};renderStore();farCheck()}}catch(e){}}
 let orpSeen="";
-function farCheck(){const t=DB.settings;if(t.orpOn===false||S.mode!=="delivery"||!BSD.lat)return;const km=orpDist(),lim=+t.deliveryKm;if(km===null||!(lim>0)||km<=lim)return;
-  const key=BSD.lat+","+BSD.lng;if(orpSeen===key)return;orpSeen=key;$("#orpCard").innerHTML=orpCardHTML(t,km);$("#orpSheet").hidden=false;setTimeout(()=>{const b=$("#orpCard [data-orpx]");b&&b.focus()},60)}
+function farCheck(){const t=DB.settings;if(t.orpOn===false||S.mode!=="delivery"||!(BSD.lat||BSD.far))return;const km=orpDist(),lim=+t.deliveryKm;if(km===null||!(lim>0)||km<=lim)return;
+  const key=(BSD.lat||BSD.far.lat)+","+(BSD.lng||BSD.far.lng);if(orpSeen===key)return;orpSeen=key;$("#orpCard").innerHTML=orpCardHTML(t,km);$("#orpSheet").hidden=false;setTimeout(()=>{const b=$("#orpCard [data-orpx]");b&&b.focus()},60)}
 function closeOrp(){$("#orpSheet").hidden=true}
 $("#orpSheet").addEventListener("click",e=>{if(e.target.closest("[data-orpx]")||e.target.id==="orpSheet")closeOrp()});
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#orpSheet").hidden)closeOrp()});
@@ -1211,6 +1220,7 @@ $("#cwSheet").addEventListener("click",e=>{if(e.target.closest("[data-cwok]")){c
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeCoWarn()});
 function cta(go){if(go==="pick"){if(document.activeElement)document.activeElement.blur();scrollToEl($("#menuGrid"));return}
   if(go==="when"){if(document.activeElement)document.activeElement.blur();const sd=$("#dayBlock").hidden;scrollToEl($(!sd&&!S.day?"#dayBlock":!$("#timeBlock").hidden&&(!sd||!S.time)?"#timeBlock":!sd&&S.day&&!$("#timeBlock").hidden?"#timeBlock":"#step2"));return}
+  if(go==="extras"){toExtras();return}
   if(go==="farblock"){showOrpNow();return}
   if(go==="needcourier"){bsNudge();return}
   if(go==="close"){closeBox();return}
@@ -1303,7 +1313,7 @@ function bsPopClose(){
   $("#bsPop").hidden=true;if($("#sheet").hidden)document.body.style.overflow="";
   const m=$("#ctaMsg");if(m&&!bsPending(S))m.hidden=true;renderStore();
 }
-document.addEventListener("click",e=>{if(e.target.closest("[data-bscourier]"))bsPopOpen()});
+document.addEventListener("click",e=>{if(e.target.closest("[data-bscourier]")){if(needExtras()){toExtras();return}bsPopOpen()}});
 $("#bsPopX").addEventListener("click",bsPopClose);$("#bsPopDone").addEventListener("click",bsPopClose);
 $("#bsPop").addEventListener("click",e=>{if(e.target.id==="bsPop")bsPopClose()});
 $("#bsPop").addEventListener("input",e=>{if(e.target.id==="coAddr"||e.target.id==="coDNote")saveCust()});
@@ -1417,7 +1427,7 @@ async function bsRates(){
     if(my!==BSD.t)return;BSD.opts=r.options||[];BSD.err=BSD.opts.length?"":(r.error||"No courier is available for this address.");
     if(S.ship&&!BSD.opts.some(x=>x.sig===S.ship.sig)){S.ship=null}
   }catch(e){if(my!==BSD.t)return;BSD.opts=[];BSD.err=e.message==="BANNED"?"Courier prices are not available for this order.":e.message;if(e.message==="BANNED")banShow()}
-  BSD.busy=false;bsDraw();renderCoSummary();renderStore();farCheck();
+  BSD.busy=false;bsDraw();renderCoSummary();renderStore();farCheck();orpLocate();
 }
 async function bsGeocode(){
   const addr=$("#coAddr").value.trim(),areaTxt=BSD.area?BSD.area.name:$("#bsArea").value.trim();if(!addr&&!areaTxt){BSD.err="Type your address (and your area) first.";bsDraw();return}
@@ -1438,7 +1448,7 @@ $("#bsArea").addEventListener("input",e=>{
   bsAreaT=setTimeout(async()=>{try{const r=await SBH.fn("biteship",{action:"areas",q});
     list.innerHTML=(r.areas||[]).map((a,i)=>`<button type="button" data-bsarea="${i}">${esc(a.name)}</button>`).join("")||`<p class="note" style="padding:8px">No area found.</p>`;list.hidden=false;list._a=r.areas||[]}catch(err){list.innerHTML=`<p class="note" style="padding:8px">${esc(err.message)}</p>`;list.hidden=false}},350)});
 $("#bsAreaList").addEventListener("click",e=>{const b=e.target.closest("[data-bsarea]");if(!b)return;const a=$("#bsAreaList")._a[+b.dataset.bsarea];if(!a)return;
-  BSD.area=a;BSD.lat="";BSD.lng="";BSD.label="";BSD.opts=[];BSD.tried=false;S.ship=null;S.bsSkip=false;$("#bsArea").value=a.name;$("#bsAreaList").hidden=true;
+  BSD.area=a;BSD.lat="";BSD.lng="";BSD.far=null;BSD.label="";BSD.opts=[];BSD.tried=false;S.ship=null;S.bsSkip=false;$("#bsArea").value=a.name;$("#bsAreaList").hidden=true;
   if($("#coAddr").value.trim().length>=5)bsGeocode();else bsRates()});
 $("#bsFind").addEventListener("click",bsGeocode);
 $("#bsPick").addEventListener("click",()=>{BSD.mapOpen=!BSD.mapOpen;bsDraw()});
@@ -1619,7 +1629,7 @@ $("#coForm").addEventListener("submit",e=>{
   const notify=(document.querySelector('input[name="coNotify"]:checked')||{value:"both"}).value;
   const cust={name:$("#coName").value.trim(),email:$("#coEmail").value.trim(),phone:$("#coPhone").value.trim(),
     address:del?$("#coAddr").value.trim():""};
-  const fields={notify,loc:S.mode==="delivery"&&BSD.lat&&BSD.lng?{lat:BSD.lat,lng:BSD.lng}:null,size:S.size,items:countItems(S.box),mode:S.mode,speed:S.mode==="pickup"?"pickup":S.speed,day:S.day,time:S.time,note:S.note,addons:[...S.addons],sale:q.sale?`${q.sale.name} (${saleOffText(q.sale)})`:"",
+  const fields={notify,loc:S.mode==="delivery"?(BSD.lat&&BSD.lng?{lat:BSD.lat,lng:BSD.lng}:BSD.far?{lat:BSD.far.lat,lng:BSD.far.lng}:null):null,size:S.size,items:countItems(S.box),mode:S.mode,speed:S.mode==="pickup"?"pickup":S.speed,day:S.day,time:S.time,note:S.note,addons:[...S.addons],sale:q.sale?`${q.sale.name} (${saleOffText(q.sale)})`:"",
     base:q.base,discount:q.discount,coupon:q.coupon?q.coupon.code:"",couponDisc:q.couponDisc,surcharge:q.surcharge,addonsTotal:q.addons,fee:q.fee,total:q.total,customer:cust,gifts:ed&&ed.size===S.size&&ed.gifts?ed.gifts:[],giftsAt:ed&&ed.size===S.size&&ed.gifts?ed.giftsAt:undefined,...(S.mode==="delivery"&&(S.dnote||S.dphoto)?{place:{note:String(S.dnote||"").slice(0,200),photo:!!S.dphoto,img:S.dphoto||"",at:Date.now()}}:{})};
   if(SBH.on){
     const btn=f.querySelector("button[type=submit]");if(btn)btn.disabled=true;
@@ -7239,7 +7249,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-01 00:15 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-01 00:39 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
