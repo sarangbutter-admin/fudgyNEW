@@ -1834,3 +1834,32 @@ body{padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-l
 @keyframes orpPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
 @keyframes orpSpin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){html:not(.motion-on) .orp-pic{animation:none!important}}
+
+/* affiliator: Share my commission (a bright card with a slider that answers right away) */
+.afgive{position:relative;margin:14px 0;padding:16px 16px 14px;border-radius:20px;overflow:hidden;color:#2A0A4A;background:linear-gradient(135deg,#FFE3F1 0%,#FFF1CC 48%,#DDF3FF 100%);box-shadow:0 8px 22px rgba(160,40,120,.22),inset 0 0 0 2px rgba(255,255,255,.8);isolation:isolate}
+.afgive::before{content:"";position:absolute;inset:-60%;z-index:-1;background:conic-gradient(from 0deg,rgba(255,120,190,.35),rgba(255,200,60,.35),rgba(80,190,255,.35),rgba(255,120,190,.35));animation:afgSpin 9s linear infinite}
+.afgive::after{content:"";position:absolute;inset:3px;border-radius:17px;background:linear-gradient(135deg,#FFF5FA,#FFFBEF 50%,#F2FAFF);z-index:-1}
+.afg-sp{position:absolute;font-size:16px;opacity:.9;animation:afgTwinkle 2.6s ease-in-out infinite;pointer-events:none}
+.afg-sp.s1{top:10px;right:16px}.afg-sp.s2{top:58px;right:8px;animation-delay:.8s;font-size:13px}.afg-sp.s3{bottom:64px;left:8px;animation-delay:1.5s;font-size:13px}
+.afg-h{display:flex;gap:10px;align-items:center}.afg-h b{display:block;font-size:17px;color:#B0166A;letter-spacing:-.01em}.afg-h small{display:block;font-size:12.5px;line-height:1.35;opacity:.8}
+.afg-ic{font-size:34px;display:inline-block;animation:afgShake 2.4s ease-in-out infinite;transform-origin:50% 80%}
+.afg-big{display:grid;justify-items:center;text-align:center;margin:12px 0 6px}.afg-big>span{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#B0166A}
+.afg-big strong{font-size:40px;line-height:1.05;font-weight:900;background:linear-gradient(90deg,#E0157F,#FF8A00);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;display:inline-block}
+.afg-big strong.pop{animation:afgPop .35s ease-out}.afg-big small{font-size:13px;opacity:.85}
+.afg-rg{-webkit-appearance:none;appearance:none;width:100%;height:14px;border-radius:99px;margin:10px 0 2px;background:linear-gradient(90deg,#FF4FA3 var(--p),#E7DDF0 var(--p));outline:none;cursor:pointer;touch-action:pan-y}
+.afg-rg::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:34px;height:34px;border-radius:50%;border:3px solid #fff;background:radial-gradient(circle at 35% 30%,#FFB84D,#E0157F);box-shadow:0 3px 10px rgba(160,20,100,.45);cursor:grab}
+.afg-rg::-moz-range-thumb{width:30px;height:30px;border-radius:50%;border:3px solid #fff;background:radial-gradient(circle at 35% 30%,#FFB84D,#E0157F);box-shadow:0 3px 10px rgba(160,20,100,.45);cursor:grab}
+.afg-rg::-moz-range-track{height:14px;border-radius:99px;background:transparent}
+.afg-rg:focus-visible{box-shadow:0 0 0 4px rgba(224,21,127,.3)}
+.afg-ends{display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;opacity:.7}
+.afg-split{display:flex;height:16px;border-radius:99px;overflow:hidden;margin:12px 0 6px;background:#fff;box-shadow:inset 0 0 0 2px rgba(255,255,255,.9),0 1px 4px rgba(0,0,60,.18)}
+.afg-split i{display:block;height:100%;transition:width .25s ease}.afg-split .keep{background:linear-gradient(90deg,#16B364,#5BE39A)}.afg-split .gave{background:linear-gradient(90deg,#FF4FA3,#FF8A00)}
+.afg-leg{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12.5px}.afg-leg .d{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:baseline}.afg-leg .d.keep{background:#16B364}.afg-leg .d.gave{background:#FF4FA3}
+.afg-note{margin:8px 0 10px;font-size:12.5px;padding:7px 10px;border-radius:12px;background:rgba(255,255,255,.75)}
+.afg-save{position:relative;width:100%;min-height:48px;border:0;border-radius:99px;font:inherit;font-weight:900;font-size:16px;color:#fff;cursor:pointer;background:linear-gradient(90deg,#E0157F,#FF8A00);box-shadow:0 6px 16px rgba(224,21,127,.4);overflow:hidden}
+.afg-save:not(:disabled)::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-50%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);animation:afgShine 2.2s ease-in-out infinite}
+.afg-save:disabled{opacity:.55;cursor:default;box-shadow:none}
+@keyframes afgSpin{to{transform:rotate(360deg)}}@keyframes afgTwinkle{0%,100%{transform:scale(.8) rotate(0);opacity:.5}50%{transform:scale(1.25) rotate(18deg);opacity:1}}
+@keyframes afgShake{0%,70%,100%{transform:rotate(0)}76%{transform:rotate(-14deg)}84%{transform:rotate(12deg)}92%{transform:rotate(-8deg)}}
+@keyframes afgPop{0%{transform:scale(.8)}60%{transform:scale(1.18)}100%{transform:scale(1)}}@keyframes afgShine{to{left:120%}}
+@media (prefers-reduced-motion:reduce){html:not(.motion-on) .afgive::before,html:not(.motion-on) .afg-sp,html:not(.motion-on) .afg-ic,html:not(.motion-on) .afg-big strong,html:not(.motion-on) .afg-save::after{animation:none!important}}

@@ -6864,13 +6864,26 @@ async function afFaqSave(){AFQ.busy=true;renderAdmin();const items=(AFQ.draft||[
     AFQ.draft=null;toast("FAQ saved. Affiliators see it now")}catch(er){toast(er.message||"Couldn't save the FAQ.")}AFQ.busy=false;const y=scrollY;renderAdmin();scrollTo(0,y)}
 async function afCpnLoad(){try{AFM.cpn=await SBH.rpc("aff_coupon_info",{})}catch(e){AFM.cpn={ok:false}}affRender()}
 function afCpnText(c){const d=c.type==="freedelivery"?"free delivery":c.type==="amount"?money(+c.value)+" off":(+c.value)+"% off";return d+(+c.minSpend>0?" on orders from "+money(+c.minSpend):"")+(c.stack?", also on flash sales":", not on flash sales")+(c.endsAt?", until "+esc(String(c.endsAt).replace("T"," ")):"")}
-function afGiveHTML(c){if(!(+c.giveMax>0))return "";const g=AFM.gd!=null?+AFM.gd:+c.give,base=+c.baseValue,rate=+c.rate,opts=[];for(let x=0;x<=+c.giveMax+1e-9;x+=0.5)opts.push(x);
-  const dirty=g!==+c.give;
-  return `<div class="afgive" style="margin:10px 0;padding:10px 12px;border:1px dashed currentColor;border-radius:12px"><b>🤝 Share my commission</b>
-    <p class="note" style="margin:4px 0 8px">Give some of your commission to your customers as extra discount. Orders that use your coupon then earn you less. Orders that come from your link without the coupon still earn the full ${rate}%.</p>
-    <label class="af">Points I give to my customers<select class="in" id="afGive">${opts.map(x=>`<option value="${x}" ${x===g?"selected":""}>${x}%${x===0?" (none)":""}</option>`).join("")}</select></label>
-    <p class="sub" style="margin:8px 0 0">Customers with your coupon get <b>${base+g}% off</b>${g>0?` (${base}% + ${g}% from you)`:""}. You earn <b>${Math.max(0,rate-g)}%</b> on those orders and <b>${rate}%</b> on orders from your link without the coupon.</p>
-    <div class="colin" style="margin-top:8px"><button class="btn btn-blue btn-sm" type="button" data-afgivesave ${AFM.busy||!dirty?"disabled":""}>${AFM.busy?"Saving…":"Save"}</button></div></div>`}
+function afGiveHTML(c){if(!(+c.giveMax>0))return "";const max=+c.giveMax,g=AFM.gd!=null?+AFM.gd:+c.give,base=+c.baseValue,rate=+c.rate,dirty=g!==+c.give;
+  const pct=max?g/max*100:0,gv=rate?g/rate*100:0;
+  return `<div class="afgive" id="afGiveBox" style="--p:${pct}%">
+    <span class="afg-sp s1" aria-hidden="true">✨</span><span class="afg-sp s2" aria-hidden="true">💖</span><span class="afg-sp s3" aria-hidden="true">✨</span>
+    <div class="afg-h"><span class="afg-ic" aria-hidden="true">🤝</span><div><b>Share my commission</b><small>Give your followers a bigger discount. You trade some of your commission for it.</small></div></div>
+    <div class="afg-big"><span>Your customers get</span><strong id="afgBig">${base+g}% off</strong><small id="afgBase">${g>0?`${base}% from the shop + <b>${g}% from you</b> 💝`:`${base}% from the shop. Slide to add more!`}</small></div>
+    <input class="afg-rg" id="afGive" type="range" min="0" max="${max}" step="0.5" value="${g}" aria-label="Points of my commission I give to my customers">
+    <div class="afg-ends"><span>Keep it all</span><span>Give up to ${max}%</span></div>
+    <div class="afg-split" aria-hidden="true"><i class="keep" id="afgKeep" style="width:${100-gv}%"></i><i class="gave" id="afgGave" style="width:${gv}%"></i></div>
+    <div class="afg-leg"><span><i class="d keep"></i>You keep <b id="afgE1">${Math.max(0,rate-g)}%</b> on coupon orders</span><span><i class="d gave"></i>Shared <b id="afgE2">${g}%</b></span></div>
+    <p class="afg-note">Orders from your link <b>without</b> the coupon still earn the full <b>${rate}%</b>.</p>
+    <button class="afg-save" type="button" data-afgivesave ${AFM.busy||!dirty?"disabled":""}><span>${AFM.busy?"Saving…":"Save my choice"}</span></button></div>`}
+// live update while the slider moves (no re-draw, so the slider is never interrupted)
+function afGiveLive(g){const c=AFM.cpn;if(!c)return;const max=+c.giveMax,base=+c.baseValue,rate=+c.rate,$i=id=>document.getElementById(id);AFM.gd=g;
+  const box=$i("afGiveBox");if(!box)return;box.style.setProperty("--p",(max?g/max*100:0)+"%");
+  const big=$i("afgBig");big.textContent=(base+g)+"% off";big.classList.remove("pop");void big.offsetWidth;big.classList.add("pop");
+  $i("afgBase").innerHTML=g>0?`${base}% from the shop + <b>${g}% from you</b> 💝`:`${base}% from the shop. Slide to add more!`;
+  const gv=rate?g/rate*100:0;$i("afgKeep").style.width=(100-gv)+"%";$i("afgGave").style.width=gv+"%";
+  $i("afgE1").textContent=Math.max(0,rate-g)+"%";$i("afgE2").textContent=g+"%";
+  const sv=box.querySelector("[data-afgivesave]");if(sv&&!AFM.busy)sv.disabled=g===+c.give}
 function afCouponHTML(){const c=AFM.cpn;if(!c||!c.ok)return "";const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,"");
   return `<section class="panel"><h2 style="margin:0 0 6px">🎟️ My coupon</h2>${!c.ready?`<p class="sub">Coupons are not ready yet. The shop sets the discount first, then you can choose your coupon name here.</p>`
     :`<div class="afcpdef"><span aria-hidden="true">🎁</span><div>Discount for your customers<b>${afCpnText(c)}</b><small>Set by the shop. It is added to your coupon automatically.</small></div></div>
@@ -7238,7 +7251,7 @@ function afBellClick(e){const tb=e.target.closest("[data-afntab]");if(tb){AFN.ta
   else if(AFN.open&&!e.target.closest(".afpop")){AFN.open=false;afBellDraw()}}
 function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElementById("affView");
   if(!v){v=document.createElement("div");v.id="affView";document.body.appendChild(v);document.body.classList.add("aff-on");
-    v.addEventListener("change",e=>{if(e.target&&e.target.id==="afGive"){AFM.gd=+e.target.value;affRender()}});
+    v.addEventListener("input",e=>{if(e.target&&e.target.id==="afGive")afGiveLive(+e.target.value)});
     v.addEventListener("click",async e=>{afBellClick(e);afClick(e,v,true);afPayClick(e);const tb=e.target.closest("[data-aftab]");if(tb){AF.tab=tb.dataset.aftab;affRender();scrollTo(0,0);return}if(e.target.closest("[data-afout]"))SBH.signOut();
       if(e.target.closest("[data-afgivesave]")){const g=AFM.gd;AFM.busy=true;AFM.msg="";affRender();try{AFM.cpn=await SBH.rpc("aff_give_save",{p_give:g});AFM.gd=null;AFM.msg="Saved. Your customers get "+AFM.cpn.value+"% off and you earn "+Math.max(0,+AFM.cpn.rate-+AFM.cpn.give)+"% on coupon orders."}catch(er){AFM.msg=er.message||"Couldn't save."}AFM.busy=false;affRender();return}
       if(e.target.closest("[data-afcpedit]")){AFM.edit=true;AFM.msg="";affRender();const i=document.getElementById("afCpIn");if(i){i.focus();i.select()}return}
@@ -7249,7 +7262,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-01 00:39 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-01 08:22 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
