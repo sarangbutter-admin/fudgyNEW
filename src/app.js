@@ -197,6 +197,7 @@ function migrate(db){
   if(db.settings.lowStockAt===undefined)db.settings.lowStockAt=10;
   if(db.settings.customOn===undefined)Object.assign(db.settings,{customOn:true,customMin:14,customStep:2,customMax:48,customPer:3.25});
   if(db.settings.fabGest===undefined)Object.assign(db.settings,{fabGest:true,fabBgType:"color",fabBg2:"#FF9F43",fabRing:"",fabImgSize:84,fabSizePx:58,fabOpacity:100,fabImg:"",rbImg:"",rbImg2:""});
+  if(db.settings.orpOn===undefined)Object.assign(db.settings,{orpOn:true,orpIcon:"📍",orpImg:"",orpFx:"bounce",orpTitle:"Sorry, that's a bit far",orpText:"We deliver within {km} km of the shop, and your address looks about {far} km away. Please contact us and we will try to help.",orpOk:"OK, close",orpCtaOn:true,orpCtaLabel:"Contact us",orpCtaLink:"",shopLat:"",shopLng:""});
   if(db.settings.guardOn===undefined)Object.assign(db.settings,{guardOn:true,guardClear:true,guardShuf:true,guardIcon:"🛡️",guardImg:"",
     guardClearTitle:"Clear your box?",guardClearText:"You already picked a courier. This will empty your whole box. Your courier choice stays.",guardClearOk:"Yes, clear it",guardClearNo:"Keep my box",
     guardShufTitle:"Shuffle your box?",guardShufText:"You already picked a courier. This swaps only the flavors we picked for you. The ones you chose yourself stay.",guardShufOk:"Yes, shuffle",guardShufNo:"Keep my box"});
@@ -1060,6 +1061,24 @@ function guardCardHTML(kind,t){
   const pic=imgOk(t.guardImg)?`<div class="gd-pic"><img class="${imgIsCut(t.guardImg,t.guardImgCut)?"cut":""}" src="${esc(imgOk(t.guardImg))}" alt="" draggable="false"></div>`:`<div class="cw-ring"><span class="cw-emo" aria-hidden="true">${esc(String(t.guardIcon||"").trim()||"🛡️")}</span></div>`;
   return `${pic}<h3 id="gdTitle">${esc(g("Title","Are you sure?"))}</h3>${g("Text","")?`<p>${esc(g("Text",""))}</p>`:""}<div class="cw-act"><button class="btn btn-blue" type="button" data-gdno>${esc(g("No","Keep my box"))}</button><button class="btn btn-ghost-blue" type="button" data-gdok>${esc(g("Ok","Yes"))}</button></div>`;
 }
+/* "out of delivery radius" pop-up: the owner sets the look, the words, and a Contact us link (Delivery & courier) */
+const ORP_FX=[["bounce","Bounce"],["wiggle","Wiggle"],["float","Float up and down"],["pulse","Pulse"],["spin","Slow spin"],["none","Still"]];
+function orpCardHTML(t,km){
+  const g=(k,d)=>String(t["orp"+k]||"").trim()||d,fx=ORP_FX.some(x=>x[0]===t.orpFx)?t.orpFx:"bounce",u=imgOk(t.orpImg);
+  const far=km===null||km===undefined?"?":String(Math.round(km*10)/10),txt=g("Text","").replace(/\{km\}/g,t.deliveryKm).replace(/\{far\}/g,far);
+  const pic=u?`<div class="orp-pic fx-${fx}"><img src="${esc(u)}" alt="" draggable="false"></div>`:`<div class="orp-pic fx-${fx}"><span class="orp-emo" aria-hidden="true">${esc(g("Icon","📍"))}</span></div>`;
+  const link=t.orpCtaOn!==false?socialUrl(t.orpCtaLink):"";
+  return `${pic}<h3 id="orpTitle">${esc(g("Title","Sorry, that's a bit far"))}</h3>${txt?`<p>${esc(txt).replace(/\n/g,"<br>")}</p>`:""}<div class="cw-act"><button class="btn btn-blue" type="button" data-orpx>${esc(g("Ok","OK, close"))}</button>${link?`<a class="btn btn-ghost-blue" href="${esc(link)}" target="_blank" rel="noopener">${esc(g("CtaLabel","Contact us"))}</a>`:""}</div>`;
+}
+// straight-line distance in km from the shop (latitude / longitude set in Delivery & courier) to the address the customer found on the map
+function orpDist(){const t=DB.settings,a=parseFloat(t.shopLat),b=parseFloat(t.shopLng),y=parseFloat(BSD.lat),x=parseFloat(BSD.lng);if(![a,b,x,y].every(isFinite))return null;
+  const R=6371,r=d=>d*Math.PI/180,dl=r(y-a),dg=r(x-b),h=Math.sin(dl/2)**2+Math.cos(r(a))*Math.cos(r(y))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+let orpSeen="";
+function farCheck(){const t=DB.settings;if(t.orpOn===false||S.mode!=="delivery"||!BSD.lat)return;const km=orpDist(),lim=+t.deliveryKm;if(km===null||!(lim>0)||km<=lim)return;
+  const key=BSD.lat+","+BSD.lng;if(orpSeen===key)return;orpSeen=key;$("#orpCard").innerHTML=orpCardHTML(t,km);$("#orpSheet").hidden=false;setTimeout(()=>{const b=$("#orpCard [data-orpx]");b&&b.focus()},60)}
+function closeOrp(){$("#orpSheet").hidden=true}
+$("#orpSheet").addEventListener("click",e=>{if(e.target.closest("[data-orpx]")||e.target.id==="orpSheet")closeOrp()});
+addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#orpSheet").hidden)closeOrp()});
 let gdFn=null;
 function guardBox(kind,fn){
   const t=DB.settings,on=t.guardOn!==false&&(kind==="clear"?t.guardClear!==false:t.guardShuf!==false);
@@ -1392,7 +1411,7 @@ async function bsRates(){
     if(my!==BSD.t)return;BSD.opts=r.options||[];BSD.err=BSD.opts.length?"":(r.error||"No courier is available for this address.");
     if(S.ship&&!BSD.opts.some(x=>x.sig===S.ship.sig)){S.ship=null}
   }catch(e){if(my!==BSD.t)return;BSD.opts=[];BSD.err=e.message==="BANNED"?"Courier prices are not available for this order.":e.message;if(e.message==="BANNED")banShow()}
-  BSD.busy=false;bsDraw();renderCoSummary();renderStore();
+  BSD.busy=false;bsDraw();renderCoSummary();renderStore();farCheck();
 }
 async function bsGeocode(){
   const addr=$("#coAddr").value.trim(),areaTxt=BSD.area?BSD.area.name:$("#bsArea").value.trim();if(!addr&&!areaTxt){BSD.err="Type your address (and your area) first.";bsDraw();return}
@@ -4413,6 +4432,22 @@ function viewDelivery(){
       <div class="grid2">
         <label class="af">Delivery radius<div class="money-in"><input class="in" type="number" min="1" data-k="settings::deliveryKm" value="${s.deliveryKm}"><span style="padding-right:10px">km</span></div></label>
       </div>
+      <h3 style="margin:18px 0 4px;font-size:15px">Outside the delivery radius pop-up</h3><p class="sub" style="margin:0 0 8px">Shown in the middle of the screen when the address a customer finds on the map is farther from your shop than the radius above. It only informs: the customer can still go on. It needs your shop location below and the Biteship courier prices switched on.</p>
+      <label class="chk"><input type="checkbox" data-k="settings::orpOn" ${s.orpOn!==false?"checked":""}> <b>Show this pop-up</b></label>
+      <div class="grid2" style="margin-top:8px"><label class="af">Shop latitude<input class="in" data-k="settings::shopLat" value="${esc(s.shopLat||"")}" maxlength="20" placeholder="-6.2088"></label><label class="af">Shop longitude<input class="in" data-k="settings::shopLng" value="${esc(s.shopLng||"")}" maxlength="20" placeholder="106.8456"></label></div>
+      <button class="ghost" type="button" data-orpgeo style="margin-top:6px">Use my Biteship pickup point</button>
+      <div class="grid2" style="margin-top:8px"><label class="af">Icon (emoji)<input class="in" data-k="settings::orpIcon" maxlength="8" value="${esc(s.orpIcon||"")}" placeholder="📍"></label>
+        <label class="af">Icon effect<select class="in" data-k="settings::orpFx">${ORP_FX.map(([v,l])=>`<option value="${v}" ${(s.orpFx||"bounce")===v?"selected":""}>${l}</option>`).join("")}</select></label></div>
+      <div class="af" style="margin-top:8px">Own picture or GIF instead of the icon<div class="colin" style="flex-wrap:wrap;gap:8px;align-items:center"><span>${imgOk(s.orpImg)?`<img class="lpthumb" style="max-height:48px;max-width:48px;border-radius:8px" src="${esc(imgOk(s.orpImg))}" alt="">`:`<span class="note" style="margin:0">None</span>`}</span><label class="ghost mqbtn">${imgOk(s.orpImg)?"Replace":"Upload picture or GIF"}<input type="file" accept="image/*" hidden data-orpimg></label>${imgOk(s.orpImg)?`<button class="danger" type="button" data-orpimgrm>Use the icon instead</button>`:""}</div>
+        <input class="in" style="margin-top:6px" data-k="settings::orpImg" maxlength="400" value="${esc(s.orpImg&&!/^data:/.test(s.orpImg)?s.orpImg:"")}" placeholder="Or paste a link (https://…) to a picture or GIF"></div>
+      <label class="af" style="margin-top:8px">Title<input class="in" data-k="settings::orpTitle" value="${esc(s.orpTitle||"")}" maxlength="80"></label>
+      <label class="af" style="margin-top:8px">Message<textarea class="in" rows="3" data-k="settings::orpText" maxlength="500">${esc(s.orpText||"")}</textarea></label>
+      <p class="note" style="margin:4px 0 0">Words you can use: <b>{km}</b> your delivery radius, <b>{far}</b> how far the customer's address is (in km, in a straight line).</p>
+      <div class="grid2" style="margin-top:8px"><label class="af">Button 1 (closes the pop-up)<input class="in" data-k="settings::orpOk" value="${esc(s.orpOk||"")}" maxlength="30" placeholder="OK, close"></label></div>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" data-k="settings::orpCtaOn" ${s.orpCtaOn!==false?"checked":""}> <b>Button 2: Contact us</b></label>
+      <div class="grid2" style="margin-top:6px"><label class="af">Button 2 text<input class="in" data-k="settings::orpCtaLabel" value="${esc(s.orpCtaLabel||"")}" maxlength="30" placeholder="Contact us"></label><label class="af">Button 2 link<input class="in" data-k="settings::orpCtaLink" value="${esc(s.orpCtaLink||"")}" maxlength="300" placeholder="WhatsApp number (0812…) or https://…"></label></div>
+      <p class="note" style="margin:4px 0 0">Type your WhatsApp number to open a WhatsApp chat, or paste any https link (Instagram, a form, email page…). Empty link = no second button.</p>
+      <button class="ghost" type="button" data-orpprev style="margin-top:8px">Preview pop-up</button>
       <h3 style="margin:18px 0 4px;font-size:15px">Ways to get an order</h3><p class="sub" style="margin:0 0 8px">Switch each one on or off. Lead time = how long before the pickup or delivery a customer must order.</p>
       <div class="stack" style="gap:10px">${[
         ["sameday","Sameday shipment","samedayOn","samedayLeadH","hours it takes to ship after payment is confirmed","hours"],
@@ -4610,6 +4645,7 @@ function viewSettings(){
 }
 
 /* --- admin wiring --- */
+function openOrpPreview(){openModal(`<div class="cw-card cw-prev">${orpCardHTML(DB.settings,(+DB.settings.deliveryKm||0)+7)}</div><p class="note" style="text-align:center">Preview only. Unsaved changes show here too. The distance shown (7 km over the radius) is just an example.</p><div style="text-align:center"><button class="ghost" type="button" data-mclose>Close preview</button></div>`,"orpprev")}
 function openCwPreview(){openModal(`<div class="cw-card cw-prev">${cwHTML()}</div><p class="note" style="text-align:center">Preview only. Unsaved changes show here too.</p><div style="text-align:center"><button class="ghost" type="button" data-mclose>Close preview</button></div>`,"cwprev")}
 function slotSync(){const t=DB.settings;t.slots.sort(slotSort);t.times=t.slots.filter(x=>x.on).map(x=>x.t);saveDB()}
 function setK(el){
@@ -4872,6 +4908,10 @@ am.addEventListener("click",e=>{
   else if(d.aadd!==undefined){const na={id:uid(),name:"New extra",desc:"",price:1,active:false};DB.addons.push(na);saveDB();toast("Extra added, turned off");renderAdmin();showNew(document.querySelector(`[data-k="addons:${na.id}:name"]`)?.closest("tr"))}
   else if(d.adel){delConfirm("this extra",()=>needOwner("delete an extra").then(()=>{DB.addons=DB.addons.filter(a=>a.id!==d.adel);saveDB();toast("Extra deleted");renderAdmin()}).catch(()=>{}))}
   else if(d.cwprev!==undefined){openCwPreview()}
+  else if(d.orpprev!==undefined){openOrpPreview()}
+  else if(d.orpx!==undefined){closeModal()}
+  else if(d.orpgeo!==undefined){const o=(BSA.cfg&&BSA.cfg.origin)||{};if(!o.lat||!o.lng){toast("Set the pickup latitude and longitude in the Biteship settings first.");return}DB.settings.shopLat=String(o.lat);DB.settings.shopLng=String(o.lng);saveDB();renderAdmin();toast("Shop location saved")}
+  else if(d.orpimgrm!==undefined){DB.settings.orpImg="";saveDB();renderAdmin();toast("Using the icon")}
   else if(d.slotadd!==undefined){const sl=DB.settings.slots,u=slotNext(sl);if(!u){toast("No room for another slot today.");return}sl.push({t:u,on:true,limit:0});slotSync();toast("Saved");renderAdmin();showNew([...document.querySelectorAll(".slotrow")].pop(),false)}
   else if(d.sdadd!==undefined){const sl=DB.settings.sdSlots=DB.settings.sdSlots||[],u=slotNext(sl);if(!u){toast("No room for another slot today.");return}sl.push({t:u,on:true,limit:0});sl.sort(slotSort);saveDB();toast("Saved");renderAdmin()}
   else if(d.sddel!==undefined){DB.settings.sdSlots.splice(+d.sddel,1);saveDB();toast("Saved");renderAdmin()}
@@ -6354,6 +6394,9 @@ am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   if(d.adimgrm){const a=DB.addons.find(x=>x.id===d.adimgrm);if(a){a.img="";delete a.imgCut;saveDB();renderAdmin();toast("Using the icon")}}
   else if(d.fbimgrm){DB.settings[d.fbimgrm+"Img"]="";delete DB.settings[d.fbimgrm+"ImgCut"];saveDB();renderAdmin();toast("Using the icon")}});
 /* Boxes & extras: pictures for the two buttons */
+am.addEventListener("change",async e=>{const el=e.target;if(!el.dataset||el.dataset.orpimg===undefined)return;const f=el.files[0];if(!f)return;
+  try{let u;if(f.type==="image/gif"){if(f.size>1.5e6){toast("That GIF is over 1.5 MB. Paste a link to it instead.");return}u=await readData(f)}else u=await lpResize(f,360,true);
+    const prev=DB.settings.orpImg;DB.settings.orpImg=u;if(!saveDB()){DB.settings.orpImg=prev;toast("Not enough storage space. Remove another photo first.");return}renderAdmin();toast("Picture saved")}catch(er){toast(er.message||"Couldn't add that picture.")}});
 am.addEventListener("change",async e=>{const el=e.target,k=el.dataset&&el.dataset.btnimg;if(!k||!/^((rb|fab)Img2?|guardImg)$/.test(k))return;const f=el.files[0];if(!f)return;
   try{const data=await lpResize(f,k==="fabImg"?220:k==="guardImg"?240:140,true),cut=await imgHasAlpha(f),prev=DB.settings[k],prevC=DB.settings[k+"Cut"];DB.settings[k]=data;DB.settings[k+"Cut"]=cut;
     if(!saveDB()){DB.settings[k]=prev;DB.settings[k+"Cut"]=prevC;toast("Not enough storage space. Remove another photo first.");return}renderAdmin();toast(cut?"Picture saved (see-through background kept)":"Picture saved (cropped round)")}catch(err){toast(err.message)}});

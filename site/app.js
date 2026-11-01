@@ -194,6 +194,7 @@ function migrate(db){
   if(db.settings.lowStockAt===undefined)db.settings.lowStockAt=10;
   if(db.settings.customOn===undefined)Object.assign(db.settings,{customOn:true,customMin:14,customStep:2,customMax:48,customPer:3.25});
   if(db.settings.fabGest===undefined)Object.assign(db.settings,{fabGest:true,fabBgType:"color",fabBg2:"#FF9F43",fabRing:"",fabImgSize:84,fabSizePx:58,fabOpacity:100,fabImg:"",rbImg:"",rbImg2:""});
+  if(db.settings.orpOn===undefined)Object.assign(db.settings,{orpOn:true,orpIcon:"📍",orpImg:"",orpFx:"bounce",orpTitle:"Sorry, that's a bit far",orpText:"We deliver within {km} km of the shop, and your address looks about {far} km away. Please contact us and we will try to help.",orpOk:"OK, close",orpCtaOn:true,orpCtaLabel:"Contact us",orpCtaLink:"",shopLat:"",shopLng:""});
   if(db.settings.guardOn===undefined)Object.assign(db.settings,{guardOn:true,guardClear:true,guardShuf:true,guardIcon:"🛡️",guardImg:"",
     guardClearTitle:"Clear your box?",guardClearText:"You already picked a courier. This will empty your whole box. Your courier choice stays.",guardClearOk:"Yes, clear it",guardClearNo:"Keep my box",
     guardShufTitle:"Shuffle your box?",guardShufText:"You already picked a courier. This swaps only the flavors we picked for you. The ones you chose yourself stay.",guardShufOk:"Yes, shuffle",guardShufNo:"Keep my box"});
@@ -1047,6 +1048,24 @@ function guardCardHTML(kind,t){
   const pic=imgOk(t.guardImg)?`<div class="gd-pic"><img class="${imgIsCut(t.guardImg,t.guardImgCut)?"cut":""}" src="${esc(imgOk(t.guardImg))}" alt="" draggable="false"></div>`:`<div class="cw-ring"><span class="cw-emo" aria-hidden="true">${esc(String(t.guardIcon||"").trim()||"🛡️")}</span></div>`;
   return `${pic}<h3 id="gdTitle">${esc(g("Title","Are you sure?"))}</h3>${g("Text","")?`<p>${esc(g("Text",""))}</p>`:""}<div class="cw-act"><button class="btn btn-blue" type="button" data-gdno>${esc(g("No","Keep my box"))}</button><button class="btn btn-ghost-blue" type="button" data-gdok>${esc(g("Ok","Yes"))}</button></div>`;
 }
+/* "out of delivery radius" pop-up: the owner sets the look, the words, and a Contact us link (Delivery & courier) */
+const ORP_FX=[["bounce","Bounce"],["wiggle","Wiggle"],["float","Float up and down"],["pulse","Pulse"],["spin","Slow spin"],["none","Still"]];
+function orpCardHTML(t,km){
+  const g=(k,d)=>String(t["orp"+k]||"").trim()||d,fx=ORP_FX.some(x=>x[0]===t.orpFx)?t.orpFx:"bounce",u=imgOk(t.orpImg);
+  const far=km===null||km===undefined?"?":String(Math.round(km*10)/10),txt=g("Text","").replace(/\{km\}/g,t.deliveryKm).replace(/\{far\}/g,far);
+  const pic=u?`<div class="orp-pic fx-${fx}"><img src="${esc(u)}" alt="" draggable="false"></div>`:`<div class="orp-pic fx-${fx}"><span class="orp-emo" aria-hidden="true">${esc(g("Icon","📍"))}</span></div>`;
+  const link=t.orpCtaOn!==false?socialUrl(t.orpCtaLink):"";
+  return `${pic}<h3 id="orpTitle">${esc(g("Title","Sorry, that's a bit far"))}</h3>${txt?`<p>${esc(txt).replace(/\n/g,"<br>")}</p>`:""}<div class="cw-act"><button class="btn btn-blue" type="button" data-orpx>${esc(g("Ok","OK, close"))}</button>${link?`<a class="btn btn-ghost-blue" href="${esc(link)}" target="_blank" rel="noopener">${esc(g("CtaLabel","Contact us"))}</a>`:""}</div>`;
+}
+// straight-line distance in km from the shop (latitude / longitude set in Delivery & courier) to the address the customer found on the map
+function orpDist(){const t=DB.settings,a=parseFloat(t.shopLat),b=parseFloat(t.shopLng),y=parseFloat(BSD.lat),x=parseFloat(BSD.lng);if(![a,b,x,y].every(isFinite))return null;
+  const R=6371,r=d=>d*Math.PI/180,dl=r(y-a),dg=r(x-b),h=Math.sin(dl/2)**2+Math.cos(r(a))*Math.cos(r(y))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+let orpSeen="";
+function farCheck(){const t=DB.settings;if(t.orpOn===false||S.mode!=="delivery"||!BSD.lat)return;const km=orpDist(),lim=+t.deliveryKm;if(km===null||!(lim>0)||km<=lim)return;
+  const key=BSD.lat+","+BSD.lng;if(orpSeen===key)return;orpSeen=key;$("#orpCard").innerHTML=orpCardHTML(t,km);$("#orpSheet").hidden=false;setTimeout(()=>{const b=$("#orpCard [data-orpx]");b&&b.focus()},60)}
+function closeOrp(){$("#orpSheet").hidden=true}
+$("#orpSheet").addEventListener("click",e=>{if(e.target.closest("[data-orpx]")||e.target.id==="orpSheet")closeOrp()});
+addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#orpSheet").hidden)closeOrp()});
 let gdFn=null;
 function guardBox(kind,fn){
   const t=DB.settings,on=t.guardOn!==false&&(kind==="clear"?t.guardClear!==false:t.guardShuf!==false);
@@ -1378,7 +1397,7 @@ async function bsRates(){
     if(my!==BSD.t)return;BSD.opts=r.options||[];BSD.err=BSD.opts.length?"":(r.error||"No courier is available for this address.");
     if(S.ship&&!BSD.opts.some(x=>x.sig===S.ship.sig)){S.ship=null}
   }catch(e){if(my!==BSD.t)return;BSD.opts=[];BSD.err=e.message==="BANNED"?"Courier prices are not available for this order.":e.message;if(e.message==="BANNED")banShow()}
-  BSD.busy=false;bsDraw();renderCoSummary();renderStore();
+  BSD.busy=false;bsDraw();renderCoSummary();renderStore();farCheck();
 }
 async function bsGeocode(){
   const addr=$("#coAddr").value.trim(),areaTxt=BSD.area?BSD.area.name:$("#bsArea").value.trim();if(!addr&&!areaTxt){BSD.err="Type your address (and your area) first.";bsDraw();return}
@@ -3170,7 +3189,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-10-31 23:56 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-01 00:11 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
