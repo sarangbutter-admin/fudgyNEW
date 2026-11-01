@@ -2183,3 +2183,15 @@ body{padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-l
 @keyframes afgFlow{to{background-position:300% 0}}
 @keyframes afsacRun{to{transform:translateX(-50%)}}
 @media (prefers-reduced-motion:reduce){html:not(.motion-on) .afsac,html:not(.motion-on) .afg-on{animation:none!important}html:not(.motion-on) .afsac-t{animation:none!important;overflow-x:auto;width:auto}}
+
+/* lively countdown for sacrifice mode: digit boxes, blinking colons, a ticking seconds box, red in the last minute */
+.afcd{display:inline-flex;align-items:center;gap:3px;vertical-align:middle;font-variant-numeric:tabular-nums;font-weight:900}
+.afcd b{min-width:1.7em;padding:3px 5px;border-radius:8px;text-align:center;line-height:1.1;color:#B0166A;background:#fff;box-shadow:0 2px 0 rgba(120,0,70,.28)}
+.afcd i{font-style:normal;font-weight:900;color:#fff;animation:afcdBlink 1s steps(2,jump-none) infinite}
+.afcd b.s{animation:afcdTick 1s ease-out}
+.afcd.hot b{color:#fff;background:#E5173F;animation:afcdHot .5s ease-in-out infinite alternate}
+.afcd.hot b.s{animation:afcdHot .5s ease-in-out infinite alternate}
+.afg-on{justify-content:space-between}.afg-w,.afsac-w{font-weight:900;display:inline-flex;align-items:center;gap:8px;letter-spacing:.04em}
+@keyframes afcdTick{0%{transform:translateY(-6px) scale(1.2);opacity:.4}100%{transform:none;opacity:1}}
+@keyframes afcdBlink{50%{opacity:.2}}@keyframes afcdHot{to{transform:scale(1.12)}}
+@media (prefers-reduced-motion:reduce){html:not(.motion-on) .afcd i,html:not(.motion-on) .afcd b{animation:none!important}}

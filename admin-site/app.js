@@ -49,7 +49,9 @@ function fmtDur(ms){ms=Math.max(0,ms);const s=Math.floor(ms/1000),d=Math.floor(s
 /* small "time left" chip for every timed offer (flash sale, discount, delivery promo, coupon with an end date) */
 function cdlText(ms){ms=Math.max(0,ms);const t=Math.floor(ms/1000),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),x=t%60,p=n=>String(n).padStart(2,"0");return d?`${d}d ${h}h`:h?`${h}h ${p(m)}m`:`${p(m)}:${p(x)}`}
 const cdlHTML=(end,cls="",ic="⏱")=>{end=+end;return end>Date.now()&&isFinite(end)?`<span class="cdl${cls?" "+cls:""}" data-cdl="${end}" data-cdi="${ic}">${ic} ${cdlText(end-Date.now())}</span>`:""};
-function tickCdl(now=Date.now()){document.querySelectorAll("[data-cdl]").forEach(el=>{const l=+el.dataset.cdl-now,t=l>0?(el.dataset.cdi||"⏱")+" "+cdlText(l):"Ended";if(el.textContent!==t)el.textContent=t})}
+function cdLiveInner(ms){ms=Math.max(0,ms);const t=Math.floor(ms/1000),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),x=t%60,p=n=>String(n).padStart(2,"0");return (d?`<b>${d}</b><i>d</i>`:"")+`<b>${p(h)}</b><i>:</i><b>${p(m)}</b><i>:</i><b class="s">${p(x)}</b>`}
+const cdLiveHTML=end=>`<span class="afcd" data-cdlive="${+end}" role="timer">${cdLiveInner(+end-Date.now())}</span>`;
+function tickCdl(now=Date.now()){document.querySelectorAll("[data-cdlive]").forEach(el=>{const l=+el.dataset.cdlive-now;el.innerHTML=cdLiveInner(l);el.classList.toggle("hot",l>0&&l<60000)});document.querySelectorAll("[data-cdl]").forEach(el=>{const l=+el.dataset.cdl-now,t=l>0?(el.dataset.cdi||"⏱")+" "+cdlText(l):"Ended";if(el.textContent!==t)el.textContent=t})}
 function fmtAgo(ms){const m=Math.round((Date.now()-ms)/60000);if(m<1)return "just now";if(m<60)return m+" min ago";const h=Math.round(m/60);if(h<24)return h+" hr ago";return Math.round(h/24)+" d ago"}
 const fmtShort = ms => new Date(ms).toLocaleDateString(LOC(),{month:"short",day:"numeric"});
 const starStr = n => "★".repeat(n)+"☆".repeat(5-n);
@@ -6872,7 +6874,7 @@ function afGiveHTML(c){if(!(+c.giveMax>0))return "";const max=+c.giveMax,g=AFM.g
   return `<div class="afgive" id="afGiveBox" style="--p:${pct}%">
     <span class="afg-sp s1" aria-hidden="true">✨</span><span class="afg-sp s2" aria-hidden="true">💖</span><span class="afg-sp s3" aria-hidden="true">✨</span>
     <div class="afg-h"><span class="afg-ic" aria-hidden="true">🤝</span><div><b>Share my commission</b><small>Give your followers a bigger discount. You trade some of your commission for it.</small></div></div>
-    ${live?`<div class="afg-on">🔥 Sacrifice mode is ON ${cdlHTML(c.giveUntil,"","⏱")}</div>`:+c.give>0?`<div class="afg-on">🔥 Sacrifice mode is ON · no end time</div>`:""}
+    ${+c.give>0?`<div class="afg-on"><span>🔥 Sacrifice mode is ON</span>${+c.giveUntil>0?`<span class="afg-w">ENDS IN ${cdLiveHTML(c.giveUntil)}</span>`:`<span class="afg-w">♾️ NO END</span>`}</div>`:""}
     <div class="afg-big"><span>Your customers get</span><strong id="afgBig">${base+g}% off</strong><small id="afgBase">${g>0?`${base}% from the shop + <b>${g}% from you</b> 💝`:`${base}% from the shop. Slide to add more!`}</small></div>
     <input class="afg-rg" id="afGive" type="range" min="0" max="${max}" step="0.5" value="${g}" aria-label="Points of my commission I give to my customers">
     <div class="afg-ends"><span>Keep it all</span><span>Give up to ${max}%</span></div>
@@ -6882,7 +6884,7 @@ function afGiveHTML(c){if(!(+c.giveMax>0))return "";const max=+c.giveMax,g=AFM.g
     <p class="afg-note">Orders from your link <b>without</b> the coupon still earn the full <b>${rate}%</b>. When the time ends, your commission goes back to normal by itself.</p>
     <button class="afg-save" type="button" data-afgivesave ${AFM.busy||!dirty?"disabled":""}><span>${AFM.busy?"Saving…":g>0?"Start sacrifice mode":"Save my choice"}</span></button></div>`}
 // the blinking marquee at the top of the dashboard while sacrifice mode is on
-function afSacHTML(){const c=AFM.cpn;if(!c||!c.ok||!(+c.give>0))return "";const live=+c.giveUntil>Date.now(),part=`<span>🔥 SACRIFICE MODE ON</span><span>Your customers get <b>${+c.value}% off</b></span><span>You earn <b>${Math.max(0,+c.rate-+c.give)}%</b> on coupon orders</span>${live?`<span>${cdlHTML(c.giveUntil,"","⏱")} left</span>`:`<span>no end time</span>`}`;
+function afSacHTML(){const c=AFM.cpn;if(!c||!c.ok||!(+c.give>0))return "";const part=`<span>🔥 SACRIFICE MODE ON</span><span>Your customers get <b>${+c.value}% off</b></span><span>You earn <b>${Math.max(0,+c.rate-+c.give)}%</b> on coupon orders</span>${+c.giveUntil>0?`<span>ENDS IN ${cdLiveHTML(c.giveUntil)}</span>`:`<span>♾️ NO END</span>`}`;
   return `<div class="afsac" role="status" aria-label="Sacrifice mode is on"><div class="afsac-t"><div>${part}${part}</div><div aria-hidden="true">${part}${part}</div></div></div>`}
 // live update while the slider moves (no re-draw, so the slider is never interrupted)
 function afGiveLive(g){const c=AFM.cpn;if(!c)return;const max=+c.giveMax,base=+c.baseValue,rate=+c.rate,$i=id=>document.getElementById(id);AFM.gd=g;
@@ -7294,7 +7296,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-01 08:32 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-01 08:47 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afSacHTML()}${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
