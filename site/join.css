@@ -79,6 +79,9 @@ body{padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-l
 #ddSplash .lid{transform-box:fill-box;transform-origin:100% 100%;animation:ddlid 1.5s ease-in-out infinite}
 #ddSplash .ck{transform-box:fill-box;transform-origin:50% 100%;animation:ddck 1.5s ease-in-out infinite}
 @keyframes ddin{to{opacity:1}}
+#ddSplash.ddw>*{visibility:hidden}
+#ddSplash.ddw::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:currentColor;box-shadow:26px 0 currentColor,-26px 0 currentColor;animation:ddgo 1s ease-in-out infinite}
+@keyframes ddgo{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-8px);opacity:1}}
 #ddSplash .lg{display:block;width:auto;height:auto;max-width:130px;max-height:130px;object-fit:contain;animation:ddbob 1.5s ease-in-out infinite}
 @keyframes ddbob{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-10px) rotate(-4deg)}60%{transform:translateY(0) rotate(3deg)}}
 @keyframes ddlid{0%,100%{transform:translateY(0) rotate(0)}35%,65%{transform:translateY(-5px) rotate(-16deg)}}
