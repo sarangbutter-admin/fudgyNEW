@@ -197,6 +197,7 @@ function migrate(db){
   if(db.settings.lowStockAt===undefined)db.settings.lowStockAt=10;
   if(db.settings.customOn===undefined)Object.assign(db.settings,{customOn:true,customMin:14,customStep:2,customMax:48,customPer:3.25});
   if(db.settings.fabGest===undefined)Object.assign(db.settings,{fabGest:true,fabBgType:"color",fabBg2:"#FF9F43",fabRing:"",fabImgSize:84,fabSizePx:58,fabOpacity:100,fabImg:"",rbImg:"",rbImg2:""});
+  if(db.settings.orpBlock===undefined)db.settings.orpBlock=true;
   if(db.settings.orpOn===undefined)Object.assign(db.settings,{orpOn:true,orpIcon:"📍",orpImg:"",orpFx:"bounce",orpTitle:"Sorry, that's a bit far",orpText:"We deliver within {km} km of the shop, and your address looks about {far} km away. Please contact us and we will try to help.",orpOk:"OK, close",orpCtaOn:true,orpCtaLabel:"Contact us",orpCtaLink:"",shopLat:"",shopLng:""});
   if(db.settings.guardOn===undefined)Object.assign(db.settings,{guardOn:true,guardClear:true,guardShuf:true,guardIcon:"🛡️",guardImg:"",
     guardClearTitle:"Clear your box?",guardClearText:"You already picked a courier. This will empty your whole box. Your courier choice stays.",guardClearOk:"Yes, clear it",guardClearNo:"Keep my box",
@@ -624,6 +625,7 @@ function ctaState(){
   const left=S.size-boxN();
   if(S.step===1) return left>0?{label:`Pick ${left} more`,dis:false,go:"pick"}:!S.closed?{label:"🔒 Close the box",dis:false,go:"close"}:{label:"Choose a day",dis:false,go:"step2"};
   if(!S.day||!S.time) return {label:optOf(S)==="sameday"?"Pick a time for today":"Pick a day and time",dis:false,go:"when"};
+  if(orpFarKm()!==null)return {label:"Outside our delivery area",dis:false,go:"farblock"};
   if(bsPending(S))return {label:`Checkout (${money(total())})`,dis:false,go:"needcourier"};
   return {label:`Checkout (${money(total())})`,dis:false,go:"checkout"};
 }
@@ -709,7 +711,7 @@ function renderStore(){
   renderCoupon(q);renderGiftBox();
   $("#total").textContent=money(total());
   const c=ctaState();
-  for(const b of [$("#panelCta"),$("#barCta")]){b.textContent=c.label;b.disabled=c.dis;b.dataset.go=c.go||"";b.classList.toggle("ready",!c.dis&&c.go!=="when"&&c.go!=="needcourier");b.classList.toggle("pickmore",c.go==="pick");b.classList.toggle("closecta",c.go==="close")}
+  for(const b of [$("#panelCta"),$("#barCta")]){b.textContent=c.label;b.disabled=c.dis;b.dataset.go=c.go||"";b.classList.toggle("ready",!c.dis&&c.go!=="when"&&c.go!=="needcourier"&&c.go!=="farblock");b.classList.toggle("pickmore",c.go==="pick");b.classList.toggle("closecta",c.go==="close")}
   if(c.go!=="needcourier"){const m=$("#ctaMsg");if(m)m.hidden=true}
   $("#clearBtn").disabled=!boxN();
   $("#randBtn").disabled=!availProducts().length;
@@ -1073,6 +1075,9 @@ function orpCardHTML(t,km){
 // straight-line distance in km from the shop (latitude / longitude set in Delivery & courier) to the address the customer found on the map
 function orpDist(){const t=DB.settings,a=parseFloat(t.shopLat),b=parseFloat(t.shopLng),y=parseFloat(BSD.lat),x=parseFloat(BSD.lng);if(![a,b,x,y].every(isFinite))return null;
   const R=6371,r=d=>d*Math.PI/180,dl=r(y-a),dg=r(x-b),h=Math.sin(dl/2)**2+Math.cos(r(a))*Math.cos(r(y))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+// true while delivery is blocked: the pop-up is on, "stop the order" is on, and the address the customer found is farther than the radius
+function orpFarKm(){const t=DB.settings;if(t.orpOn===false||t.orpBlock===false||S.mode!=="delivery"||!BSD.lat)return null;const km=orpDist(),lim=+t.deliveryKm;return km!==null&&lim>0&&km>lim?km:null}
+function showOrpNow(){const km=orpDist();$("#orpCard").innerHTML=orpCardHTML(DB.settings,km);$("#orpSheet").hidden=false;setTimeout(()=>{const b=$("#orpCard [data-orpx]");b&&b.focus()},60)}
 let orpSeen="";
 function farCheck(){const t=DB.settings;if(t.orpOn===false||S.mode!=="delivery"||!BSD.lat)return;const km=orpDist(),lim=+t.deliveryKm;if(km===null||!(lim>0)||km<=lim)return;
   const key=BSD.lat+","+BSD.lng;if(orpSeen===key)return;orpSeen=key;$("#orpCard").innerHTML=orpCardHTML(t,km);$("#orpSheet").hidden=false;setTimeout(()=>{const b=$("#orpCard [data-orpx]");b&&b.focus()},60)}
@@ -1206,6 +1211,7 @@ $("#cwSheet").addEventListener("click",e=>{if(e.target.closest("[data-cwok]")){c
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeCoWarn()});
 function cta(go){if(go==="pick"){if(document.activeElement)document.activeElement.blur();scrollToEl($("#menuGrid"));return}
   if(go==="when"){if(document.activeElement)document.activeElement.blur();const sd=$("#dayBlock").hidden;scrollToEl($(!sd&&!S.day?"#dayBlock":!$("#timeBlock").hidden&&(!sd||!S.time)?"#timeBlock":!sd&&S.day&&!$("#timeBlock").hidden?"#timeBlock":"#step2"));return}
+  if(go==="farblock"){showOrpNow();return}
   if(go==="needcourier"){bsNudge();return}
   if(go==="close"){closeBox();return}
   if(go==="step2")goStep(2);else if(go==="checkout")openCoWarn()}
@@ -1607,12 +1613,13 @@ $("#coForm").addEventListener("submit",e=>{
     $("#coErr").hidden=false;sanitizeCart();renderStoreStatic();renderStore();return}
   const q=quote({...S,phone:$("#coPhone").value.trim()}),del=S.mode==="delivery",ed=S.editId?DB.orders.find(x=>x.id===S.editId&&x.status==="awaiting"):null;
   if(S.coupon&&q.couponErr){const m=q.couponErr;S.coupon="";$("#coErr").textContent=m+" The coupon was removed, so please check your new total.";$("#coErr").hidden=false;renderStore();openCheckout();return}
+  if(orpFarKm()!==null){$("#coErr").textContent="Sorry, that address is outside our delivery area. Please choose pickup, or contact us.";$("#coErr").hidden=false;showOrpNow();return}
   if(bsPending(S)){$("#coErr").textContent="Please choose a courier to see your delivery price.";$("#coErr").hidden=false;bsSumDraw();$("#bsSum").scrollIntoView({block:"center"});return}
   if(S.mode!=="pickup"&&S.speed==="sameday"&&!S.sdLate&&!samedayOpen()&&samedayLate()){openSdPop();return}
   const notify=(document.querySelector('input[name="coNotify"]:checked')||{value:"both"}).value;
   const cust={name:$("#coName").value.trim(),email:$("#coEmail").value.trim(),phone:$("#coPhone").value.trim(),
     address:del?$("#coAddr").value.trim():""};
-  const fields={notify,size:S.size,items:countItems(S.box),mode:S.mode,speed:S.mode==="pickup"?"pickup":S.speed,day:S.day,time:S.time,note:S.note,addons:[...S.addons],sale:q.sale?`${q.sale.name} (${saleOffText(q.sale)})`:"",
+  const fields={notify,loc:S.mode==="delivery"&&BSD.lat&&BSD.lng?{lat:BSD.lat,lng:BSD.lng}:null,size:S.size,items:countItems(S.box),mode:S.mode,speed:S.mode==="pickup"?"pickup":S.speed,day:S.day,time:S.time,note:S.note,addons:[...S.addons],sale:q.sale?`${q.sale.name} (${saleOffText(q.sale)})`:"",
     base:q.base,discount:q.discount,coupon:q.coupon?q.coupon.code:"",couponDisc:q.couponDisc,surcharge:q.surcharge,addonsTotal:q.addons,fee:q.fee,total:q.total,customer:cust,gifts:ed&&ed.size===S.size&&ed.gifts?ed.gifts:[],giftsAt:ed&&ed.size===S.size&&ed.gifts?ed.giftsAt:undefined,...(S.mode==="delivery"&&(S.dnote||S.dphoto)?{place:{note:String(S.dnote||"").slice(0,200),photo:!!S.dphoto,img:S.dphoto||"",at:Date.now()}}:{})};
   if(SBH.on){
     const btn=f.querySelector("button[type=submit]");if(btn)btn.disabled=true;
@@ -4432,8 +4439,9 @@ function viewDelivery(){
       <div class="grid2">
         <label class="af">Delivery radius<div class="money-in"><input class="in" type="number" min="1" data-k="settings::deliveryKm" value="${s.deliveryKm}"><span style="padding-right:10px">km</span></div></label>
       </div>
-      <h3 style="margin:18px 0 4px;font-size:15px">Outside the delivery radius pop-up</h3><p class="sub" style="margin:0 0 8px">Shown in the middle of the screen when the address a customer finds on the map is farther from your shop than the radius above. It only informs: the customer can still go on. It needs your shop location below and the Biteship courier prices switched on.</p>
+      <h3 style="margin:18px 0 4px;font-size:15px">Outside the delivery radius pop-up</h3><p class="sub" style="margin:0 0 8px">Shown in the middle of the screen when the address a customer finds on the map is farther from your shop than the radius above. With "Also stop the order" on, that customer cannot place a delivery order for it. It needs your shop location below and the Biteship courier prices switched on.</p>
       <label class="chk"><input type="checkbox" data-k="settings::orpOn" ${s.orpOn!==false?"checked":""}> <b>Show this pop-up</b></label>
+      <label class="chk" style="margin-top:6px"><input type="checkbox" data-k="settings::orpBlock" ${s.orpBlock!==false?"checked":""}> <b>Also stop the order</b> <span class="note" style="margin:0">(delivery is blocked for an address outside the radius. The customer can choose pickup or contact you. The server checks it too.)</span></label>
       <div class="grid2" style="margin-top:8px"><label class="af">Shop latitude<input class="in" data-k="settings::shopLat" value="${esc(s.shopLat||"")}" maxlength="20" placeholder="-6.2088"></label><label class="af">Shop longitude<input class="in" data-k="settings::shopLng" value="${esc(s.shopLng||"")}" maxlength="20" placeholder="106.8456"></label></div>
       <button class="ghost" type="button" data-orpgeo style="margin-top:6px">Use my Biteship pickup point</button>
       <div class="grid2" style="margin-top:8px"><label class="af">Icon (emoji)<input class="in" data-k="settings::orpIcon" maxlength="8" value="${esc(s.orpIcon||"")}" placeholder="📍"></label>
@@ -7231,7 +7239,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-01 00:11 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-01 00:15 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
