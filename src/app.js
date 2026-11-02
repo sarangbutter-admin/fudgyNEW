@@ -2565,11 +2565,12 @@ function cqPlate(p){const g=plateBg(p),inner=plateInner(p)||"";let body=inner;
     body=`<img class="ck cq-ck" src="${u}" alt="" draggable="false" decoding="async">`}
   return `<div class="plate${g.dark?" dark":""}${inner?"":" blank"}" style="${esc(g.css)}">${body}</div>`}
 function cqPlusHTML(c){const pl=c.plus||{},img=imgOk(pl.img);return img?`<img src="${esc(img)}" alt="" draggable="false">`:esc(String(pl.icon||"+").slice(0,4))}
+let CQ_BEST=null;   // best sellers, worked out once for each draw of the carousel
 function cqCardHTML(o,dup){const {p,it}=o,c=cqCfg(),pl=c.plus||{},k=cqKey(o),fx=["pulse","wiggle","none"].includes(pl.fx)?pl.fx:"pulse",tb=dup?` tabindex="-1"`:"",cfx=CQ_FX.includes(it.fx)?` cfx-${it.fx}`:"";
   if(!p)return `<article class="cq-card cq-cust" data-cqid="${esc(k)}"><div class="cq-pl${cfx}" data-cqopen="${esc(k)}"><div class="cq-media">${cqMediaHTML(it)}</div></div>
     <h4>${esc(it.title||"")}</h4>${it.sub?`<p class="cq-cs">${esc(it.sub)}</p>`:""}<button class="cq-plus fx-${fx}" type="button" data-cqopen="${esc(k)}"${tb} aria-label="See more about ${esc(it.title||"this card")}">${cqPlusHTML(c)}</button></article>`;
-  const out=isOut(p);
-  return `<article class="cq-card${out?" out":""}" data-cqid="${esc(p.id)}"><div class="cq-pl${cfx}" data-cqopen="${esc(p.id)}">${cqPlate(p)}${c.price!==false&&p.surcharge>0?`<span class="cq-x">+${money(p.surcharge)}</span>`:""}${out?`<span class="cq-sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:""}</div>
+  const out=isOut(p),bd=badgesOf(p,CQ_BEST||undefined).slice(0,2),low=!out&&p.track&&p.stock<=DB.settings.lowStockAt?`<span class="stk">Only ${p.stock} left</span>`:"";
+  return `<article class="cq-card${out?" out":""}" data-cqid="${esc(p.id)}"><div class="cq-pl${cfx}" data-cqopen="${esc(p.id)}">${cqPlate(p)}${c.price!==false&&p.surcharge>0?`<span class="cq-x">+${money(p.surcharge)}</span>`:""}${out?`<span class="cq-sold">${p.status==="soldout"?"Sold out today":"Out of stock"}</span>`:low}${bd.length?`<div class="bdgs">${bd.map(badgeHTML).join("")}</div>`:""}</div>
     <h4>${esc(p.name)}</h4><button class="cq-plus fx-${fx}" type="button" data-cqopen="${esc(p.id)}"${tb} aria-label="See the details of ${esc(p.name)}">${cqPlusHTML(c)}</button></article>`}
 function cqStop(){clearTimeout(CQ.rt);CQ.tr=CQ.row=CQ.dw=null}
 // the shop page shows it while the shop is open; the pre-launch page has its own copy below the mini game
@@ -2582,7 +2583,7 @@ function cqMount(el,force,pre){const c=cqCfg(),list=cqList(),on=(pre?c.pre!==fal
   cqStop();if(!on){el.hidden=true;el.innerHTML="";return}
   el.hidden=false;
   const cw=CQ_SZ[c.size]||CQ_SZ.M,vw=Math.max(el.clientWidth||0,innerWidth||0,320),r=Math.max(1,Math.ceil(1.3*vw/((cw+14)*list.length))),
-    seq=Array.from({length:r}).flatMap(()=>list),set=k=>`<div class="cq-copy"${k?` aria-hidden="true"`:""}>${seq.map(o=>cqCardHTML(o,k)).join("")}</div>`;
+    seq=(CQ_BEST=bestIds(),Array.from({length:r}).flatMap(()=>list)),set=k=>`<div class="cq-copy"${k?` aria-hidden="true"`:""}>${seq.map(o=>cqCardHTML(o,k)).join("")}</div>`;
   el.style.cssText=`--cqw:${cw}px;--cqbg:${hexOk(c.bg,"#FFF4D6")};--cqink:${hexOk(c.ink,"#0B0B45")};--cqac:${hexOk(c.accent,"#000096")};--cqpb:${hexOk((c.plus||{}).bg,"#000096")};--cqpc:${hexOk((c.plus||{}).color,"#ffffff")}`;
   el.innerHTML=`<div class="wrap">${c.title?`<h2 class="cq-t">${esc(c.title)}</h2>`:""}${c.sub?`<p class="cq-s">${esc(c.sub)}</p>`:""}</div>
     <div class="cq-rel"><button class="cq-arr l" type="button" data-cqarr="-1" aria-label="Previous flavors">‹</button><div class="cq-track cq-paused" id="cqTrack" tabindex="0" role="region" aria-label="Flavors. Drag or swipe to browse."><div class="cq-drag"><div class="cq-row${c.dir==="right"?" rev":""}">${set(0)}${set(1)}${set(2)}</div></div></div><button class="cq-arr r" type="button" data-cqarr="1" aria-label="Next flavors">›</button></div>`;

@@ -2204,3 +2204,8 @@ body{padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-l
 .afg-chips .afg-c:disabled{cursor:not-allowed}
 
 .afgive{overflow:hidden;overflow:clip}   /* clip cannot be scrolled by focus or scrollIntoView, so the glow layer never shows through */
+
+/* carousel cards: the same badges as the flavor menu (colored badges at the bottom of the plate, "Only N left" at the top right) */
+.cq-pl .stk{left:auto;right:8px;top:8px}
+.cq-pl .bdgs{bottom:-8px}
+.cq-card h4{margin-top:14px}
