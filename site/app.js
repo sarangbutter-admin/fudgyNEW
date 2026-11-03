@@ -338,27 +338,34 @@ function quote(c,db=DB,{at=Date.now(),withDelivery=true}={}){
   const addons=r2((c.addons||[]).reduce((a,id)=>{const x=db.addons.find(y=>y.id===id&&y.active);return a+(x?x.price:0)},0));
   const cp=c.coupon?couponCheck(c.coupon,c,db,{base,saleDisc:discount,phone:c.phone,excl:c.editId}):null;
   const couponDisc=cp&&cp.ok?cp.discount:0;
+  const fdc0=FDC;FDC={before:r2(base+surcharge+addons),after:r2(base-discount-couponDisc+surcharge+addons)};
   const fdSale=at&&c.mode==="delivery"?freeDelSale(c.size,at,db):null;
   const shipQ=withDelivery?bsShip(c,at||Date.now(),db):null,cpFree=!!(cp&&cp.ok&&cp.freeDel);
-  const fdAll=at&&c.mode==="delivery"?db.sales.find(x=>isFD(x)&&saleStatus(x,at)==="live"&&fdApplies(x,c.size,db)&&x.kind!=="amount"&&!fdKinds(x))||null:null;
+  const fdAll=at&&c.mode==="delivery"?db.sales.find(x=>isFD(x)&&saleStatus(x,at)==="live"&&fdApplies(x,c.size,db)&&x.kind!=="amount"&&!fdKinds(x)&&fdMinOk(x))||null:null;
   const noFee=cpFree||!!fdAll;   // a free promo for every courier: no need to pick a courier to know the price
   const feePending=withDelivery&&c.mode==="delivery"&&!noFee&&!shipQ&&bsPending(c,db);
   const feeRaw=withDelivery&&c.mode==="delivery"?(shipQ?+shipQ.price:feePending?0:(c.speed==="sameday"?(db.settings.samedayFee??db.settings.deliveryFee):storeFee(c.size,db))):0;
   const fdUsed=fdAll||(at&&c.mode==="delivery"&&!feePending?fdFor(c.size,shipQ||"store",feeRaw,at,db):null);
   const fee=cpFree||feePending?(cpFree?0:feeRaw):fdAll?0:fdApply(fdUsed,feeRaw,shipQ||"store"),feeWas=fee<feeRaw?feeRaw:0;
+  FDC=fdc0;
   return {ship:shipQ,feePending,feeWas,base,sale,fdSale:fdUsed||fdSale,discount,surcharge,addons,fee,coupon:cp&&cp.ok?cp.coupon:null,couponDisc,couponErr:cp&&!cp.ok?cp.err:"",total:r2(base-discount-couponDisc+surcharge+addons+fee)};
 }
-const saleOffText = s => isFD(s)?(s.kind==="amount"?`${money(s.amount)} off delivery`:"Free delivery")+(fdKinds(s)?` (${fdKindsText(s)})`:""):isGift(s)?"Free gifts":s.type==="percent"?`${s.value}% off`:`${money(s.value)} off`;
+const saleOffText = s => isFD(s)?(s.kind==="amount"?`${money(s.amount)} off delivery`:"Free delivery")+(fdKinds(s)?` (${fdKindsText(s)})`:"")+(+s.minSpend>0?` over ${money(s.minSpend)}`:""):isGift(s)?"Free gifts":s.type==="percent"?`${s.value}% off`:`${money(s.value)} off`;
 function giftAppliesText(s){const ps=[...new Set(s.rules.map(r=>+r.from===+r.to&&DB.sizes.some(z=>z.n===+r.from)?`box of ${r.from}`:`custom boxes of ${r.from} to ${r.to}`))];
   return ps.length>1?ps.slice(0,-1).join(", ")+" and "+ps[ps.length-1]:ps[0]}
-const fdx=D=>{const k=(D.dkinds||[]).filter(x=>FD_KINDS.includes(x));return {scope:k.length===1&&k[0]==="store"?"store":"all",kinds:k,kind:D.dkind==="amount"?"amount":"free",amount:D.dkind==="amount"?Math.max(0,Math.round(+D.damount||0)):0}};
+const fdx=D=>{const k=(D.dkinds||[]).filter(x=>FD_KINDS.includes(x));return {scope:k.length===1&&k[0]==="store"?"store":"all",kinds:k,kind:D.dkind==="amount"?"amount":"free",amount:D.dkind==="amount"?Math.max(0,Math.round(+D.damount||0)):0,minSpend:Math.max(0,Math.round(+D.minSpend||0)),minBasis:D.minBasis==="before"?"before":"after"}};
 /* a delivery promo takes the delivery price down: free or an amount off. src "bite" = a Biteship courier, "store" = the Store Courier / sameday. A "store only" promo leaves Biteship prices alone. */
 /* delivery promo filter: kinds = which delivery options get it (empty = all). "store" = the Store Courier, then Biteship services by their codes: sameday, instant, car (instant car) */
 const FD_KINDS=["store","sameday","instant","car"];
 const bsPromoKind=x=>{const t=String([x.courier,x.service].join(" ")).toLowerCase();if(/(^|[^a-z])(car|mpv|van|truck|pickup|mobil)([^a-z]|$)/.test(t))return "car";if(/same[ _-]?day/.test(t))return "sameday";if(/instant|gojek|grab|lalamove|borzo|deliveree|bike|motor|ojek/.test(t))return "instant";return "regular"};
 const fdKey=src=>src==="store"?"store":src&&typeof src==="object"?bsPromoKind(src):"bite";
 const fdKinds=s=>Array.isArray(s.kinds)&&s.kinds.length?s.kinds:(s.scope==="store"?["store"]:null);
-const fdApply=(s,fee,src)=>{if(!s)return fee;const k=fdKinds(s);if(k&&!k.includes(fdKey(src)))return fee;return s.kind==="amount"?Math.max(0,r2(fee-(+s.amount||0))):0};
+// minimum purchase for a delivery promo: counted before discounts (box + extras) or after the flash sale and coupon discount, as the owner chose. FDC = the cart being priced right now (set by quote()).
+let FDC=null,fdBusy=false;
+function fdSpend(){if(fdBusy)return null;fdBusy=true;try{const q=quote(S,DB,{withDelivery:false});return {before:r2(q.base+q.surcharge+q.addons),after:r2(q.base-q.discount-q.couponDisc+q.surcharge+q.addons)}}catch(e){return null}finally{fdBusy=false}}
+const fdMinOk=s=>{if(!s||!(+s.minSpend>0))return true;const c=FDC||fdSpend();if(!c)return true;return (s.minBasis==="before"?c.before:c.after)>=+s.minSpend};
+const fdMinText=s=>+s.minSpend>0?` · min ${money(s.minSpend)} ${s.minBasis==="before"?"before discounts":"after discounts"}`:"";
+const fdApply=(s,fee,src)=>{if(!s)return fee;if(!fdMinOk(s))return fee;const k=fdKinds(s);if(k&&!k.includes(fdKey(src)))return fee;return s.kind==="amount"?Math.max(0,r2(fee-(+s.amount||0))):0};
 const fdFor=(n,src,fee,at=Date.now(),db=DB)=>{let best=null,bv=fee;db.sales.forEach(x=>{if(!isFD(x)||saleStatus(x,at)!=="live"||!fdApplies(x,n,db))return;const v=fdApply(x,fee,src);if(v<bv){bv=v;best=x}});return best};
 const fdStoreOnly=s=>{const k=s&&fdKinds(s);return !!(k&&k.length===1&&k[0]==="store")};
 const FD_LBL={sameday:"Sameday",instant:"Instant",car:"Instant car"};
@@ -3258,7 +3265,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-03 13:55 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-03 13:57 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afSacHTML()}${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

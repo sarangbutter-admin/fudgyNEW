@@ -343,27 +343,34 @@ function quote(c,db=DB,{at=Date.now(),withDelivery=true}={}){
   const addons=r2((c.addons||[]).reduce((a,id)=>{const x=db.addons.find(y=>y.id===id&&y.active);return a+(x?x.price:0)},0));
   const cp=c.coupon?couponCheck(c.coupon,c,db,{base,saleDisc:discount,phone:c.phone,excl:c.editId}):null;
   const couponDisc=cp&&cp.ok?cp.discount:0;
+  const fdc0=FDC;FDC={before:r2(base+surcharge+addons),after:r2(base-discount-couponDisc+surcharge+addons)};
   const fdSale=at&&c.mode==="delivery"?freeDelSale(c.size,at,db):null;
   const shipQ=withDelivery?bsShip(c,at||Date.now(),db):null,cpFree=!!(cp&&cp.ok&&cp.freeDel);
-  const fdAll=at&&c.mode==="delivery"?db.sales.find(x=>isFD(x)&&saleStatus(x,at)==="live"&&fdApplies(x,c.size,db)&&x.kind!=="amount"&&!fdKinds(x))||null:null;
+  const fdAll=at&&c.mode==="delivery"?db.sales.find(x=>isFD(x)&&saleStatus(x,at)==="live"&&fdApplies(x,c.size,db)&&x.kind!=="amount"&&!fdKinds(x)&&fdMinOk(x))||null:null;
   const noFee=cpFree||!!fdAll;   // a free promo for every courier: no need to pick a courier to know the price
   const feePending=withDelivery&&c.mode==="delivery"&&!noFee&&!shipQ&&bsPending(c,db);
   const feeRaw=withDelivery&&c.mode==="delivery"?(shipQ?+shipQ.price:feePending?0:(c.speed==="sameday"?(db.settings.samedayFee??db.settings.deliveryFee):storeFee(c.size,db))):0;
   const fdUsed=fdAll||(at&&c.mode==="delivery"&&!feePending?fdFor(c.size,shipQ||"store",feeRaw,at,db):null);
   const fee=cpFree||feePending?(cpFree?0:feeRaw):fdAll?0:fdApply(fdUsed,feeRaw,shipQ||"store"),feeWas=fee<feeRaw?feeRaw:0;
+  FDC=fdc0;
   return {ship:shipQ,feePending,feeWas,base,sale,fdSale:fdUsed||fdSale,discount,surcharge,addons,fee,coupon:cp&&cp.ok?cp.coupon:null,couponDisc,couponErr:cp&&!cp.ok?cp.err:"",total:r2(base-discount-couponDisc+surcharge+addons+fee)};
 }
-const saleOffText = s => isFD(s)?(s.kind==="amount"?`${money(s.amount)} off delivery`:"Free delivery")+(fdKinds(s)?` (${fdKindsText(s)})`:""):isGift(s)?"Free gifts":s.type==="percent"?`${s.value}% off`:`${money(s.value)} off`;
+const saleOffText = s => isFD(s)?(s.kind==="amount"?`${money(s.amount)} off delivery`:"Free delivery")+(fdKinds(s)?` (${fdKindsText(s)})`:"")+(+s.minSpend>0?` over ${money(s.minSpend)}`:""):isGift(s)?"Free gifts":s.type==="percent"?`${s.value}% off`:`${money(s.value)} off`;
 function giftAppliesText(s){const ps=[...new Set(s.rules.map(r=>+r.from===+r.to&&DB.sizes.some(z=>z.n===+r.from)?`box of ${r.from}`:`custom boxes of ${r.from} to ${r.to}`))];
   return ps.length>1?ps.slice(0,-1).join(", ")+" and "+ps[ps.length-1]:ps[0]}
-const fdx=D=>{const k=(D.dkinds||[]).filter(x=>FD_KINDS.includes(x));return {scope:k.length===1&&k[0]==="store"?"store":"all",kinds:k,kind:D.dkind==="amount"?"amount":"free",amount:D.dkind==="amount"?Math.max(0,Math.round(+D.damount||0)):0}};
+const fdx=D=>{const k=(D.dkinds||[]).filter(x=>FD_KINDS.includes(x));return {scope:k.length===1&&k[0]==="store"?"store":"all",kinds:k,kind:D.dkind==="amount"?"amount":"free",amount:D.dkind==="amount"?Math.max(0,Math.round(+D.damount||0)):0,minSpend:Math.max(0,Math.round(+D.minSpend||0)),minBasis:D.minBasis==="before"?"before":"after"}};
 /* a delivery promo takes the delivery price down: free or an amount off. src "bite" = a Biteship courier, "store" = the Store Courier / sameday. A "store only" promo leaves Biteship prices alone. */
 /* delivery promo filter: kinds = which delivery options get it (empty = all). "store" = the Store Courier, then Biteship services by their codes: sameday, instant, car (instant car) */
 const FD_KINDS=["store","sameday","instant","car"];
 const bsPromoKind=x=>{const t=String([x.courier,x.service].join(" ")).toLowerCase();if(/(^|[^a-z])(car|mpv|van|truck|pickup|mobil)([^a-z]|$)/.test(t))return "car";if(/same[ _-]?day/.test(t))return "sameday";if(/instant|gojek|grab|lalamove|borzo|deliveree|bike|motor|ojek/.test(t))return "instant";return "regular"};
 const fdKey=src=>src==="store"?"store":src&&typeof src==="object"?bsPromoKind(src):"bite";
 const fdKinds=s=>Array.isArray(s.kinds)&&s.kinds.length?s.kinds:(s.scope==="store"?["store"]:null);
-const fdApply=(s,fee,src)=>{if(!s)return fee;const k=fdKinds(s);if(k&&!k.includes(fdKey(src)))return fee;return s.kind==="amount"?Math.max(0,r2(fee-(+s.amount||0))):0};
+// minimum purchase for a delivery promo: counted before discounts (box + extras) or after the flash sale and coupon discount, as the owner chose. FDC = the cart being priced right now (set by quote()).
+let FDC=null,fdBusy=false;
+function fdSpend(){if(fdBusy)return null;fdBusy=true;try{const q=quote(S,DB,{withDelivery:false});return {before:r2(q.base+q.surcharge+q.addons),after:r2(q.base-q.discount-q.couponDisc+q.surcharge+q.addons)}}catch(e){return null}finally{fdBusy=false}}
+const fdMinOk=s=>{if(!s||!(+s.minSpend>0))return true;const c=FDC||fdSpend();if(!c)return true;return (s.minBasis==="before"?c.before:c.after)>=+s.minSpend};
+const fdMinText=s=>+s.minSpend>0?` · min ${money(s.minSpend)} ${s.minBasis==="before"?"before discounts":"after discounts"}`:"";
+const fdApply=(s,fee,src)=>{if(!s)return fee;if(!fdMinOk(s))return fee;const k=fdKinds(s);if(k&&!k.includes(fdKey(src)))return fee;return s.kind==="amount"?Math.max(0,r2(fee-(+s.amount||0))):0};
 const fdFor=(n,src,fee,at=Date.now(),db=DB)=>{let best=null,bv=fee;db.sales.forEach(x=>{if(!isFD(x)||saleStatus(x,at)!=="live"||!fdApplies(x,n,db))return;const v=fdApply(x,fee,src);if(v<bv){bv=v;best=x}});return best};
 const fdStoreOnly=s=>{const k=s&&fdKinds(s);return !!(k&&k.length===1&&k[0]==="store")};
 const FD_LBL={sameday:"Sameday",instant:"Instant",car:"Instant car"};
@@ -2653,7 +2660,7 @@ motionAsk();
 
 /* ================= ADMIN ================= */
 const A={sel:new Set(),lbl:null,lblPrev:"sample",rvPid:null,tab:"dashboard",nf:{type:"news",title:"",text:"",pid:"",code:"",until:""},dd:"today",vr:"today",dsig:"",filter:"all",od:"all",q:"",pq:"",pcat:"all",modal:null,np:null,bakeDay:null,openOrder:null,
-  draft:{kind:"discount",name:"Flash sale",type:"percent",value:20,appliesTo:"all",fdAll:true,fdSizes:[],fdCustom:false,dkind:"free",damount:0,dscope:"all",startMode:"now",startAt:"",durH:1,durM:0,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#000096",fx:"shine",view:"teaser"}};
+  draft:{kind:"discount",name:"Flash sale",type:"percent",value:20,appliesTo:"all",fdAll:true,fdSizes:[],fdCustom:false,dkind:"free",damount:0,minSpend:0,minBasis:"after",dscope:"all",startMode:"now",startAt:"",durH:1,durM:0,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#000096",fx:"shine",view:"teaser"}};
 // the page the team is on survives a refresh (and coming back later in the same browser)
 {const KEY="delidome-admin-tab",TABS="dashboard orders complaints customers products badges sales coupons boxes notify announcer hero landing carousel marquee revrew delivery labels settings security affiliates afcoupons prelaunch log team".split(" ");
   let cur="dashboard";try{const v=localStorage.getItem(KEY);if(TABS.includes(v))cur=v}catch(e){}
@@ -3852,7 +3859,7 @@ function reuseSale(id){
   const s=DB.sales.find(x=>x.id===id);if(!s)return;
   const mins=Math.max(5,Math.round((s.end-s.start)/60e3)),kind=isFD(s)?"freedelivery":isGift(s)?"gifts":"discount";
   const lst=kind==="freedelivery"?(s.appliesTo==="list"?{fdAll:false,fdSizes:(s.sizes||[]).map(Number),fdCustom:!!s.custom}:s.appliesTo==="all"||!s.appliesTo?{fdAll:true,fdSizes:[],fdCustom:false}:{fdAll:false,fdSizes:[+s.appliesTo],fdCustom:false}):{fdAll:true,fdSizes:[],fdCustom:false};
-  const d={...lst,dkind:s.kind==="amount"?"amount":"free",damount:+s.amount||0,dkinds:Array.isArray(s.kinds)&&s.kinds.length?s.kinds.slice():(s.scope==="store"?["store"]:[]),kind,name:s.name,type:s.type==="amount"?"amount":"percent",value:+s.value||20,appliesTo:String(s.appliesTo==="list"?"all":s.appliesTo||"all"),startMode:"now",startAt:"",
+  const d={...lst,dkind:s.kind==="amount"?"amount":"free",damount:+s.amount||0,minSpend:+s.minSpend||0,minBasis:s.minBasis==="before"?"before":"after",dkinds:Array.isArray(s.kinds)&&s.kinds.length?s.kinds.slice():(s.scope==="store"?["store"]:[]),kind,name:s.name,type:s.type==="amount"?"amount":"percent",value:+s.value||20,appliesTo:String(s.appliesTo==="list"?"all":s.appliesTo||"all"),startMode:"now",startAt:"",
     durH:Math.min(168,Math.floor(mins/60)),durM:Math.min(168,Math.floor(mins/60))>=168?0:mins%60,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#000096",fx:"shine",view:"teaser"};
   if(kind==="gifts"){
     const gm={};
@@ -3889,6 +3896,9 @@ function viewSales(){giftUsageLoad();
         <div class="af">Discount<div class="chips" style="margin-top:6px"><button class="fchip" type="button" data-dkind="free" aria-pressed="${D.dkind!=="amount"}">Free delivery</button><button class="fchip" type="button" data-dkind="amount" aria-pressed="${D.dkind==="amount"}">Amount off the delivery price</button></div>
           ${D.dkind==="amount"?`<label class="af" style="margin-top:6px">Amount off<div class="money-in"><span>${esc(DB.settings.currency)}</span><input class="in" type="number" min="1" step="100" data-draft="damount" value="${+D.damount||""}" placeholder="e.g. 10000"></div></label><p class="note" style="margin:6px 0 0">Customers see the new price in the courier list. If this amount is as much as a courier's price (Biteship or Store Courier), that courier shows <b>FREE</b>. A countdown shows how long the promo lasts.</p>`:""}</div>
         <div class="af">Which delivery option gets it<div class="chips" style="margin-top:6px">${[["all","All couriers"],["store",scName()],["sameday","Sameday"],["instant","Instant"],["car","Instant car"]].map(([k,l])=>`<button class="fchip" type="button" data-dkindf="${k}" aria-pressed="${k==="all"?!(D.dkinds||[]).length:(D.dkinds||[]).includes(k)}">${esc(l)}</button>`).join("")}</div><p class="note" style="margin:6px 0 0">${!(D.dkinds||[]).length?"Every courier gets it.":(D.dkinds||[]).length===1&&D.dkinds[0]==="store"?`Only ${esc(scName())} gets it, with the old price crossed out. It is always shown first, even if you set it to show only when courier prices can't load.`:`Only ${esc((D.dkinds||[]).map(x=>x==="store"?scName():FD_LBL[x]).join(", "))} get it. Other couriers keep their normal price. Biteship services are sorted by their service code (Sameday, Instant, Instant car).`}</p></div>`:""}
+        ${D.kind==="freedelivery"?`<div class="af">Minimum purchase to get it (0 = none)<div class="grid2" style="margin-top:6px"><div class="money-in"><span>${esc(DB.settings.currency)}</span><input class="in" type="number" min="0" step="1000" data-draft="minSpend" value="${+D.minSpend||""}" placeholder="0"></div>
+          <select class="in" data-draft="minBasis" aria-label="Count the minimum"><option value="after" ${D.minBasis!=="before"?"selected":""}>After discounts (flash sale + coupon)</option><option value="before" ${D.minBasis==="before"?"selected":""}>Before discounts</option></select></div>
+          <p class="note" style="margin:6px 0 0">${D.minBasis==="before"?"Counted on the box and extras at full price, before any flash sale or coupon discount.":"Counted on the box and extras after the flash sale and the coupon discount are taken off."} Delivery fee is never part of it. Under the minimum, the customer pays the normal delivery price.</p></div>`:""}
         ${D.kind==="gifts"||D.kind==="freedelivery"?"":`<label class="af">Applies to<select class="in" data-draft="appliesTo"><option value="all" ${D.appliesTo==="all"?"selected":""}>Every box size</option>${DB.sizes.map(s=>`<option value="${s.n}" ${D.appliesTo===String(s.n)?"selected":""}>Box of ${s.n} only</option>`).join("")}</select></label>`}
         <div class="af">Starts<div class="seg"><button type="button" data-smode="now" aria-pressed="${D.startMode==="now"}">Right now</button><button type="button" data-smode="later" aria-pressed="${D.startMode==="later"}">Schedule</button></div></div>
         ${D.startMode==="later"?`<label class="af">Start date and time<input class="in" type="datetime-local" data-draft="startAt" value="${esc(D.startAt)}"></label>`:""}
@@ -7365,7 +7375,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-03 13:55 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-03 13:57 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afSacHTML()}${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
