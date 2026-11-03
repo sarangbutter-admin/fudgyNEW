@@ -293,10 +293,13 @@ const bsHTML=(o,adm)=>{const b=o.bship;if(!b||!b.courier||o.mode!=="delivery")re
   const acts=adm?`<div class="colin" style="margin-top:10px;flex-wrap:wrap;gap:8px">${!booked?`<button class="btn btn-blue btn-sm" type="button" data-bsact="book" data-oid="${o.id}" ${bsReqOk(o)?"":'disabled title="Move the order to Baking first"'}>${b.failed||b.cancelledAt?"Book again":"Request pickup"}</button>`:`<button class="ghost" type="button" data-bsact="refresh" data-oid="${o.id}">Refresh status</button><button class="danger" type="button" data-bsact="cancel" data-oid="${o.id}">Cancel booking</button>`}</div><p class="note" id="bsMsg" hidden></p>`:"";
   return `<div class="dsec"><h4>🛵 Courier</h4>${fail}<dl class="dl">${lines}</dl>${acts}<div class="bspfs">${pf("pickup")}${pf("delivery")}</div>${hist?`<details class="bshd"${adm?"":" open"}><summary>Courier updates</summary>${hist}</details>`:""}</div>`};
 // the Store Courier price: flat, per started kg (cookies x grams + box grams) or per cookie. Mirrors store_fee() in the database.
-function storeFee(n,db=DB){const t=db.settings,m=t.scMode||"flat";
+function storeFee(n,db=DB){return r2(storeFeeBase(n,db)+storeKmFee(db))}
+function storeFeeBase(n,db=DB){const t=db.settings,m=t.scMode||"flat";
   if(m==="pcs")return r2(n*(+t.scPerPcs||0));
   if(m==="kg"){const g=n*(+(t.scGrams??100))+(+(t.scBoxG??200));return r2(Math.ceil(g/1000)*(+t.scPerKg||0))}
   return +t.deliveryFee||0}
+// distance add-on: price per started km beyond the km already included, straight line from the shop to the customer's address. Mirrors store_fee_km() in the database. 0 when there is no map position yet.
+function storeKmFee(db=DB){const t=db.settings;if(db!==DB||!t.scKmOn||!(+t.scPerKm>0))return 0;const km=orpDist();if(km===null)return 0;return r2((+t.scPerKm)*Math.ceil(Math.max(0,km-(+t.scKmFree||0))))}
 // the customer-facing line under "Scheduled delivery": {km} = delivery radius, {fee} = Store Courier price for this box, {courier} = who delivers
 function schedText(c,db=DB){const t=db.settings,fee=storeFee(c.size,db),by=bsOn(db)?"The delivery price depends on the courier you choose.":(scOn(db)?`Delivered by ${scName(db)}: ${freeDelSale(c.size)?"free":money(fee)}.`:"");
   return String(t.schedMsg||"Scheduled delivery: pick a day and time. We deliver within {km} km of the shop. {courier}").replace(/\{km\}/g,t.deliveryKm).replace(/\{fee\}/g,money(fee)).replace(/\{courier\}/g,by).replace(/\s+/g," ").trim()}
@@ -3255,7 +3258,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-03 05:45 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-03 13:55 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afSacHTML()}${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

@@ -298,10 +298,13 @@ const bsHTML=(o,adm)=>{const b=o.bship;if(!b||!b.courier||o.mode!=="delivery")re
   const acts=adm?`<div class="colin" style="margin-top:10px;flex-wrap:wrap;gap:8px">${!booked?`<button class="btn btn-blue btn-sm" type="button" data-bsact="book" data-oid="${o.id}" ${bsReqOk(o)?"":'disabled title="Move the order to Baking first"'}>${b.failed||b.cancelledAt?"Book again":"Request pickup"}</button>`:`<button class="ghost" type="button" data-bsact="refresh" data-oid="${o.id}">Refresh status</button><button class="danger" type="button" data-bsact="cancel" data-oid="${o.id}">Cancel booking</button>`}</div><p class="note" id="bsMsg" hidden></p>`:"";
   return `<div class="dsec"><h4>🛵 Courier</h4>${fail}<dl class="dl">${lines}</dl>${acts}<div class="bspfs">${pf("pickup")}${pf("delivery")}</div>${hist?`<details class="bshd"${adm?"":" open"}><summary>Courier updates</summary>${hist}</details>`:""}</div>`};
 // the Store Courier price: flat, per started kg (cookies x grams + box grams) or per cookie. Mirrors store_fee() in the database.
-function storeFee(n,db=DB){const t=db.settings,m=t.scMode||"flat";
+function storeFee(n,db=DB){return r2(storeFeeBase(n,db)+storeKmFee(db))}
+function storeFeeBase(n,db=DB){const t=db.settings,m=t.scMode||"flat";
   if(m==="pcs")return r2(n*(+t.scPerPcs||0));
   if(m==="kg"){const g=n*(+(t.scGrams??100))+(+(t.scBoxG??200));return r2(Math.ceil(g/1000)*(+t.scPerKg||0))}
   return +t.deliveryFee||0}
+// distance add-on: price per started km beyond the km already included, straight line from the shop to the customer's address. Mirrors store_fee_km() in the database. 0 when there is no map position yet.
+function storeKmFee(db=DB){const t=db.settings;if(db!==DB||!t.scKmOn||!(+t.scPerKm>0))return 0;const km=orpDist();if(km===null)return 0;return r2((+t.scPerKm)*Math.ceil(Math.max(0,km-(+t.scKmFree||0))))}
 // the customer-facing line under "Scheduled delivery": {km} = delivery radius, {fee} = Store Courier price for this box, {courier} = who delivers
 function schedText(c,db=DB){const t=db.settings,fee=storeFee(c.size,db),by=bsOn(db)?"The delivery price depends on the courier you choose.":(scOn(db)?`Delivered by ${scName(db)}: ${freeDelSale(c.size)?"free":money(fee)}.`:"");
   return String(t.schedMsg||"Scheduled delivery: pick a day and time. We deliver within {km} km of the shop. {courier}").replace(/\{km\}/g,t.deliveryKm).replace(/\{fee\}/g,money(fee)).replace(/\{courier\}/g,by).replace(/\s+/g," ").trim()}
@@ -4436,7 +4439,8 @@ function viewDelivery(){
     <section class="panel">
       <h2>🚚 Store Courier</h2><p class="sub">Your own delivery. It shows up in the courier list next to the Biteship couriers, and it is the delivery price when Biteship is off or its prices can't load. A scheduled delivery has no extra charge of its own: the customer pays the courier they choose.</p>
       ${(()=>{const m=s.scMode||"flat",cur=`<span>${esc(s.currency)}</span>`,sw=(k,l,on)=>`<div style="display:flex;gap:10px;align-items:center;margin:10px 0"><label class="sw"><input type="checkbox" data-k="settings::${k}" ${on?"checked":""} aria-label="${esc(l)}"><span></span></label><span class="stlabel">${l}</span></div>`;
-        const ex=DB.sizes.slice().sort((a,b)=>a.n-b.n).map(z=>`<span class="fchip" style="cursor:default">Box of ${z.n}: <b>${money(storeFee(z.n))}</b></span>`).join("");
+        const ex=DB.sizes.slice().sort((a,b)=>a.n-b.n).map(z=>`<span class="fchip" style="cursor:default">Box of ${z.n}: <b>${money(storeFeeBase(z.n))}</b></span>`).join("");
+        const kmOn=!!s.scKmOn,per=+s.scPerKm||0,fr=+s.scKmFree||0,sample=[1,5,10,15].map(k=>`<span class="fchip" style="cursor:default">${k} km: <b>+${money(per*Math.ceil(Math.max(0,k-fr)))}</b></span>`).join("");
         return `${sw("scOn","Offer the Store Courier",s.scOn!==false)}
         <div class="grid2"><label class="af">Name shown to customers<input class="in" data-k="settings::scName" maxlength="30" value="${esc(s.scName||"")}" placeholder="Store Courier"></label><label class="af">Small text under the name<input class="in" data-k="settings::scNote" maxlength="60" value="${esc(s.scNote||"")}" placeholder="Delivered by our own team"></label></div>
         <div class="grid3" style="margin-top:10px"><label class="af">How the price is worked out<select class="in" data-k="settings::scMode">${[["flat","Flat price"],["kg","Per kg"],["pcs","Per cookie"]].map(([k,l])=>`<option value="${k}" ${m===k?"selected":""}>${l}</option>`).join("")}</select></label>
@@ -4444,6 +4448,12 @@ function viewDelivery(){
           ${m==="kg"?`<label class="af">Price per kg<div class="money-in">${cur}<input class="in" type="number" min="0" step="0.5" data-k="settings::scPerKg" value="${s.scPerKg||0}"></div></label><label class="af">Grams per cookie<div class="money-in"><input class="in" type="number" min="1" step="5" data-k="settings::scGrams" value="${s.scGrams??100}"><span style="padding-right:10px">g</span></div></label>`:""}
           ${m==="pcs"?`<label class="af">Price per cookie<div class="money-in">${cur}<input class="in" type="number" min="0" step="0.1" data-k="settings::scPerPcs" value="${s.scPerPcs||0}"></div></label>`:""}</div>
         ${m==="kg"?`<div class="grid3" style="margin-top:10px"><label class="af">Box and packing weight<div class="money-in"><input class="in" type="number" min="0" step="10" data-k="settings::scBoxG" value="${s.scBoxG??200}"><span style="padding-right:10px">g</span></div></label></div><p class="note" style="margin:6px 0 0">Weight = cookies × grams per cookie + box weight. Every started kg is charged (1,400 g counts as 2 kg).</p>`:""}
+        <div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line,#e6e6e6)"><b>📏 Add a fee for distance</b>
+          ${sw("scKmOn","Charge more the farther the address is",kmOn)}
+          <div class="grid3"><label class="af">Extra price for each km<div class="money-in">${cur}<input class="in" type="number" min="0" step="0.5" data-k="settings::scPerKm" value="${per}"></div></label>
+            <label class="af">Km already in the starter price<div class="money-in"><input class="in" type="number" min="0" step="0.5" data-k="settings::scKmFree" value="${fr}"><span style="padding-right:10px">km</span></div></label></div>
+          <p class="note" style="margin:6px 0 0">The starter price above is what you charge first. Then every started km beyond the free km adds this price. Distance is the straight line from your shop (set below, under Delivery and pickup) to the address the customer picks on the map. If the address has no map position yet, only the starter price is charged. Sameday shipment keeps its own fee.</p>
+          ${kmOn&&per>0?`<div class="chips" style="margin-top:6px">${sample}</div>`:""}</div>
         <label class="af" style="margin-top:10px">Where it shows<select class="in" data-k="settings::scShow"><option value="always" ${(s.scShow||"always")==="always"?"selected":""}>Always in the courier list</option><option value="fallback" ${s.scShow==="fallback"?"selected":""}>Only when courier prices can't load</option></select></label>
         <div class="af" style="margin-top:10px">What customers pay now<div class="chips" style="margin-top:6px">${ex||"—"}</div><p class="note" style="margin:6px 0 0">It becomes <b>free</b> while a Free delivery promo covers the box, or when the customer uses a free-delivery coupon. Changing prices needs the owner password.</p></div>`})()}
       <label class="af" style="margin-top:14px">Message under “Scheduled delivery”<textarea class="in" rows="3" maxlength="300" data-k="settings::schedMsg">${esc(s.schedMsg||"")}</textarea></label>
@@ -7355,7 +7365,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-03 05:45 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-03 13:55 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afSacHTML()}${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
@@ -7693,7 +7703,7 @@ function needOwner(what){
 }
 window.needOwner=needOwner;
 // price fields ask for the owner password before they change
-const PRICE_K=/^(products:[^:]+:surcharge|sizes:[^:]+:price|addons:[^:]+:price|settings::deliveryFee|settings::samedayFee|settings::customPer|settings::scPerKg|settings::scPerPcs|settings::scMode)$/;
+const PRICE_K=/^(products:[^:]+:surcharge|sizes:[^:]+:price|addons:[^:]+:price|settings::deliveryFee|settings::samedayFee|settings::customPer|settings::scPerKg|settings::scPerPcs|settings::scPerKm|settings::scKmFree|settings::scKmOn|settings::scMode)$/;
 am.addEventListener("change",e=>{const el=e.target;if(!el.dataset||!el.dataset.k||!PRICE_K.test(el.dataset.k)||!SBH.on||SUDO_UNTIL>Date.now()+15000)return;
   const [coll,id,field]=el.dataset.k.split(":"),item=coll==="settings"?DB.settings:coll==="sizes"?DB.sizes.find(x=>String(x.n)===id):DB[coll].find(x=>x.id===id);
   if(!item)return;const old=item[field],nv=el.value;if(String(old)===String(Math.max(0,parseFloat(nv)||0)))return;
