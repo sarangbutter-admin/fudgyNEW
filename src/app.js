@@ -2681,6 +2681,7 @@ function renderAdmin(){try{applyBgx();applySnow();applyAdminBrand();lpFavicon(DB
   $("#amain").innerHTML=({afcoupons:viewAfCoupons,notify:viewNotify,prelaunch:viewPrelaunch,revrew:viewRevrew,dashboard:viewDashboard,orders:viewOrders,sales:viewSales,products:viewProducts,complaints:viewComplaints,boxes:viewBoxes,marquee:viewMarquee,announcer:viewAnnouncer,coupons:viewCoupons,hero:viewHero,labels:viewLabels,landing:viewLanding,carousel:viewCarousel,settings:viewSettings,delivery:viewDelivery,customers:viewCustomers,team:viewTeam,badges:viewBadges,log:viewLog,security:viewSecurity,affiliates:viewAffiliates})[A.tab]();
   if(A.tab==="log"&&LG.list===null)loadLog();
   if(A.tab==="customers"&&(CU.list===null||CU.stale))loadCustomers();
+  if((A.tab==="orders"||A.tab==="customers")&&(CS.map===null||CS.sig!==csSig())&&!CS.loading)loadCustStats();
   if(A.tab==="team"&&TM.list===null)loadTeam();
   if(A.tab==="security"&&SEC.cfg===null)loadSec();
   if(A.tab==="security"&&SEC.lastTab!=="security"&&SEC.cfg!==null)loadSec();SEC.lastTab=A.tab;
@@ -3153,13 +3154,14 @@ function moreInsights(set){
     ${top.length?`<ol class="rank">${top.map((c,i)=>`<li><span class="rk-n">${i+1}</span><span class="rk-l">${esc(c.name)} <small class="note">(${c.n} order${c.n===1?"":"s"})</small></span><span class="rk-v">${money(c.spent)}</span></li>`).join("")}</ol>`:`<div class="empty">Nothing in this period.</div>`}
     <p class="note" style="margin:10px 0 0">Repeat customers have 2 or more paid orders in total. Discounts are flash sales plus coupons. Top customers are ranked by what they spent after refunds.</p></section>`;
 }
+// the courier price before any delivery promo (the saved Biteship price, else the Store Courier price) and what the customer saved on delivery
+const delRawFee=o=>{const st=DB.settings;return o.mode!=="delivery"?0:(o.bship&&+o.bship.price>0)?+o.bship.price:o.speed==="sameday"?(+(st.samedayFee??st.deliveryFee)||0):storeFee(o.size)};
+const delSavedOf=o=>Math.max(0,r2(delRawFee(o)-(+o.fee||0)));
 /* promotions: flash sales, delivery promos, blind boxes and coupons, for orders placed in [a,b) that were not cancelled */
 function promoStats(a,b){
   const inR=ms=>ms>=a&&ms<b,cl=DB.orders.filter(o=>o.status!=="cancelled"&&inR(o.createdAt||0)),st=DB.settings;
-  // the courier price before any delivery promo: the saved Biteship price, else the Store Courier price
-  const rawFee=o=>o.mode!=="delivery"?0:(o.bship&&+o.bship.price>0)?+o.bship.price:o.speed==="sameday"?(+(st.samedayFee??st.deliveryFee)||0):storeFee(o.size);
   const cpType=o=>{const c=o.coupon?DB.coupons.find(x=>String(x.code).toUpperCase()===String(o.coupon).toUpperCase()):null;return c?c.type:""};
-  const delSaved=o=>Math.max(0,r2(rawFee(o)-(+o.fee||0)));
+  const delSaved=delSavedOf;
   const fl=cl.filter(o=>o.sale&&(+o.discount||0)>0),cp=cl.filter(o=>o.coupon&&String(o.coupon).trim());
   const fdO=cl.filter(o=>cpType(o)!=="freedelivery"&&delSaved(o)>0);
   let bb=0;cl.forEach(o=>{bb+=new Set((o.gifts||[]).filter(g=>g&&g.random).map(g=>g.promoId||g.promo||"x")).size});
@@ -3391,7 +3393,7 @@ function viewOrders(){
         <div class="chips" style="margin-top:12px">${[["all","All"],...STATUSES.slice(0,2),["rejected","Rejected"],...STATUSES.slice(2)].map(([k,l])=>`<button class="fchip${k==="rejected"?" fc-rej":""}" type="button" data-filter="${k}" aria-pressed="${A.filter===k}">${l} <i>${cnt(k)}</i></button>`).join("")}</div>
         <div class="tools-row" style="margin:12px 0 14px">
           <span class="note" style="margin:0">${rows.length} order${rows.length===1?"":"s"} · ${esc(dayTxt)} (by order date)</span>
-          <div class="colin" style="flex-wrap:wrap;gap:8px"><button class="btn btn-blue btn-sm" type="button" data-printsel ${toPrint?"":"disabled"}>Print unprinted labels (${toPrint})</button>
+          <div class="colin" style="flex-wrap:wrap;gap:8px"><button class="btn btn-blue btn-sm" type="button" data-printsel ${toPrint?"":"disabled"}>Print unprinted labels (${toPrint})</button><button class="ghost" type="button" data-ordexport>⬇ Download (CSV)</button>
           <input class="search" id="oSearch" type="search" placeholder="Search name, phone or order" value="${esc(A.q)}" aria-label="Search orders"></div>
         </div>
         ${rows.length?`<div class="oc-grid">${rows.map(orderCard).join("")}</div>`:`<div class="empty">No orders match.</div>`}
@@ -3502,7 +3504,7 @@ function orderCard(o){
   const canEdit=canEditOrder(o),own=ROLE()==="owner";
   const lbl=paid?(o.labelAt?`<div class="oc-lbl ok">✓ Label printed ${fmtAgo(o.labelAt)}</div>`:`<div class="oc-lbl warn">⚠ Label not printed yet</div>`):(o.status==="cancelled"?"":`<div class="oc-lbl off">Label can be printed after payment is confirmed</div>`);
   return `<article class="oc-card" aria-label="Order ${esc(o.code)}">
-    <div class="oc-h"><span>#${esc(o.code)} · ${esc(c.name)}${o.example?`<span class="ex">Example</span>`:""}${o.complaint?`<span class="ex oc-cp">Complaint</span>`:""}${(x=>x?`<span class="ex bsbadge ${x.c}">🛵 ${esc(x.t)}</span>`:"")(bsBadge(o))}</span><b class="num">${money(o.total)}</b></div>
+    <div class="oc-h"><span>#${esc(o.code)} · ${esc(c.name)}${custTagsHTML(o)}${o.example?`<span class="ex">Example</span>`:""}${o.complaint?`<span class="ex oc-cp">Complaint</span>`:""}${(x=>x?`<span class="ex bsbadge ${x.c}">🛵 ${esc(x.t)}</span>`:"")(bsBadge(o))}</span><b class="num">${money(o.total)}</b></div>
     ${o.refund?`<div class="oc-alert ref">💸 ${o.refund.full?"Refunded":"Partly refunded"}: ${money(o.refund.amount)} · ${fmtAgo(o.refund.at)}${o.refund.note?" · "+esc(o.refund.note):""}</div>`:""}
     ${o.status==="review"&&o.payReq?`<div class="oc-alert appr">⏳ ${own?`${esc(o.payReq.by)} confirmed this payment – needs your approval`:`Payment checked – waiting for owner approval`}</div>${own?`<div class="oc-sts"><button class="btn btn-blue btn-sm" type="button" data-papprove="${o.id}">✓ Approve payment</button><button class="oc-b" type="button" data-preject="${o.id}">Turn down</button></div>`:""}`
       :o.status==="review"&&o.rejReq?`<div class="oc-alert appr rej">⏳ ${own?`${esc(o.rejReq.by)} wants to REJECT this payment proof${o.rejReq.reason?` ("${esc(o.rejReq.reason)}")`:""} – needs your approval`:`Proof rejection sent – waiting for owner approval`}</div>${own?`<div class="oc-sts"><button class="danger" type="button" data-rapprove="${o.id}">✓ Approve rejection</button><button class="oc-b" type="button" data-rdeny="${o.id}">Keep payment (turn down)</button></div>`:""}`
@@ -6418,6 +6420,7 @@ am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
 am.addEventListener("change",async e=>{const el=e.target;if(!el.dataset||el.dataset.orpimg===undefined)return;const f=el.files[0];if(!f)return;
   try{let u;if(f.type==="image/gif"){if(f.size>1.5e6){toast("That GIF is over 1.5 MB. Paste a link to it instead.");return}u=await readData(f)}else u=await lpResize(f,360,true);
     const prev=DB.settings.orpImg;DB.settings.orpImg=u;if(!saveDB()){DB.settings.orpImg=prev;toast("Not enough storage space. Remove another photo first.");return}renderAdmin();toast("Picture saved")}catch(er){toast(er.message||"Couldn't add that picture.")}});
+am.addEventListener("change",e=>{if(e.target.dataset&&e.target.dataset.cusort!==undefined){CU.sort=e.target.value;renderAdmin()}});
 am.addEventListener("change",async e=>{const el=e.target,k=el.dataset&&el.dataset.btnimg;if(!k||!/^((rb|fab)Img2?|guardImg)$/.test(k))return;const f=el.files[0];if(!f)return;
   try{const data=await lpResize(f,k==="fabImg"?220:k==="guardImg"?240:140,true),cut=await imgHasAlpha(f),prev=DB.settings[k],prevC=DB.settings[k+"Cut"];DB.settings[k]=data;DB.settings[k+"Cut"]=cut;
     if(!saveDB()){DB.settings[k]=prev;DB.settings[k+"Cut"]=prevC;toast("Not enough storage space. Remove another photo first.");return}renderAdmin();toast(cut?"Picture saved (see-through background kept)":"Picture saved (cropped round)")}catch(err){toast(err.message)}});
@@ -6492,7 +6495,48 @@ const TAB_PERM={dashboard:"dashboard",orders:"orders",complaints:"complaints",cu
   sales:"sales",coupons:"coupons",notify:"notify",announcer:"design",hero:"design",landing:"design",carousel:"design",marquee:"design",revrew:"coupons",settings:"settings",delivery:"settings"};
 const myPerms=()=>SBH.on?(SBH.perms||[]):PERMS.map(p=>p[0]);
 const tabAllowed=t=>ROLE()==="owner"||(TAB_PERM[t]&&myPerms().includes(TAB_PERM[t]));
-const CU={list:null,q:"",form:null,err:"",loading:false,stale:false,bf:null,only:"",bm:null,bmd:null,bmOpen:false,bmBusy:false};
+/* customer numbers: order tags (NEW CUSTOMER / #Repeatx2), where a customer first came from, lifetime totals, and the downloads */
+const CS={map:null,loading:false,sig:""};
+const csSig=()=>DB.orders.length+":"+(DB.orders[0]?DB.orders[0].id:"");
+function custStatsLocal(){   // demo mode: worked out from the orders in this browser
+  const m={};DB.orders.filter(o=>o.status!=="cancelled").slice().sort((a,b)=>a.createdAt-b.createdAt).forEach(o=>{const k=normPhone(o.customer.phone);if(!k)return;
+    const c=m[k]||(m[k]={n:0,firstAt:o.createdAt,lastAt:0,spent:0,src:o.aff?"aff":"direct",affName:o.aff?o.aff.code:null,affCode:o.aff?o.aff.code:null,flav:{},coupons:0,couponDisc:0,delDisc:0,flashN:0,flashDisc:0});
+    c.n++;c.lastAt=Math.max(c.lastAt,o.createdAt);if(PAID_ST.includes(o.status))c.spent+=(o.total||0)-((o.refund&&o.refund.amount)||0);
+    Object.entries(o.items||{}).forEach(([id,q])=>c.flav[id]=(c.flav[id]||0)+q);
+    if(o.coupon){c.coupons++;c.couponDisc+=o.couponDisc||0}c.delDisc+=delSavedOf(o);if(o.sale){c.flashDisc+=o.discount||0;if((o.discount||0)>0)c.flashN++}});
+  Object.values(m).forEach(c=>{c.fav=Object.entries(c.flav).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([id,q])=>({id,name:(prod(id)||{name:"Removed flavor"}).name,q}));delete c.flav});
+  return m}
+async function loadCustStats(){
+  if(CS.loading)return;
+  if(!SBH.on){CS.map=custStatsLocal();CS.sig=csSig();if(A.tab==="orders"||A.tab==="customers")renderAdmin();return}
+  CS.loading=true;try{CS.map=await SBH.rpc("admin_customer_stats",{})}catch(e){CS.map=CS.map||{}}
+  CS.loading=false;CS.sig=csSig();if((A.tab==="orders"||A.tab==="customers")&&!A.modal)renderAdmin()}
+const cuSt=c=>CS.map&&CS.map[normPhone(c.phone)]||null;
+const CT={sig:"",m:null};
+// how many orders this customer had before this one (older orders that are no longer on screen are counted from the totals)
+function custTagInfo(o){
+  if(!o||o.status==="cancelled"||!o.customer)return null;
+  const sig=DB.orders.length+":"+(CS.map?Object.keys(CS.map).length:0)+":"+csSig();
+  if(CT.sig!==sig){CT.sig=sig;const by={};DB.orders.forEach(x=>{if(x.status==="cancelled"||!x.customer)return;const k=normPhone(x.customer.phone);(by[k]||(by[k]=[])).push(x)});
+    Object.values(by).forEach(l=>l.sort((a,b)=>a.createdAt-b.createdAt||String(a.id).localeCompare(String(b.id))));CT.m=by}
+  const k=normPhone(o.customer.phone),l=CT.m[k]||[],st=CS.map&&CS.map[k],i=l.findIndex(x=>x.id===o.id);
+  return {prior:(i<0?l.length:i)+(st?Math.max(0,st.n-l.length):0),st}}
+const custTagText=o=>{const t=custTagInfo(o);return t?(t.prior===0?"NEW CUSTOMER":"#Repeatx"+t.prior):""};
+const custSrcText=st=>!st?"":st.src==="aff"?"Affiliator: "+(st.affName||st.affCode||""):"Direct";
+function custTagsHTML(o){const t=custTagInfo(o);if(!t)return "";const {prior,st}=t;
+  const a=prior===0?`<span class="ctag new" title="First order from this customer">🆕 NEW CUSTOMER</span>`:`<span class="ctag rep" title="This customer ordered ${prior} time${prior===1?"":"s"} before">#Repeatx${prior}</span>`;
+  const src=st?(st.src==="aff"?`<span class="ctag aff" title="This customer first came through an affiliator">📣 ${esc(custSrcText(st))}</span>`:`<span class="ctag dir" title="This customer first came directly from you">🏠 Direct</span>`):"";
+  return `<span class="ctags">${a}${src}</span>`}
+const favText=st=>st&&st.fav&&st.fav.length?st.fav.map(f=>`${f.name} ×${f.q}`).join(" · "):"";
+function cuExport(){
+  const d=ms=>ms?fmtDT(ms):"",rows=[["Name","WhatsApp","Email","Customer tag","First came from","Affiliator code","First order","Last order","Orders","Total spent","Frequent menu","Coupons claimed","Coupon discount total","Delivery discount total","Flash sales used","Flash discount total","Note"]];
+  (CU.list||[]).forEach(c=>{const st=cuSt(c);rows.push([c.name,c.phone,c.email||"",st?(st.n>1?"#Repeatx"+(st.n-1):"NEW CUSTOMER"):"No orders yet",custSrcText(st),st&&st.src==="aff"?st.affCode||"":"",st?d(st.firstAt):"",st?d(st.lastAt):"",st?st.n:0,st?Math.round(st.spent):0,favText(st),st?st.coupons:0,st?Math.round(st.couponDisc):0,st?Math.round(st.delDisc):0,st?st.flashN:0,st?Math.round(st.flashDisc):0,c.note||""])});
+  csvDownload("customers-"+ymd(new Date())+".csv",rows);toast("Customers downloaded")}
+function ordExport(){
+  const rows=[["Order","Placed","Status","Customer","WhatsApp","Customer tag","First came from","Items","Box size","Pickup or delivery","Total","Coupon","Coupon discount","Flash sale","Flash discount","Delivery fee","Delivery discount"]];
+  shownRows().forEach(o=>{const t=custTagInfo(o);rows.push([o.code,fmtDT(o.createdAt),o.status,o.customer.name,o.customer.phone,custTagText(o),t?custSrcText(t.st):"",Object.entries(o.items||{}).map(([id,n])=>`${(prod(id)||{name:"Removed flavor"}).name} x${n}`).join("; "),o.size,o.mode,Math.round(o.total||0),o.coupon||"",Math.round(o.couponDisc||0),o.sale||"",Math.round(o.discount||0),Math.round(o.fee||0),Math.round(delSavedOf(o))])});
+  csvDownload("orders-"+ymd(new Date())+".csv",rows);toast("Orders downloaded")}
+const CU={list:null,q:"",sort:"new",form:null,err:"",loading:false,stale:false,bf:null,only:"",bm:null,bmd:null,bmOpen:false,bmBusy:false};
 const CU_DAYS=[[1,"1 day"],[7,"7 days"],[30,"30 days"],[90,"90 days"],[0,"No end date"]];
 const cuBanTxt=b=>b.until?"until "+fmtDT(b.until):"no end date";
 const TM={list:null,err:"",loading:false};
@@ -6511,12 +6555,21 @@ async function loadCustomers(){
   CU.loading=false;if(A.tab==="customers"&&!A.modal)renderAdmin();
 }
 function cuRows(){
-  const q=CU.q.trim().toLowerCase(),qd=q.replace(/\D/g,"");
-  const l=(CU.list||[]).filter(c=>(CU.only==="ban"?c.ban:!c.ban&&(CU.only!=="look"||(c.flags||[]).length))&&(!q||c.name.toLowerCase().includes(q)||(qd&&normPhone(c.phone).includes(normPhone(qd)))||String(c.email||"").toLowerCase().includes(q)));
-  if(!l.length)return `<div class="empty">${(CU.list||[]).length?(CU.only==="ban"?"Nobody is banned right now.":"No customer matches that."):"No customers yet. They are added automatically when someone orders, or you can add one above."}</div>`;
-  return l.map(c=>`<div class="pmcard" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><b style="font-size:16px">${esc(c.name)}</b>
-    <span class="note" style="margin:0">${c.source==="manual"?"Added by hand":"From an order"}${c.orders?` · ${c.orders} order${c.orders>1?"s":""}`:""}${c.spent>0?` · ${money(c.spent)} paid`:""}</span></div>
-    <div><a href="${esc(waLink({customer:{phone:c.phone}},""))}" target="_blank" rel="noopener">${esc(c.phone)}</a>${c.email?` · ${esc(c.email)}`:""}</div>
+  const q=CU.q.trim().toLowerCase(),qd=q.replace(/\D/g,""),f=CU.only;
+  const pass=c=>{const st=cuSt(c);return f==="ban"?!!c.ban:!c.ban&&(f===""||(f==="look"&&(c.flags||[]).length)||(f==="new"&&st&&st.n===1)||(f==="repeat"&&st&&st.n>1)||(f==="aff"&&st&&st.src==="aff")||(f==="direct"&&st&&st.src==="direct"))};
+  const l=(CU.list||[]).filter(c=>pass(c)&&(!q||c.name.toLowerCase().includes(q)||(qd&&normPhone(c.phone).includes(normPhone(qd)))||String(c.email||"").toLowerCase().includes(q)));
+  const sv=c=>{const st=cuSt(c);return CU.sort==="spent"?(st?st.spent:0):CU.sort==="orders"?(st?st.n:0):CU.sort==="last"?(st?st.lastAt:0):(c.createdAt||0)};
+  l.sort((a,b)=>sv(b)-sv(a));
+  if(!l.length)return `<div class="empty">${(CU.list||[]).length?(f==="ban"?"Nobody is banned right now.":"No customer matches that."):"No customers yet. They are added automatically when someone orders, or you can add one above."}</div>`;
+  const mny=v=>money(Math.round(v||0));
+  return l.map(c=>{const st=cuSt(c),tag=st?(st.n>1?`<span class="ctag rep">#Repeatx${st.n-1}</span>`:`<span class="ctag new">🆕 NEW CUSTOMER</span>`):"",
+      src=st?(st.src==="aff"?`<span class="ctag aff">📣 ${esc(custSrcText(st))}</span>`:`<span class="ctag dir">🏠 Direct</span>`):"";
+    return `<div class="pmcard" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><b style="font-size:16px">${esc(c.name)}<span class="ctags">${tag}${src}</span></b>
+    <span class="note" style="margin:0">${c.source==="manual"?"Added by hand":"From an order"}</span></div>
+    <div><a href="${esc(waLink({customer:{phone:c.phone}},""))}" target="_blank" rel="noopener">💬 ${esc(c.phone)}</a>${c.email?` · ${esc(c.email)}`:""}</div>
+    ${st?`<div class="custats"><div><b>${st.n}</b><small>order${st.n===1?"":"s"}</small></div><div><b>${mny(st.spent)}</b><small>total spent</small></div><div><b>${st.coupons}</b><small>coupon${st.coupons===1?"":"s"} claimed${st.coupons?` · −${mny(st.couponDisc)}`:""}</small></div><div><b>−${mny(st.delDisc)}</b><small>delivery discount</small></div><div><b>${st.flashN}</b><small>flash sale${st.flashN===1?"":"s"} used${st.flashN?` · −${mny(st.flashDisc)}`:""}</small></div></div>
+      ${favText(st)?`<div class="note" style="margin:0">🍪 <b>Orders most:</b> ${esc(favText(st))}</div>`:""}
+      <div class="note" style="margin:0">📍 <b>First came from:</b> ${esc(custSrcText(st))}${st.src==="aff"&&st.affCode?` (${esc(st.affCode)})`:""} · first order ${fmtDT(st.firstAt)}${st.lastAt&&st.lastAt!==st.firstAt?` · last order ${fmtDT(st.lastAt)}`:""}</div>`:`<div class="note" style="margin:0">${CS.map===null?"Loading numbers…":"No orders yet."}</div>`}
     ${c.note?`<div class="note" style="margin:0">${esc(c.note)}</div>`:""}
     ${(c.flags||[]).length?`<div class="cuflag"><b>👀 Needs a look</b>${c.flags.map(f=>`<span>• ${esc(f)}</span>`).join("")}${SBH.on?`<button class="ghost sm" type="button" data-cuchecked="${esc(c.id)}">Mark as checked</button>`:""}</div>`:""}
     ${c.ban?`<div class="cuban"><b>🚫 Banned ${cuBanTxt(c.ban)}</b><span>${esc(c.ban.reason)}</span></div>`:""}
@@ -6524,7 +6577,7 @@ function cuRows(){
       <label class="af">How long<select class="in" data-cubf="days">${CU_DAYS.map(([v,l])=>`<option value="${v}" ${+CU.bf.days===v?"selected":""}>${l}</option>`).join("")}</select></label>
       <p class="note" style="margin:0">They can't place new orders with this number or email. Their old orders stay as they are.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="danger" type="button" data-cubango>Ban this customer</button><button class="ghost" type="button" data-cubanno>Cancel</button></div></div>`:""}
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" type="button" data-cuedit="${esc(c.id)}">Edit</button>${SBH.on?(c.ban?`<button class="ghost" type="button" data-cuunban="${esc(c.id)}">Unban</button>`:`<button class="ghost" type="button" data-cuban="${esc(c.id)}">🚫 Ban</button>`):""}${ROLE()==="owner"?`<button class="danger" type="button" data-cudel="${esc(c.id)}">Delete</button>`:""}</div></div>`).join("");
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" type="button" data-cuedit="${esc(c.id)}">Edit</button>${SBH.on?(c.ban?`<button class="ghost" type="button" data-cuunban="${esc(c.id)}">Unban</button>`:`<button class="ghost" type="button" data-cuban="${esc(c.id)}">🚫 Ban</button>`):""}${ROLE()==="owner"?`<button class="danger" type="button" data-cudel="${esc(c.id)}">Delete</button>`:""}</div></div>`}).join("");
 }
 const BM_ICONS=["🚫","🙏","🎁","🍪","💙","😢","⚠️","📞"];
 function bmPrev(){const M=CU.bmd||BANM_DEF,P=DB.proofpop||{};return `<div class="bmprev" style="--pp-bg:${esc(P.bg||"#fff")};--pp-acc:${esc(P.accent||"#000096")};--pp-ink:${esc(P.ink||"#0B0B45")}">${banHTML(M,"#")}${M.fx&&(M.items||[]).length?`<div class="bmfall">${M.items.slice(0,4).map(u=>`<img src="${esc(u)}" alt="">`).join("")}</div>`:""}</div>`}
@@ -6555,9 +6608,10 @@ function viewCustomers(){
       <p class="err" id="cuErr" ${CU.err?"":"hidden"}>${esc(CU.err)}</p>
       <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button class="btn btn-blue" type="button" data-cusave>${F.id?"Save changes":"Add customer"}</button>${F.id?`<button class="btn btn-ghost-blue" type="button" data-cucancel>Cancel</button>`:""}</div></section>
     ${SBH.on?bmPanel():""}
-    <section class="panel"><div class="phead"><div><h2>All customers${CU.list?` (${CU.list.filter(c=>!c.ban).length})`:""}</h2></div></div>
-      <div class="chips" style="margin-top:8px"><button class="fchip" type="button" data-cuonly="" aria-pressed="${!CU.only}">All</button><button class="fchip" type="button" data-cuonly="look" aria-pressed="${CU.only==="look"}">👀 Needs a look${CU.list&&CU.list.some(c=>!c.ban&&(c.flags||[]).length)?` (${CU.list.filter(c=>!c.ban&&(c.flags||[]).length).length})`:""}</button><button class="fchip" type="button" data-cuonly="ban" aria-pressed="${CU.only==="ban"}">🚫 Banned${CU.list&&CU.list.some(c=>c.ban)?` (${CU.list.filter(c=>c.ban).length})`:""}</button></div>
-      <label class="af" style="margin-top:8px">Search<input class="in" id="cuSearch" type="search" placeholder="Name, number or email" value="${esc(CU.q)}" autocomplete="off"></label>
+    <section class="panel"><div class="phead"><div><h2>All customers${CU.list?` (${CU.list.filter(c=>!c.ban).length})`:""}</h2></div><button class="btn btn-blue btn-sm" type="button" data-cuexport ${CU.list&&CU.list.length?"":"disabled"}>⬇ Download customers (CSV)</button></div>
+      <div class="chips" style="margin-top:8px"><button class="fchip" type="button" data-cuonly="" aria-pressed="${!CU.only}">All</button><button class="fchip" type="button" data-cuonly="new" aria-pressed="${CU.only==="new"}">🆕 New${CS.map?` (${CU.list?CU.list.filter(c=>!c.ban&&cuSt(c)&&cuSt(c).n===1).length:0})`:""}</button><button class="fchip" type="button" data-cuonly="repeat" aria-pressed="${CU.only==="repeat"}">🔁 Repeat${CS.map?` (${CU.list?CU.list.filter(c=>!c.ban&&cuSt(c)&&cuSt(c).n>1).length:0})`:""}</button><button class="fchip" type="button" data-cuonly="aff" aria-pressed="${CU.only==="aff"}">📣 From affiliators</button><button class="fchip" type="button" data-cuonly="direct" aria-pressed="${CU.only==="direct"}">🏠 Direct</button><button class="fchip" type="button" data-cuonly="look" aria-pressed="${CU.only==="look"}">👀 Needs a look${CU.list&&CU.list.some(c=>!c.ban&&(c.flags||[]).length)?` (${CU.list.filter(c=>!c.ban&&(c.flags||[]).length).length})`:""}</button><button class="fchip" type="button" data-cuonly="ban" aria-pressed="${CU.only==="ban"}">🚫 Banned${CU.list&&CU.list.some(c=>c.ban)?` (${CU.list.filter(c=>c.ban).length})`:""}</button></div>
+      <div class="grid2" style="margin-top:8px"><label class="af">Search<input class="in" id="cuSearch" type="search" placeholder="Name, number or email" value="${esc(CU.q)}" autocomplete="off"></label>
+        <label class="af">Sort by<select class="in" data-cusort>${[["new","Newest customers"],["spent","Top spenders"],["orders","Most orders"],["last","Latest order"]].map(([v,l])=>`<option value="${v}" ${CU.sort===v?"selected":""}>${l}</option>`).join("")}</select></label></div>
       <div id="cuList" style="margin-top:10px;display:grid;gap:10px">${CU.list===null?`<div class="empty">Loading…</div>`:cuRows()}</div></section></div>`;
 }
 function cuErr(m){CU.err=m;const e=$("#cuErr");if(e){e.textContent=m;e.hidden=!m}}
@@ -7659,6 +7713,8 @@ am.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)r
   else if(d.bmsave!==undefined&&CU.bmd){CU.bmBusy=true;renderAdmin();try{CU.bm=Object.assign({},BANM_DEF,await SBH.rpc("admin_ban_msg_save",{p:CU.bmd}));CU.bmd=JSON.parse(JSON.stringify(CU.bm));toast("Ban message saved")}catch(x){toast(x.message)}CU.bmBusy=false;renderAdmin()}
   else if(d.cuchecked){try{CU.list=await SBH.rpc("admin_cust_reviewed",{p_id:d.cuchecked});toast("Marked as checked")}catch(x){toast(x.message);return}const y=scrollY;renderAdmin();scrollTo(0,y)}
   else if(d.cuonly!==undefined){CU.only=d.cuonly;renderAdmin()}
+  else if(d.cuexport!==undefined){cuExport()}
+  else if(d.ordexport!==undefined){ordExport()}
   else if(d.cuban){CU.bf={id:d.cuban,reason:"",days:7};renderAdmin()}
   else if(d.cubanno!==undefined){CU.bf=null;renderAdmin()}
   else if(d.cubango!==undefined){const f=CU.bf;if(!f)return;try{CU.list=await SBH.rpc("admin_cust_ban",{p_id:f.id,p_reason:f.reason,p_days:+f.days||null});CU.bf=null;toast("Customer banned")}catch(x){toast(x.message);return}const y=scrollY;renderAdmin();scrollTo(0,y)}

@@ -1917,3 +1917,10 @@ body{padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-l
 .cq-pl .stk{left:auto;right:8px;top:8px}
 .cq-pl .bdgs{bottom:-8px}
 .cq-card h4{margin-top:14px}
+
+/* customer tags on orders and in the customer list */
+.ctag.new{background:#16B364;color:#fff;box-shadow:0 0 0 0 rgba(22,179,100,.6);animation:ctagPulse 1.6s ease-in-out infinite}
+.ctag.rep{background:#fff;color:#000096;border:1.5px solid #000096}
+.ctag.aff{background:#FFE3F1;color:#B0166A}.ctag.dir{background:#E6F6EC;color:#0A6B34}
+@keyframes ctagPulse{0%,100%{box-shadow:0 0 0 0 rgba(22,179,100,.55)}50%{box-shadow:0 0 0 5px rgba(22,179,100,0)}}
+@media (prefers-reduced-motion:reduce){html:not(.motion-on) .ctag.new{animation:none}}
