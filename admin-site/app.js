@@ -1400,6 +1400,10 @@ async function bsMapShow(){
 }
 /* the kind of a Biteship service, for the badge: Car, Instant (bike, minutes) or Sameday */
 const BS_KINDS={car:{t:"Car",ic:"🚗",cls:"bsb-car"},instant:{t:"Instant",ic:"🏍️",cls:"bsb-inst"},sameday:{t:"Sameday",ic:"🏍️",cls:"bsb-same"}};
+// courier card: big vehicle, the speed in clear capitals (SAMEDAY green / INSTANT blue), a delivery-time chip. Instant car shows INSTANT with a car.
+function bsSpeed(x){const t=String([x.type,x.serviceName,x.service,x.courierName,x.courier].join(" ")).toLowerCase();return /same[ _-]?day/.test(t)?"sameday":/instant|gojek|grab|lalamove|borzo|deliveree|bike|motor|ojek|car|mobil|truck|van\b|pickup/.test(t)?"instant":""}
+const BS_SPD={sameday:{t:"SAMEDAY",ic:"🌤️",cls:"same"},instant:{t:"INSTANT",ic:"⚡",cls:"inst"}};
+const bsVeh=(k,sp)=>k==="car"?"🚗":sp==="sameday"?"🛵":sp==="instant"?"🏍️":"🚚";
 function bsKind(x){const t=String([x.type,x.serviceName,x.service,x.courierName,x.courier].join(" ")).toLowerCase();
   if(/car|mobil|truck|van\b|pickup/.test(t))return "car";if(/same[ _-]?day/.test(t))return "sameday";if(/instant|gojek|grab|lalamove|borzo|deliveree|bike|motor|ojek/.test(t))return "instant";return ""}
 // the "looking for couriers" animation: a little scooter riding along a road
@@ -1417,7 +1421,8 @@ function bsDraw(){
     // cheapest first (the index stays the position in BSD.opts so the click handler still finds the courier)
     const rows=BSD.opts.map((x,i)=>({x,i})).sort((a,b)=>fdPx(a.x)-fdPx(b.x)||a.x.price-b.x.price);
     o.innerHTML=(storeTop?store:"")+rows.map(({x,i})=>{const sel=!!(S.ship&&S.ship.sig===x.sig&&!S.bsSkip),k=bsKind(x),b=BS_KINDS[k],fd=dm?fdFor(S.size,x,x.price):null;
-      return `<button type="button" class="bsopt${sel?" sel":""}${b?" bsk-"+k:""}" data-bsopt="${i}" aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(x.courierName||x.courier)}</b> ${esc(x.serviceName||x.service)}${b?` <em class="bsbadge ${b.cls}"><i aria-hidden="true">${b.ic}</i>${b.t}</em>`:""}${x.eta?`<small>${esc(x.eta)}</small>`:""}${fd?`<small>${cdlHTML(fd.end)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,x.price,x)}</span></button>`}).join("")
+      const sp=bsSpeed(x),pl=BS_SPD[sp];
+      return `<button type="button" class="bsopt bsc${sel?" sel":""}${sp?" bsc-"+sp:""}${k==="car"?" bsc-car":""}" data-bsopt="${i}" aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span class="bsic" aria-hidden="true"><u></u><u></u><u></u><i>${bsVeh(k,sp)}</i></span><span class="bsmain"><b class="bsnm">${esc(x.courierName||x.courier)} ${esc(x.serviceName||x.service)}</b><span class="bstags">${pl?`<em class="bspill ${pl.cls}"><i aria-hidden="true">${pl.ic}</i>${pl.t}</em>`:""}${x.eta?`<span class="bseta">⏱ ${esc(x.eta)}</span>`:""}</span>${fd?`<small>${cdlHTML(fd.end)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,x.price,x)}</span></button>`}).join("")
       +(storeTop?"":store)}
   const msg=BSD.err&&!BSD.busy?BSD.err:"";er.hidden=!msg;er.textContent=msg;
 }
@@ -1429,7 +1434,7 @@ function bsStoreOpt(){if(!bsFallback()||BSD.busy)return "";
   if(fb&&!fdStoreOnly(fd)&&BSD.opts.length&&!BSD.err)return S.bsSkip?bsStoreBtn():"";   // "only when prices can't load", unless a delivery promo makes it the better deal
   return bsStoreBtn()}
 function bsStoreBtn(){const t=DB.settings,fee=storeFee(S.size),fd=S.mode==="delivery"?fdFor(S.size,"store",fee):null,sel=!!S.bsSkip,promo=!!fd;
-  return `<button type="button" class="bsopt bsstore${sel?" sel":""}${promo?" promo":""}" data-bsskip aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span><b>${esc(scName())}</b>${promo?`<em class="bspromo">${fd.kind==="amount"?(fdApply(fd,fee,"store")>0?esc(money(fd.amount))+" OFF":"FREE DELIVERY"):"FREE DELIVERY"}</em>`:""}${t.scNote?`<small>${esc(t.scNote)}</small>`:""}${promo?`<small>${cdlHTML(fd.end)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,fee,"store")}</span></button>`}
+  return `<button type="button" class="bsopt bsc bsstore${sel?" sel":""}${promo?" promo":""}" data-bsskip aria-pressed="${sel}">${sel?`<i class="bschk" aria-hidden="true">✓</i>`:""}<span class="bsic" aria-hidden="true"><u></u><u></u><u></u><i>🚚</i></span><span class="bsmain"><b class="bsnm">${esc(scName())}</b>${promo?`<em class="bspromo">${fd.kind==="amount"?(fdApply(fd,fee,"store")>0?esc(money(fd.amount))+" OFF":"FREE DELIVERY"):"FREE DELIVERY"}</em>`:""}${t.scNote?`<small>${esc(t.scNote)}</small>`:""}${promo?`<small>${cdlHTML(fd.end)}</small>`:""}</span><span class="num">${fdPriceHTML(fd,fee,"store")}</span></button>`}
 async function bsRates(){
   if(!(BSD.area||BSD.lat)||BSD.busy)return;
   const who=bsWho();if(!who){BSD.err="Type your WhatsApp number first, then we can show courier prices.";bsDraw();return}
@@ -7375,7 +7380,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-03 13:57 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-06 13:13 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afSacHTML()}${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
