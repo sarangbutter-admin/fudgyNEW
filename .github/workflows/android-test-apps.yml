@@ -1,8 +1,8 @@
 name: Android test apps
 
 # Builds two TEST apps that open the dev addresses full-screen:
-#   Delidome (test)        -> https://dev--delidomeorder.netlify.app
-#   Delidome Admin (test)  -> https://dev--deliadmin.netlify.app
+#   BakeByCulture (test)        -> https://dev--bakebycultureorder.netlify.app
+#   BakeByCulture Admin (test)  -> https://dev--bbc-team-9f208a3e.netlify.app
 # The APKs are attached to the "android-test" pre-release on GitHub.
 on:
   workflow_dispatch:
@@ -29,8 +29,8 @@ jobs:
       - name: Collect APKs
         run: |
           mkdir out
-          cp android/app/build/outputs/apk/shop/release/*.apk  out/Delidome-shop-TEST.apk
-          cp android/app/build/outputs/apk/admin/release/*.apk out/Delidome-admin-TEST.apk
+          cp android/app/build/outputs/apk/shop/release/*.apk  out/BakeByCulture-shop-TEST.apk
+          cp android/app/build/outputs/apk/admin/release/*.apk out/BakeByCulture-admin-TEST.apk
           ls -la out
       - name: Publish to the android-test pre-release
         env:

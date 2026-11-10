@@ -1,4 +1,4 @@
--- Delidome migration 16: time slots.
+-- BakeByCulture migration 16: time slots.
 --  * Time slots are now one-hour boxes ("00 to 01" ... "22 to 23", 24-hour clock). The owner switches each on/off and can set a daily limit.
 --  * A limit is only used up by orders whose payment is confirmed. A full slot can't be chosen (shown to customers as Full).
 --  * The old free-text time list in Shop settings is converted to the new boxes (the same hours stay on; the owner can add more from the 00 to 01 ... 22 to 23 list).
@@ -180,7 +180,7 @@ begin
   oid := substr(replace(gen_random_uuid()::text, '-', ''), 1, 16);
   tok := public.new_token();
 
-  msg := 'Hi ' || coalesce(nullif(split_part(v_name, ' ', 1), ''), 'there') || ', your Delidome order ' || v_code || ' (' || public.money_txt(total)
+  msg := 'Hi ' || coalesce(nullif(split_part(v_name, ' ', 1), ''), 'there') || ', your BakeByCulture order ' || v_code || ' (' || public.money_txt(total)
          || ') is waiting for payment. Please pay and send your proof in My orders before it is cancelled automatically.';
   for ch in select unnest(case v_notify when 'both' then array['whatsapp','email'] when 'none' then array[]::text[] else array[v_notify] end) loop
     ms := ms || jsonb_build_array(jsonb_build_object('at', t, 'channel', ch, 'status', 'awaiting', 'text', msg, 'by', 'system'));

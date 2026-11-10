@@ -1,4 +1,4 @@
--- Delidome migration 30: early warnings, owner alerts and resetting the limits (Security tab).
+-- BakeByCulture migration 30: early warnings, owner alerts and resetting the limits (Security tab).
 --  * a visitor who has used most of their allowance (default 70%, Security tab "warnPct") gets a friendly warning:
 --    place_order / track_order / check_coupon answers carry "_warn" (the shop shows the warning pop-up)
 --  * owner alerts: a whole-shop limit was reached, or a daily courier cap passed 70% / was reached (Security tab + badge)

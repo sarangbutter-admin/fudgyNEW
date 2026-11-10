@@ -1,4 +1,4 @@
--- Delidome migration 55: "Become an affiliator" applications.
+-- BakeByCulture migration 55: "Become an affiliator" applications.
 --  * a customer opens the apply link the owner shares, fills a short form and gets a private status link
 --  * the owner sees the applications in the Affiliates menu and approves (creates the account) or rejects with a reason
 --  * the applicant checks the result with their status link

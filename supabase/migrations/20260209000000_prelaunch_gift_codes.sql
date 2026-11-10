@@ -1,4 +1,4 @@
--- Delidome migration 40: pre-launch gift codes at checkout.
+-- BakeByCulture migration 40: pre-launch gift codes at checkout.
 --  * pre_gift_check: is this a valid, unused, unexpired pre-launch gift code (and, when a number is given, is it that customer's)?
 --  * pre_gift_claim: right after an order is placed, the gift is attached to the order (data.preGift) and the code is marked used
 --  * a cancelled order gives the code back
@@ -31,7 +31,7 @@ begin
   if not public.owns(p_id, p_token) then return jsonb_build_object('ok', false, 'err', 'Please try again.'); end if;
   select * into o from public.orders where id = p_id;
   if o.id is null or o.data ? 'preGift' or o.created_at < t - 900000 then return jsonb_build_object('ok', false, 'err', 'Please try again.'); end if;
-  perform pg_advisory_xact_lock(hashtext('delidome-pregift'));
+  perform pg_advisory_xact_lock(hashtext('bakebyculture-pregift'));
   select * into r from public.prelaunch_regs where code = cd;
   if r.id is null then return jsonb_build_object('ok', false, 'err', 'That gift code isn''t valid.'); end if;
   if r.used_order is not null and r.used_order <> o.code then return jsonb_build_object('ok', false, 'err', 'This gift code was already used.'); end if;

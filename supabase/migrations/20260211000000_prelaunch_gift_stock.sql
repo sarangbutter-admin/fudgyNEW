@@ -1,4 +1,4 @@
--- Delidome migration 42: pre-launch gift stock, and the surprise gift is drawn when the order moves past "awaiting payment" (like the old gift rules).
+-- BakeByCulture migration 42: pre-launch gift stock, and the surprise gift is drawn when the order moves past "awaiting payment" (like the old gift rules).
 --  * every gift can have a stock (blank = unlimited); a drawn gift holds one unit until its order is cancelled
 --  * the draw is fixed per gift code: a cancelled order frees the code AND the stock, but the same code always gets the same gift (no re-rolling / farming)
 --  * checkout refuses a code when everything is gone, so nobody pays for a gift that is not there
@@ -67,7 +67,7 @@ begin
   if not public.owns(p_id, p_token) then return jsonb_build_object('ok', false, 'err', 'Please try again.'); end if;
   select * into o from public.orders where id = p_id;
   if o.id is null or o.data ? 'preGift' or o.created_at < t - 900000 then return jsonb_build_object('ok', false, 'err', 'Please try again.'); end if;
-  perform pg_advisory_xact_lock(hashtext('delidome-pregift'));
+  perform pg_advisory_xact_lock(hashtext('bakebyculture-pregift'));
   select * into r from public.prelaunch_regs where code = cd;
   if r.id is null then return jsonb_build_object('ok', false, 'err', 'That gift code isn''t valid.'); end if;
   if r.used_order is not null and r.used_order <> o.code then return jsonb_build_object('ok', false, 'err', 'This gift code was already used.'); end if;
@@ -88,7 +88,7 @@ declare pg jsonb := new.data -> 'preGift'; r public.prelaunch_regs; pool jsonb; 
 begin
   if pg is null or coalesce((pg ->> 'drawn')::boolean, false) then return new; end if;
   if coalesce(new.data ->> 'status', '') in ('', 'awaiting', 'cancelled') then return new; end if;
-  perform pg_advisory_xact_lock(hashtext('delidome-pregift'));
+  perform pg_advisory_xact_lock(hashtext('bakebyculture-pregift'));
   select * into r from public.prelaunch_regs where code = pg ->> 'code';
   if r.id is null then return new; end if;
   mode := coalesce(public.pre_cfg() -> 'gifts' ->> 'mode', 'set'); pool := public.pre_gift_pool();

@@ -1,4 +1,4 @@
--- Delidome migration 35: notifications for affiliators (the bell on their page) and announcements from the owner.
+-- BakeByCulture migration 35: notifications for affiliators (the bell on their page) and announcements from the owner.
 --  Automatic notifications: a new order from their link or coupon, payment confirmed, delivered, cancelled, complaint, refund, failed delivery,
 --  commission approved / voided, payout sent, payment account verified or rejected, account paused or active again, commission rate changed.
 --  Announcements: the owner writes to all affiliators or to one (flash sale, coupon, new feature...).

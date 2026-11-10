@@ -1,4 +1,4 @@
--- Delidome migration 28: abuse protection.
+-- BakeByCulture migration 28: abuse protection.
 --  * limits per visitor (by the connection's IP address) on placing orders, tracking, coupon tries and visit logging,
 --    on top of the old shop-wide limits (one visitor can no longer use up everyone's allowance, and can't place unlimited orders)
 --  * a small cache for courier price and address lookups, so repeated requests don't cost Biteship / Google calls

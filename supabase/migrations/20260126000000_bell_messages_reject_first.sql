@@ -1,4 +1,4 @@
--- Delidome migration 26:
+-- BakeByCulture migration 26:
 --  * a customer message can use the channel 'bell' (the shop's bell only, no WhatsApp or email): staff who choose
 --    "bell only" when changing a status still notify the customer in the shop
 --  * an order with a payment proof can only go back to Awaiting payment by rejecting the proof (with a reason)

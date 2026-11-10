@@ -230,7 +230,7 @@ export async function bookOrder(db: any, key: string, cfg: any, row: { id: strin
     destination_contact_name: cl(c.name, 60), destination_contact_phone: cl(c.phone, 20), destination_contact_email: cl(c.email, 100),
     destination_address: cl(c.address, 250), destination_note: cl(await driverNote(db, o, row.id), 500),
     courier_company: sh.courier, courier_type: sh.service, delivery_type: "now",
-    order_note: "Delidome order " + o.code + " (cookies, handle with care)", metadata: { orderCode: o.code },
+    order_note: "BakeByCulture order " + o.code + " (cookies, handle with care)", metadata: { orderCode: o.code },
     items: [{ name: "Cookie box of " + o.size, description: "Fragile baked goods", value: Math.round(nm(o.base)), quantity: 1, weight: box.weight, length: box.length, width: box.width, height: box.height }],
   };
   if (org.lat !== "" && org.lng !== "" && Number.isFinite(nm(org.lat, NaN)) && Number.isFinite(nm(org.lng, NaN))) payload.origin_coordinate = { latitude: nm(org.lat), longitude: nm(org.lng) };

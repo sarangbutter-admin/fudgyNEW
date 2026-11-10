@@ -1,4 +1,4 @@
--- Delidome migration 46: review rewards can give a cookie / flavor straight from the menu (type 'cookie', pool item has pid)
+-- BakeByCulture migration 46: review rewards can give a cookie / flavor straight from the menu (type 'cookie', pool item has pid)
 -- It must be on sale and in stock to be drawn; its name and picture come from the menu. Safe to run more than once.
 
 create or replace function public.rv_item_ok(it jsonb, cfg jsonb) returns boolean

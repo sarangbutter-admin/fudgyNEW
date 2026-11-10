@@ -1,4 +1,4 @@
-// Delidome: optional Biteship courier integration.
+// BakeByCulture: optional Biteship courier integration.
 // Deploy:  supabase functions deploy biteship
 // The API key is saved by the owner in Shop settings -> Courier delivery (stored in a private table, never sent to the website).
 import { tsGate, admin, applyUpdate, bookOrder, boxOf, bs, bsErr, cacheGet, cacheSet, cors, driverOf, findProofs, hmacHex, INSTANT, ipOf, json, kv, limited, settings, sha, teamRole } from "../_shared/common.ts";
@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
           return { lat: x.geometry.location.lat, lng: x.geometry.location.lng, label: clean(x.formatted_address, 200), rough: !["ROOFTOP", "RANGE_INTERPOLATED"].includes(x.geometry.location_type) };
         };
         const photon = async (q: string): Promise<Hit | null> => {
-          const r = await fetch("https://photon.komoot.io/api/?limit=1&bbox=94.9,-11.1,141.1,6.1&q=" + encodeURIComponent(q), { headers: { "User-Agent": "delidome-shop/1.0 (delivery quote)" } });
+          const r = await fetch("https://photon.komoot.io/api/?limit=1&bbox=94.9,-11.1,141.1,6.1&q=" + encodeURIComponent(q), { headers: { "User-Agent": "bakebyculture-shop/1.0 (delivery quote)" } });
           const j: any = r.ok ? await r.json().catch(() => ({})) : {};
           console.log("geocode photon", r.status, (j.features || []).length);
           const f = (j.features || [])[0];

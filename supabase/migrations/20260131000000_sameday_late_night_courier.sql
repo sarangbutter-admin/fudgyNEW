@@ -1,4 +1,4 @@
--- Delidome migration 31: delivery days and the evening courier stop.
+-- BakeByCulture migration 31: delivery days and the evening courier stop.
 --  * Sameday after the order-by time: a customer who saw the "Sameday closed" pop-up and still chose Sameday
 --    can order it (the order is marked "Same day (after cut-off)")
 --  * Scheduled delivery is never today: tomorrow at the earliest, up to "schedMaxDays" days (Delivery & courier, default 7)

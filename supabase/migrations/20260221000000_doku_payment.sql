@@ -1,4 +1,4 @@
--- Delidome migration 52: DOKU online payment (auto confirmation). Manual confirmation by the store stays as it is.
+-- BakeByCulture migration 52: DOKU online payment (auto confirmation). Manual confirmation by the store stays as it is.
 --  * the owner saves the DOKU Client ID + Secret Key in Shop settings (kept in private_kv "doku_key", never sent to the website)
 --  * settings.doku (public part of the settings doc): { on, methods: [{ k, name, on, payer: 'owner'|'customer', pct, fixed }] }
 --  * the customer picks a method group; the fee is added to the DOKU amount only when the customer pays that fee

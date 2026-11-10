@@ -1,4 +1,4 @@
--- Delidome migration 19: optional Google Maps key for "Find my address on the map" (Biteship courier delivery).
+-- BakeByCulture migration 19: optional Google Maps key for "Find my address on the map" (Biteship courier delivery).
 -- Safe to run more than once. Run after migration 18.
 
 create or replace function public.admin_biteship_get() returns jsonb

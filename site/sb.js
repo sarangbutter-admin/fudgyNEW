@@ -1,4 +1,4 @@
-/* Delidome: Supabase wiring (loaded before app.js, used by it through window.SBH).
+/* BakeByCulture: Supabase wiring (loaded before app.js, used by it through window.SBH).
    - Visitors: load the public shop, place / edit / cancel / track orders, pay, complain, rate, review (all through database functions)
    -    When Supabase is not configured, SBH.on is false and none of this runs (demo mode). */
 (function () {
@@ -8,7 +8,7 @@
   if (!H.on) return;
 
   var J = JSON.stringify;
-  var TOK_KEY = "delidome-tok-v1";
+  var TOK_KEY = "bakebyculture-tok-v1";
   var TOK = {};
   try { TOK = JSON.parse(localStorage.getItem(TOK_KEY) || "{}") || {}; } catch (e) { TOK = {}; }
   function saveTok() { try { localStorage.setItem(TOK_KEY, J(TOK)); } catch (e) {} }
@@ -114,7 +114,7 @@
     setOrderIn(DB.orders, r.order);
     lastOrdSig = "";
     // affiliate link: credit the new order to the link the customer came from (within 30 days; a matching coupon wins on the server)
-    if (!existing && r.token) { try { var af = JSON.parse(localStorage.getItem("delidome-aff-v1") || "null");
+    if (!existing && r.token) { try { var af = JSON.parse(localStorage.getItem("bakebyculture-aff-v1") || "null");
       if (af && af.code && Date.now() - af.at < 30 * 864e5) K.rpc("aff_claim", { p_id: r.order.id, p_token: r.token, p_code: af.code, p_src: af.src || "", p_at: af.at }).catch(function () {}); } catch (e) {} }
     // pre-launch gift code: attach the gift to the new order (the server checks the code belongs to this WhatsApp number)
     if (!existing && r.token && p.preCode) { try { var pg = await K.rpc("pre_gift_claim", { p_id: r.order.id, p_token: r.token, p_code: p.preCode });
@@ -215,7 +215,7 @@
       e.preventDefault();
       var em = $q("#adlEmail").value.trim(), pw = $q("#adlPass").value, b = $q("#adlGo");
       if (!em || !pw) { err.textContent = "Enter your username and password."; err.hidden = false; return; }
-      if (em.indexOf("@") < 0) em = em.toLowerCase() + "@team.delidome.local";
+      if (em.indexOf("@") < 0) em = em.toLowerCase() + "@team.bakebyculture.local";
       b.disabled = true; b.textContent = "Signing in…"; err.hidden = true;
       var cap = tsh ? tsh.token() : "";
       if (tsh && tsh.key && !cap) { err.textContent = tsh.failed ? "The security check could not load. Please reload the page." : "Please complete the security check."; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; return; }

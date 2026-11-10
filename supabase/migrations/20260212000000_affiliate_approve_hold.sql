@@ -1,4 +1,4 @@
--- Delidome migration 43: the owner can approve a commission that is still "On hold" once its complaint is resolved (no need to wait for the window to end).
+-- BakeByCulture migration 43: the owner can approve a commission that is still "On hold" once its complaint is resolved (no need to wait for the window to end).
 -- A new complaint during the window puts it on hold again. Safe to run more than once.
 
 create or replace function public.admin_aff_decide(p_ids jsonb, p_action text, p_reason text) returns jsonb

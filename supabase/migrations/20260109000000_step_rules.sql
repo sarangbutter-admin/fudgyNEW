@@ -1,6 +1,6 @@
--- Delidome migration 9: no skipping steps for anyone, nothing moves past Check payment until payment is confirmed, staff can only edit/cancel before payment is confirmed. Includes migrations 7 and 8.
--- Delidome migration 8: staff can't reject a payment proof on their own either (owner approves). Includes everything from migration 7.
--- Delidome migration 7: order status rules.
+-- BakeByCulture migration 9: no skipping steps for anyone, nothing moves past Check payment until payment is confirmed, staff can only edit/cancel before payment is confirmed. Includes migrations 7 and 8.
+-- BakeByCulture migration 8: staff can't reject a payment proof on their own either (owner approves). Includes everything from migration 7.
+-- BakeByCulture migration 7: order status rules.
 --  * "Confirm payment" needs the customer's payment proof.
 --  * Staff can't confirm payment on their own: it waits for an owner to approve.
 --  * Status only moves forward: Payment confirmed -> Baking -> Ready / Out for delivery -> Delivered / Picked up.

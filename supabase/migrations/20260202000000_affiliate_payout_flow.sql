@@ -1,4 +1,4 @@
--- Delidome migration 33: affiliate commission review and payout flow.
+-- BakeByCulture migration 33: affiliate commission review and payout flow.
 --  Statuses per order (worked out live, plus the owner's own decisions):
 --    waiting (not paid yet) · cancelled · progress (paid, being prepared / delivered) · hold (24 h window running, or a complaint not resolved)
 --    review (owner must approve or void) · approved (waiting payout) · paid (proof uploaded) · voided (reason)

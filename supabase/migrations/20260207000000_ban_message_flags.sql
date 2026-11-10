@@ -1,4 +1,4 @@
--- Delidome migration 38: the ban message the owner can customise, the courier price gate for banned customers, and "Needs a look" flags.
+-- BakeByCulture migration 38: the ban message the owner can customise, the courier price gate for banned customers, and "Needs a look" flags.
 --  * a banned customer's order is refused with the word BANNED, and the shop then shows the owner's own message (icon, picture, gifts, text)
 --  * cust_ban_gate() is called by the courier function: no courier prices for a banned number or email
 --  * admin_customers() also returns flags for suspicious patterns; the owner can mark a customer as checked

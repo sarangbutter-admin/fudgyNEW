@@ -1,4 +1,4 @@
--- Delidome migration 54: affiliator coupons.
+-- BakeByCulture migration 54: affiliator coupons.
 --  * the owner sets a coupon rule for each affiliator (type, value, minimum spend, uses, validity, "can be used with a flash sale", "affiliator may choose the name")
 --  * the affiliator picks their own coupon name (like ALPHA001) in their dashboard; it becomes a real coupon (coupons row "affc_<id>") with the owner's rule
 --  * an order that uses the coupon is credited to the affiliator (existing rule: the coupon wins over the 30-day link memory) at the commission % the owner set

@@ -1,4 +1,4 @@
--- Delidome migration 18: optional Biteship courier delivery (rates at checkout, booking, tracking).
+-- BakeByCulture migration 18: optional Biteship courier delivery (rates at checkout, booking, tracking).
 -- Safe to run more than once. Run after migration 17. Does nothing until the owner switches it on in Shop settings.
 
 create table if not exists public.private_kv (
@@ -271,7 +271,7 @@ begin
   oid := substr(replace(gen_random_uuid()::text, '-', ''), 1, 16);
   tok := public.new_token();
 
-  msg := 'Hi ' || coalesce(nullif(split_part(v_name, ' ', 1), ''), 'there') || ', your Delidome order ' || v_code || ' (' || public.money_txt(total)
+  msg := 'Hi ' || coalesce(nullif(split_part(v_name, ' ', 1), ''), 'there') || ', your BakeByCulture order ' || v_code || ' (' || public.money_txt(total)
          || ') is waiting for payment. Please pay and send your proof in My orders before it is cancelled automatically.';
   for ch in select unnest(case v_notify when 'both' then array['whatsapp','email'] when 'none' then array[]::text[] else array[v_notify] end) loop
     ms := ms || jsonb_build_array(jsonb_build_object('at', t, 'channel', ch, 'status', 'awaiting', 'text', msg, 'by', 'system'));

@@ -1,4 +1,4 @@
-/* Delidome: Supabase wiring (loaded before app.js, used by it through window.SBH).
+/* BakeByCulture: Supabase wiring (loaded before app.js, used by it through window.SBH).
    - Visitors: load the public shop, place / edit / cancel / track orders, pay, complain, rate, review (all through database functions)
    - Owner: sign in, load everything, auto-save every change, poll for new orders
    When Supabase is not configured, SBH.on is false and none of this runs (demo mode). */
@@ -9,7 +9,7 @@
   if (!H.on) return;
 
   var J = JSON.stringify;
-  var TOK_KEY = "delidome-tok-v1";
+  var TOK_KEY = "bakebyculture-tok-v1";
   var TOK = {};
   try { TOK = JSON.parse(localStorage.getItem(TOK_KEY) || "{}") || {}; } catch (e) { TOK = {}; }
   function saveTok() { try { localStorage.setItem(TOK_KEY, J(TOK)); } catch (e) {} }
@@ -115,7 +115,7 @@
     setOrderIn(DB.orders, r.order);
     lastOrdSig = "";
     // affiliate link: credit the new order to the link the customer came from (within 30 days; a matching coupon wins on the server)
-    if (!existing && r.token) { try { var af = JSON.parse(localStorage.getItem("delidome-aff-v1") || "null");
+    if (!existing && r.token) { try { var af = JSON.parse(localStorage.getItem("bakebyculture-aff-v1") || "null");
       if (af && af.code && Date.now() - af.at < 30 * 864e5) K.rpc("aff_claim", { p_id: r.order.id, p_token: r.token, p_code: af.code, p_src: af.src || "", p_at: af.at }).catch(function () {}); } catch (e) {} }
     // pre-launch gift code: attach the gift to the new order (the server checks the code belongs to this WhatsApp number)
     if (!existing && r.token && p.preCode) { try { var pg = await K.rpc("pre_gift_claim", { p_id: r.order.id, p_token: r.token, p_code: p.preCode });
@@ -216,7 +216,7 @@
       e.preventDefault();
       var em = $q("#adlEmail").value.trim(), pw = $q("#adlPass").value, b = $q("#adlGo");
       if (!em || !pw) { err.textContent = "Enter your username and password."; err.hidden = false; return; }
-      if (em.indexOf("@") < 0) em = em.toLowerCase() + "@team.delidome.local";
+      if (em.indexOf("@") < 0) em = em.toLowerCase() + "@team.bakebyculture.local";
       b.disabled = true; b.textContent = "Signing in…"; err.hidden = true;
       var cap = tsh ? tsh.token() : "";
       if (tsh && tsh.key && !cap) { err.textContent = tsh.failed ? "The security check could not load. Please reload the page." : "Please complete the security check."; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; return; }
@@ -248,7 +248,7 @@
       e.preventDefault();
       var em = $q("#adlEmail").value.trim(), pw = $q("#adlPass").value, b = $q("#adlGo");
       if (!em || !pw) { err.textContent = "Enter your username (or email) and password."; err.hidden = false; return; }
-      if (em.indexOf("@") < 0) em = em.toLowerCase() + "@team.delidome.local";   // staff sign in with a username
+      if (em.indexOf("@") < 0) em = em.toLowerCase() + "@team.bakebyculture.local";   // staff sign in with a username
       b.disabled = true; b.textContent = "Signing in…"; err.hidden = true;
       var cap = tsh ? tsh.token() : "";
       if (tsh && tsh.key && !cap) { err.textContent = tsh.failed ? "The security check could not load. Please reload the page." : "Please complete the security check."; err.hidden = false; b.disabled = false; b.textContent = "Sign in"; return; }
@@ -282,7 +282,7 @@
   // under the sign-in button: "Forgot your password? Email us" and the link to apply as an affiliator
   async function loginHelp(form) {
     await tsLoginKey();
-    var C = window.DELIDOME_CONFIG || {}, shop = String(C.shopUrl || "").replace(/\/+$/, ""), p = document.createElement("p");
+    var C = window.BAKEBYCULTURE_CONFIG || {}, shop = String(C.shopUrl || "").replace(/\/+$/, ""), p = document.createElement("p");
     p.className = "adl-sub"; p.style.cssText = "margin-top:12px;display:grid;gap:6px";
     var mail = TSL.help ? '<a href="mailto:' + TSL.help.replace(/"/g, "") + '?subject=' + encodeURIComponent("Forgot password reset") + '&body=' + encodeURIComponent("Hello, I forgot my password. Please reset it.\n\nMy username: (type your username here)\n\nI am writing from the email address I registered with you.") + '">Forgot your password? Email us</a><br><small>Write from your registered email and type your username.</small>' : "Forgot your password? Ask the owner to reset it.";
     p.innerHTML = '<span>' + mail + '</span>' + (shop ? '<span>Want to become an affiliator? <a href="' + shop + '/?apply=affiliate" target="_blank" rel="noopener">Apply here</a></span>' : "");
@@ -398,7 +398,7 @@
       H.admin = true; H.loaded = true;
       snapAll();
       if (fresh) { SN = { docs: {}, rows: { sizes: {}, categories: {}, addons: {}, sales: {}, coupons: {}, broadcasts: {} }, prods: {}, orders: {} }; }
-      try { if (!localStorage.getItem("delidome-aadmin-v1")) { ABOOT = Date.now(); localStorage.setItem(ABOOT_KEY, String(ABOOT)); localStorage.setItem("delidome-aadmin-v1", "1"); } } catch (e) {}
+      try { if (!localStorage.getItem("bakebyculture-aadmin-v1")) { ABOOT = Date.now(); localStorage.setItem(ABOOT_KEY, String(ABOOT)); localStorage.setItem("bakebyculture-aadmin-v1", "1"); } } catch (e) {}
       var el = $q("#adLogin"); if (el) el.remove();
       ["#syncSt", "#signOut"].forEach(function (s) { var e = $q(s); if (e) e.hidden = false; });
       setSync(fresh ? "saving" : "saved");

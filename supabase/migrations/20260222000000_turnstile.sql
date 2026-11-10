@@ -1,4 +1,4 @@
--- Delidome migration 53: Cloudflare Turnstile security checks.
+-- BakeByCulture migration 53: Cloudflare Turnstile security checks.
 --  * the owner saves the Turnstile secret key in Shop settings (private_kv "turnstile_key"); the site key and the switches live in settings.turnstile
 --  * the edge function "turnstile" verifies the widget token with Cloudflare and returns a short pass "<action>|<expiry ms>.<hmac>"
 --  * the checks that run in the database (WhatsApp / place order, coupon input, payment proof) read the pass from the request header x-ts-pass

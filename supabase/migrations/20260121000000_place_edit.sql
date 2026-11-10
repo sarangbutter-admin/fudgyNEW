@@ -1,4 +1,4 @@
--- Delidome migration 21: customers can change the driver note / place photo until a courier is booked (not after).
+-- BakeByCulture migration 21: customers can change the driver note / place photo until a courier is booked (not after).
 -- Safe to run more than once. Run after migration 20.
 create or replace function public.submit_place(p_id text, p_token text, p_note text, p_img text) returns jsonb
 language plpgsql security definer set search_path = public as $$

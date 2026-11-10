@@ -1,4 +1,4 @@
--- Delidome migration 25: gift rules per box size, drawn when the payment proof is sent.
+-- BakeByCulture migration 25: gift rules per box size, drawn when the payment proof is sent.
 --  * a gifts promo now has a pool (sale.gifts: id, name, img, stock - blank = unlimited) and rules (sale.rules: from, to, limit, mode specific|random, ids)
 --  * the gifts are chosen when the customer sends the payment proof (submit_proof), once per order; random picks can't be rerolled
 --  * the gift only counts once the owner confirms the payment (labels already need a paid order)

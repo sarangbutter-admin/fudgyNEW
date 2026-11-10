@@ -1,4 +1,4 @@
--- Delidome migration 37: ban / unban customers (by WhatsApp number and email), with an optional expiry.
+-- BakeByCulture migration 37: ban / unban customers (by WhatsApp number and email), with an optional expiry.
 --  * a banned customer can't place a new order (checked in the database, so it can't be skipped in the browser)
 --  * unbanning keeps the record. Everything is written to the activity log.
 -- Safe to run more than once. Run after migration 36.

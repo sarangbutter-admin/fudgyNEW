@@ -1,4 +1,4 @@
--- Delidome migration 34: affiliator payment account, payout rules.
+-- BakeByCulture migration 34: affiliator payment account, payout rules.
 --  * the affiliator adds a bank / e-wallet account (changing it needs their password and sets it back to "pending");
 --    the owner verifies it by hand (verify, or reject with a reason)
 --  * paying needs a verified account and at least the minimum payout (default 20000, the owner can change it); the day is only a note (default Thursday)

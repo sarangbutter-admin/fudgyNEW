@@ -1,4 +1,4 @@
--- Delidome migration 44: "Store Courier" delivery price (flat, per kg or per cookie) and free-delivery promos for several box sizes.
+-- BakeByCulture migration 44: "Store Courier" delivery price (flat, per kg or per cookie) and free-delivery promos for several box sizes.
 --  * scheduled delivery has no surcharge of its own: the price is the chosen courier's, or the Store Courier's (also the fallback when courier prices can't load)
 --  * Store Courier price: flat (settings.deliveryFee), per started kg (weight = cookies x grams + box grams) or per cookie
 --  * a free-delivery promo can apply to every size, one size (old style) or a list of sizes (+ custom boxes)

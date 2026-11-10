@@ -1,4 +1,4 @@
--- Delidome migration 10: three ways to get an order (Sameday shipment, Pickup, Scheduled delivery), each with an on/off switch and a lead time.
+-- BakeByCulture migration 10: three ways to get an order (Sameday shipment, Pickup, Scheduled delivery), each with an on/off switch and a lead time.
 -- Safe to run more than once. Run after migration 1 (works with or without 2 to 9).
 
 create or replace function public.place_order(p jsonb) returns jsonb
@@ -157,7 +157,7 @@ begin
   oid := substr(replace(gen_random_uuid()::text, '-', ''), 1, 16);
   tok := public.new_token();
 
-  msg := 'Hi ' || coalesce(nullif(split_part(v_name, ' ', 1), ''), 'there') || ', your Delidome order ' || v_code || ' (' || public.money_txt(total)
+  msg := 'Hi ' || coalesce(nullif(split_part(v_name, ' ', 1), ''), 'there') || ', your BakeByCulture order ' || v_code || ' (' || public.money_txt(total)
          || ') is waiting for payment. Please pay and send your proof in My orders before it is cancelled automatically.';
   for ch in select unnest(case v_notify when 'both' then array['whatsapp','email'] when 'none' then array[]::text[] else array[v_notify] end) loop
     ms := ms || jsonb_build_array(jsonb_build_object('at', t, 'channel', ch, 'status', 'awaiting', 'text', msg, 'by', 'system'));

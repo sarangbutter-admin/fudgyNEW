@@ -1,5 +1,5 @@
--- Delidome migration 2: staff roles, team management, customer list.
--- Safe to run more than once. Run it AFTER 20260101000000_delidome_schema.sql.
+-- BakeByCulture migration 2: staff roles, team management, customer list.
+-- Safe to run more than once. Run it AFTER 20260101000000_bakebyculture_schema.sql.
 
 -- ---------- roles ------------------------------------------------------
 alter table public.admins add column if not exists role text not null default 'owner';

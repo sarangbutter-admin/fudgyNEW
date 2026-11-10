@@ -1,5 +1,5 @@
 -- =====================================================================
--- Delidome — Supabase schema
+-- BakeByCulture — Supabase schema
 --
 -- Security model
 --   * Every table has row level security ON and NO policies, and all table
@@ -468,7 +468,7 @@ begin
   oid := substr(replace(gen_random_uuid()::text, '-', ''), 1, 16);
   tok := public.new_token();
 
-  msg := 'Hi ' || coalesce(nullif(split_part(v_name, ' ', 1), ''), 'there') || ', your Delidome order ' || v_code || ' (' || public.money_txt(total)
+  msg := 'Hi ' || coalesce(nullif(split_part(v_name, ' ', 1), ''), 'there') || ', your BakeByCulture order ' || v_code || ' (' || public.money_txt(total)
          || ') is waiting for payment. Please pay and send your proof in My orders before it is cancelled automatically.';
   for ch in select unnest(case v_notify when 'both' then array['whatsapp','email'] when 'none' then array[]::text[] else array[v_notify] end) loop
     ms := ms || jsonb_build_array(jsonb_build_object('at', t, 'channel', ch, 'status', 'awaiting', 'text', msg, 'by', 'system'));
@@ -925,4 +925,4 @@ end $$;
 -- ---------- optional: sweep unpaid orders every minute ----------------
 -- Unpaid orders are also cancelled whenever anyone opens the shop or the admin,
 -- so this is only a bonus. To enable it: Dashboard > Database > Extensions > pg_cron, then run:
---   select cron.schedule('delidome-sweep', '* * * * *', $$select public.sweep_orders()$$);
+--   select cron.schedule('bakebyculture-sweep', '* * * * *', $$select public.sweep_orders()$$);

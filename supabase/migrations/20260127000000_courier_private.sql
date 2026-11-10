@@ -1,4 +1,4 @@
--- Delidome migration 27: the courier's live tracking link stays private (only the team can see it).
+-- BakeByCulture migration 27: the courier's live tracking link stays private (only the team can see it).
 -- Courier tracking pages can show a map with the pickup point, so customers never receive the link
 -- unless the owner switches "Show the live tracking link to customers" on in Delivery & courier.
 -- Safe to run more than once. Run after migration 26.

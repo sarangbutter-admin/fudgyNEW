@@ -1,4 +1,4 @@
--- Delidome migration 47: reward pool chances are percentages (pct, decimals allowed, e.g. 0.5 = 0.5%).
+-- BakeByCulture migration 47: reward pool chances are percentages (pct, decimals allowed, e.g. 0.5 = 0.5%).
 -- Each item gets its own chance out of 100; what is left over (and the share of items that are out of stock) means "no reward this time".
 -- If the percentages add up to more than 100 they are scaled down to fit. Items without a pct share the draw equally.
 -- Safe to run more than once.

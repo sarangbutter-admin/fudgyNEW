@@ -1,4 +1,4 @@
--- Delidome migration 13:
+-- BakeByCulture migration 13:
 --  * Visitor numbers are only sent to owners. Staff accounts get an empty list (hidden on the screen too).
 --  * Refunds: an owner can mark a paid order as refunded (full or part). The customer sees it in the bell and in their order history.
 -- Safe to run more than once. Run after migration 12.

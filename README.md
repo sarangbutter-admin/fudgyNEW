@@ -1,4 +1,4 @@
-# Delidome: cookie box shop
+# BakeByCulture: cookie box shop
 
 A ready-to-deploy ordering website for a cookie shop.
 
@@ -16,7 +16,7 @@ netlify.toml          <- settings for the customer site (admin-site/netlify.toml
 tools/build.js        <- builds site/ and admin-site/ from src/
 ```
 
-**Two sites, one database.** Customers use the shop address. The owner and staff use a different, unlisted address (for example `delidome-team.netlify.app`, or a hard-to-guess name). The shop does not link to it, does not contain its code, and `/#admin` on the shop just shows the shop. The team site is marked `noindex` (search engines are told to stay away).
+**Two sites, one database.** Customers use the shop address. The owner and staff use a different, unlisted address (for example `bakebyculture-team.netlify.app`, or a hard-to-guess name). The shop does not link to it, does not contain its code, and `/#admin` on the shop just shows the shop. The team site is marked `noindex` (search engines are told to stay away).
 
 If `config.js` is left empty the site runs in **demo mode**: everything is stored in the visitor's own browser and nothing is shared. Handy for trying things out, never use it for real customers.
 
@@ -27,7 +27,7 @@ If `config.js` is left empty the site runs in **demo mode**: everything is store
 ### 1. Supabase (the database)
 
 1. Create a project at <https://supabase.com> (any region close to your customers). Save the database password somewhere safe.
-2. Open **SQL Editor → New query**, paste the whole file `supabase/migrations/20260101000000_delidome_schema.sql`, press **Run**. Then do the same with `20260102000000_roles_customers.sql` (staff roles + customer list) `20260103000000_hardening.sql` (tighter permissions) `20260104000000_storage_select.sql` (picture uploads) `20260105000000_badges_reviews.sql` (badges, best sellers, buyer-only reviews) `20260106000000_team_log.sql` (staff usernames, access checkboxes, activity log, owner password) `20260107000000_order_flow.sql` (order status rules: payment proof + owner approval, forward-only steps, courier + airway bill for delivery, only owners can go back, edit or cancel once ready) and `20260108000000_reject_approval.sql` (staff rejecting a payment proof also needs owner approval) and `20260109000000_step_rules.sql` (no skipping steps, nothing moves on before payment is confirmed) and `20260110000000_ship_options.sql` (Sameday shipment, Pickup and Scheduled delivery, each with an on/off switch and a lead time) and `20260111000000_free_delivery_promo.sql` (scheduled Free delivery promos in Flash sales) and `20260112000000_pay_deadline.sql` (time to pay follows the order's due time: the earlier of the usual payment window and the due time minus the lead time, never under the minimum; sameday gets its own short window; times that are too soon are refused). and `20260113000000_refund_visitors.sql` (owner-only visitor numbers; owner can mark a paid order as refunded, and the customer sees it in the bell and their order history). and `20260114000000_sales_performance.sql` (orders remember who cancelled them and whether Random/Shuffle was used, for the dashboard Sales and Performance tabs). and `20260115000000_owner_only_delete.sql` (only an owner account can delete flavors, extras, box sizes and categories). and `20260116000000_time_slots.sql` (one-hour time slot boxes on a 24-hour clock, each with on/off and a daily limit that only paid orders use up). and `20260117000000_gifts.sql` (Gifts promos in Flash sales: free items with certain boxes, always-given or random; saved on the order). and `20260118000000_biteship.sql` (optional Biteship courier prices and booking; does nothing until switched on), `20260119000000_google_geocode.sql` (optional Google Maps key) and `20260120000000_place_photo.sql` (optional note for the driver and photo of the place). All are safe to run again later.
+2. Open **SQL Editor → New query**, paste the whole file `supabase/migrations/20260101000000_bakebyculture_schema.sql`, press **Run**. Then do the same with `20260102000000_roles_customers.sql` (staff roles + customer list) `20260103000000_hardening.sql` (tighter permissions) `20260104000000_storage_select.sql` (picture uploads) `20260105000000_badges_reviews.sql` (badges, best sellers, buyer-only reviews) `20260106000000_team_log.sql` (staff usernames, access checkboxes, activity log, owner password) `20260107000000_order_flow.sql` (order status rules: payment proof + owner approval, forward-only steps, courier + airway bill for delivery, only owners can go back, edit or cancel once ready) and `20260108000000_reject_approval.sql` (staff rejecting a payment proof also needs owner approval) and `20260109000000_step_rules.sql` (no skipping steps, nothing moves on before payment is confirmed) and `20260110000000_ship_options.sql` (Sameday shipment, Pickup and Scheduled delivery, each with an on/off switch and a lead time) and `20260111000000_free_delivery_promo.sql` (scheduled Free delivery promos in Flash sales) and `20260112000000_pay_deadline.sql` (time to pay follows the order's due time: the earlier of the usual payment window and the due time minus the lead time, never under the minimum; sameday gets its own short window; times that are too soon are refused). and `20260113000000_refund_visitors.sql` (owner-only visitor numbers; owner can mark a paid order as refunded, and the customer sees it in the bell and their order history). and `20260114000000_sales_performance.sql` (orders remember who cancelled them and whether Random/Shuffle was used, for the dashboard Sales and Performance tabs). and `20260115000000_owner_only_delete.sql` (only an owner account can delete flavors, extras, box sizes and categories). and `20260116000000_time_slots.sql` (one-hour time slot boxes on a 24-hour clock, each with on/off and a daily limit that only paid orders use up). and `20260117000000_gifts.sql` (Gifts promos in Flash sales: free items with certain boxes, always-given or random; saved on the order). and `20260118000000_biteship.sql` (optional Biteship courier prices and booking; does nothing until switched on), `20260119000000_google_geocode.sql` (optional Google Maps key) and `20260120000000_place_photo.sql` (optional note for the driver and photo of the place). All are safe to run again later.
 3. Create your owner login: **Authentication → Users → Add user → Create new user**. Enter your email and a long password, and tick **Auto Confirm User**.
 4. Tell the database that this email is the owner. In **SQL Editor** run (use your own email):
    ```sql
@@ -42,7 +42,7 @@ If `config.js` is left empty the site runs in **demo mode**: everything is store
 Edit `src/config.js` (then run `node tools/build.js`, which copies it into both sites):
 
 ```js
-window.DELIDOME_CONFIG = {
+window.BAKEBYCULTURE_CONFIG = {
   supabaseUrl: "https://YOUR-PROJECT.supabase.co",
   supabaseAnonKey: "YOUR-ANON-OR-PUBLISHABLE-KEY",
   shopUrl: "https://YOUR-SHOP-ADDRESS"   // team site only: the "View shop" button
@@ -58,9 +58,9 @@ Create an empty repository on GitHub, then in this folder:
 ```bash
 git init
 git add .
-git commit -m "Delidome shop"
+git commit -m "BakeByCulture shop"
 git branch -M main
-git remote add origin https://github.com/YOU/delidome.git
+git remote add origin https://github.com/YOU/bakebyculture.git
 git push -u origin main
 ```
 
@@ -97,7 +97,7 @@ First things to do in the admin:
 ### 6. Optional
 
 * **Cancel unpaid orders on the dot**: unpaid orders are cancelled (and their cookies put back in stock) whenever anyone opens the shop or the admin, which in practice is within seconds. For a guarantee even when nobody is online: **Database → Extensions → enable `pg_cron`**, then run  
-  `select cron.schedule('delidome-sweep', '* * * * *', $$select public.sweep_orders()$$);`
+  `select cron.schedule('bakebyculture-sweep', '* * * * *', $$select public.sweep_orders()$$);`
 * **Backups**: Supabase keeps daily backups on paid plans. On the free plan, export your data now and then (**Database → Backups**, or `pg_dump`).
 
 ---
@@ -130,7 +130,7 @@ First things to do in the admin:
 * **Draft and publish**: edits to Shop settings, Marquee banner and Landing page (and Top banner) stay in the owner's browser as a draft. A yellow bar shows "Not published yet" with **Publish changes** and **Discard changes**. Customers only see the published version. The Announcer and Top banner have their own Save & publish / Discard buttons too.
 * **Updating the site**: edit files in `src/`, run `node tools/build.js`, commit `src/`, `site/` and `admin-site/`, `git push`, Netlify redeploys. For database changes, add a new file in `supabase/migrations/` and run it in the SQL editor.
 * **Preview without Netlify**: `cd site && python3 -m http.server 8080`, then open <http://localhost:8080>.
-* **Single-file preview**: `python3 tools/bundle.py` writes `dist/delidome-single.html`.
+* **Single-file preview**: `python3 tools/bundle.py` writes `dist/bakebyculture-single.html`.
 
 ## Troubleshooting
 

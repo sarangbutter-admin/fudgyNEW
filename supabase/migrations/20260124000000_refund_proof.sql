@@ -1,4 +1,4 @@
--- Delidome migration 24: a refund needs a picture proof (the transfer receipt / screenshot).
+-- BakeByCulture migration 24: a refund needs a picture proof (the transfer receipt / screenshot).
 --  * the picture is kept out of the order (like payment proofs) in order_files, kind 'refund'; the order only keeps refund.proof = true
 --  * admin_refund_order now takes the picture and refuses to save a refund without it (the old 4-argument version is removed)
 --  * admin_order_files also returns the refund picture

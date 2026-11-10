@@ -2,12 +2,12 @@ plugins { id "com.android.application" }
 
 // Two test apps that open the dev branch addresses full-screen (Trusted Web Activity).
 def flavorsCfg = [
-  admin: [id: "com.delidome.admin.test", name: "Delidome Admin (test)", host: "dev--deliadmin.netlify.app"],
-  shop : [id: "com.delidome.shop.test",  name: "Delidome (test)",       host: "dev--delidomeorder.netlify.app"],
+  admin: [id: "com.bakebyculture.admin.test", name: "BakeByCulture Admin (test)", host: "dev--bbc-team-9f208a3e.netlify.app"],
+  shop : [id: "com.bakebyculture.shop.test",  name: "BakeByCulture (test)",       host: "dev--bakebycultureorder.netlify.app"],
 ]
 
 android {
-  namespace "com.delidome.twa"
+  namespace "com.bakebyculture.twa"
   compileSdk 34
   defaultConfig { minSdk 21; targetSdk 34; versionCode 1; versionName "0.1-test" }
   signingConfigs {

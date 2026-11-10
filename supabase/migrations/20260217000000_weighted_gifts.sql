@@ -1,4 +1,4 @@
--- Delidome migration 48: chance (%) for the random gifts of Flash sale "Gifts" promos and of the Pre-launch surprise gift.
+-- BakeByCulture migration 48: chance (%) for the random gifts of Flash sale "Gifts" promos and of the Pre-launch surprise gift.
 -- A gift can have a "pct" (share of the draw, decimals ok, 0.5 = 0.5%). Gifts without one share equally. A gift is always given:
 -- the numbers only decide how likely each gift is compared with the others that are still in stock.
 -- Safe to run more than once.

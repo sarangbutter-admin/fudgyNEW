@@ -1,15 +1,15 @@
-/* Delidome: tiny Supabase client (no libraries, no build step).
+/* BakeByCulture: tiny Supabase client (no libraries, no build step).
    - rpc(): calls a database function through PostgREST
    - login()/logout(): owner sign-in with email + password (Supabase Auth)
    - upload(): puts an owner picture into the public "shop-media" bucket
    When config.js is empty, SBK.on is false and the site runs in demo mode. */
 (function () {
   "use strict";
-  var C = window.DELIDOME_CONFIG || {};
+  var C = window.BAKEBYCULTURE_CONFIG || {};
   var URL_ = String(C.supabaseUrl || "").trim().replace(/\/+$/, "");
   var KEY = String(C.supabaseAnonKey || "").trim();
   var on = !!(URL_ && KEY);
-  var SKEY = "delidome-auth-v1";
+  var SKEY = "bakebyculture-auth-v1";
   var BUCKET = "shop-media";
   var sess = null;
   try { sess = JSON.parse(localStorage.getItem(SKEY) || "null"); } catch (e) { sess = null; }

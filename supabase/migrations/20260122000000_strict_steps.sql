@@ -1,4 +1,4 @@
--- Delidome migration 22: stricter order steps.
+-- BakeByCulture migration 22: stricter order steps.
 --  * a cancelled order can only be reopened at Awaiting payment / Check payment (never straight to Payment confirmed, Baking, Out for delivery or Delivered)
 --  * a paid order (Baking and later) can't be moved back to the payment steps; Payment confirmed can go back to Check payment (undo), which clears the paid mark
 -- Safe to run more than once. Run after migration 21.

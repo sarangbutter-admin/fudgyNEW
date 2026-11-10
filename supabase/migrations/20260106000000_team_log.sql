@@ -1,4 +1,4 @@
--- Delidome migration 6: staff logins (username + password), permission checkboxes,
+-- BakeByCulture migration 6: staff logins (username + password), permission checkboxes,
 -- activity log (owner only, kept 3 months), owner password for deletes and price changes.
 -- Safe to run more than once. Run after migrations 1-5.
 
@@ -382,7 +382,7 @@ begin
 end $$;
 
 -- ---------- team management (owner only) ---------------------------------------
-create or replace function public.team_domain() returns text language sql immutable as $$ select 'team.delidome.local' $$;
+create or replace function public.team_domain() returns text language sql immutable as $$ select 'team.bakebyculture.local' $$;
 
 drop function if exists public.admin_team_list();
 create or replace function public.admin_team_list() returns jsonb

@@ -1,4 +1,4 @@
--- Delidome migration 50: sameday time slots. When settings.sdSlotOn is true and sameday is still open (before the order-by hour),
+-- BakeByCulture migration 50: sameday time slots. When settings.sdSlotOn is true and sameday is still open (before the order-by hour),
 -- the customer must pick one of the switched-on settings.sdSlots (one-hour boxes like "16 to 17"). A slot is "too soon" when it starts
 -- before now + the sameday lead time. A slot can have a daily limit (paid orders, like the normal time slots).
 -- After the cut-off (order placed with sdLate) there is no slot: the time stays "Same day (after cut-off)". Safe to run more than once.

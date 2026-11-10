@@ -1,9 +1,9 @@
-/* Delidome: English / Bahasa Indonesia for the customer shop.
+/* BakeByCulture: English / Bahasa Indonesia for the customer shop.
    The shop is written in English. When the visitor picks Indonesian, every piece of text on the page that has a translation
    in i18n-dict.js is swapped (and swapped back for English), including text the shop draws later. Text the owner typed
    themselves (flavor names, landing page words...) has no translation, so it stays exactly as written. */
 (function () {
-  var KEY = "delidome-lang", TIPKEY = "delidome-lang-tip", lang = "en";
+  var KEY = "bakebyculture-lang", TIPKEY = "bakebyculture-lang-tip", lang = "en";
   try { lang = localStorage.getItem(KEY) === "id" ? "id" : "en"; } catch (e) {}
   var D = window.DD_ID || {}, P = window.DD_ID_PATTERNS || [];
   window.DDLANG = function () { return lang; };

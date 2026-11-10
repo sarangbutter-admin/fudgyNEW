@@ -1,4 +1,4 @@
--- Delidome migration 39: pre-launch page.
+-- BakeByCulture migration 39: pre-launch page.
 --  * docs 'prelaunch' (public): the owner's page settings; shop_public also returns it
 --  * prelaunch_regs: who registered for a free Gift Set (one per WhatsApp number, first X only), each with a personal gift code
 --  * while pre-launch is on (and the opening time has not passed with auto-open), the shop takes no orders (except from the team)
@@ -39,7 +39,7 @@ begin
   if ph !~ '^[0-9+()\s.-]{6,24}$' or length(pn) < 7 or length(pn) > 14 then perform public.bad('Please enter a valid WhatsApp number.'); end if;
   if em <> '' and em !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then perform public.bad('Please enter a valid email address.'); end if;
   if not public.throttle_ok('prereg:' || pn, 6, 600000) or not public.throttle_ok('prereg-all', 120, 60000) then perform public.bad('Too many tries. Please wait a minute.'); end if;
-  perform pg_advisory_xact_lock(hashtext('delidome-prelaunch'));
+  perform pg_advisory_xact_lock(hashtext('bakebyculture-prelaunch'));
   select * into r from public.prelaunch_regs where phone_norm = pn;
   if r.id is not null then
     return jsonb_build_object('ok', true, 'again', true, 'code', r.code, 'rank', r.rank, 'name', r.name, 'exp', r.exp, 'max', mx);

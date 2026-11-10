@@ -1,4 +1,4 @@
-// Delidome: Cloudflare Turnstile check. The shop shows the widget, sends the token here, and gets back a short "pass"
+// BakeByCulture: Cloudflare Turnstile check. The shop shows the widget, sends the token here, and gets back a short "pass"
 // that the protected actions (WhatsApp / place order, coupon input, payment proof, courier check, DOKU checkout, affiliator application) need.
 // The Turnstile secret key is saved by the owner in Shop settings -> Security check (private table, never sent to the website).
 // Deploy:  supabase functions deploy turnstile

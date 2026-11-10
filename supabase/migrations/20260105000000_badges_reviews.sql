@@ -1,4 +1,4 @@
--- Delidome migration 5: badges + best sellers in the shop, reviews only from real buyers.
+-- BakeByCulture migration 5: badges + best sellers in the shop, reviews only from real buyers.
 -- Safe to run more than once.
 
 -- the public shop now also gets the owner's badges and how many of each flavor sold (last 90 days, paid orders only)

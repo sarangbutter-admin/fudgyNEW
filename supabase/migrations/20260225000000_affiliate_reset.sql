@@ -1,4 +1,4 @@
--- Delidome migration 56: affiliator password reset by email.
+-- BakeByCulture migration 56: affiliator password reset by email.
 --  * each affiliator can have a registered contact email (set from the application, or typed by the owner in the Edit form)
 --  * the owner looks the username up, checks that the email they received came from the registered address, and sets a new password
 -- Safe to run more than once.

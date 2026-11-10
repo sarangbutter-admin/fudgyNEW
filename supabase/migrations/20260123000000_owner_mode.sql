@@ -1,4 +1,4 @@
--- Delidome migration 23: Owner mode per order.
+-- BakeByCulture migration 23: Owner mode per order.
 -- Owner overrides (going back a step, cancelling a paid order, reopening a cancelled one, editing a paid order,
 -- changing a set courier / airway bill, refunds) only work after the owner turns on Owner mode for that order
 -- with the owner password. It switches itself off after 5 minutes. Everyday work (confirming payments,

@@ -1,4 +1,4 @@
--- Delidome migration 20: optional "Note for the driver" and "Photo of your place" for delivery orders.
+-- BakeByCulture migration 20: optional "Note for the driver" and "Photo of your place" for delivery orders.
 -- Safe to run more than once. Run after migration 19. Switched on/off in the Delivery & courier tab.
 -- The photo is kept out of the order (like payment proofs), only the shop and that customer can see it,
 -- and it is deleted 3 days after the order is delivered or cancelled.

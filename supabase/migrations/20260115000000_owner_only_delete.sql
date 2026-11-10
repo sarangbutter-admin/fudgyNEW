@@ -1,4 +1,4 @@
--- Delidome migration 15: only an owner account can delete flavors, extras, box sizes and categories
+-- BakeByCulture migration 15: only an owner account can delete flavors, extras, box sizes and categories
 -- (staff who know the owner password still can't). Safe to run more than once. Run after migration 14.
 do $do$
 declare d text := pg_get_functiondef('public.coll_guard()'::regprocedure);

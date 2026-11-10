@@ -13,7 +13,7 @@
    ===================================================================== */
 const DEFAULT_CATS=[{id:"classics",name:"Classics"},{id:"chocolate",name:"Chocolate"},{id:"specials",name:"Specials"}];
 const CAT_OF={bb:"classics",oc:"classics",sm:"classics",dc:"chocolate",rv:"chocolate",rb:"chocolate",mt:"specials",lm:"specials",pb:"specials"};
-const DB_KEY = "delidome-db-v1", CART_KEY = "delidome-cart-v1";
+const DB_KEY = "bakebyculture-db-v1", CART_KEY = "bakebyculture-cart-v1";
 const ART = {
   bb:{label:"Classic chip",       dough:"#D19554", edge:"#97592A", chips:["#3B2214","#2A170C"], salt:true},
   dc:{label:"Cocoa",              dough:"#5A3322", edge:"#2E170D", chips:["#F2E5CE","#1A0C06"]},
@@ -26,7 +26,7 @@ const ART = {
   lm:{label:"Lemon sugar",        dough:"#EBCB6B", edge:"#B8922E", chips:["#FFF8E1","#F5E3A0"], salt:true},
   ub:{label:"Ube",                dough:"#8E6BB8", edge:"#5B3F82", chips:["#F3E9FF","#3B2214"]}
 };
-const PLATES = ["#000096","#D9DCFA","#2328C8","#EEF0FF"];
+const PLATES = ["#5A3221","#EFDFD2","#8A5236","#FBF4EE"];
 const STATUSES = [["awaiting","Awaiting payment"],["review","Check payment"],["new","Payment confirmed"],["baking","Baking"],["ready","Ready / Out for delivery"],["completed","Delivered / Picked up"],["cancelled","Cancelled"]];
 const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const DOW_LONG = ["Sundays","Mondays","Tuesdays","Wednesdays","Thursdays","Fridays","Saturdays"];
@@ -58,7 +58,7 @@ function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15
 function seedDB(){
   const now=Date.now(), H=3600e3;
   const db={v:1,
-    settings:{currency:"$",tz:"Asia/Jakarta",deliveryFee:5,scOn:true,scName:"Store Courier",scMode:"flat",scPerKg:0,scPerPcs:0,scGrams:100,scBoxG:200,scShow:"always",scNote:"Delivered by our own team",schedMsg:"Scheduled delivery: pick a day and time. We deliver within {km} km of the shop. {courier}",deliveryKm:10,samedayOn:false,samedayLeadH:3,samedayCutoff:15,samedayFee:8,samedayPayMin:60,minPayMin:30,rejPayMin:120,payCdColor:"#C8102E",payCdSize:"L",payCdFx:true,pickupOn:true,pickupLeadH:24,schedOn:true,schedLeadH:24,cutoffHour:20,closedWeekdays:[1],lowStockAt:10,customOn:true,customMin:14,customStep:2,customMax:48,customPer:3.25,payWindowH:24,complaintWindowH:24,waCountry:"62",payBank:"Example Bank\nAccount 123 456 7890\nName: Delidome Cookies",
+    settings:{currency:"$",tz:"Asia/Jakarta",deliveryFee:5,scOn:true,scName:"Store Courier",scMode:"flat",scPerKg:0,scPerPcs:0,scGrams:100,scBoxG:200,scShow:"always",scNote:"Delivered by our own team",schedMsg:"Scheduled delivery: pick a day and time. We deliver within {km} km of the shop. {courier}",deliveryKm:10,samedayOn:false,samedayLeadH:3,samedayCutoff:15,samedayFee:8,samedayPayMin:60,minPayMin:30,rejPayMin:120,payCdColor:"#C8102E",payCdSize:"L",payCdFx:true,pickupOn:true,pickupLeadH:24,schedOn:true,schedLeadH:24,cutoffHour:20,closedWeekdays:[1],lowStockAt:10,customOn:true,customMin:14,customStep:2,customMax:48,customPer:3.25,payWindowH:24,complaintWindowH:24,waCountry:"62",payBank:"Example Bank\nAccount 123 456 7890\nName: BakeByCulture Cookies",
       times:["10 to 11am","12 to 1pm","3 to 4pm","5 to 6pm"],
       address:"12 Example Street, Your City. Look for the blue dome sign.",
       hours:[["Tue to Fri","10am to 6pm"],["Saturday","9am to 5pm"],["Sunday","10am to 3pm"],["Monday","Closed"]]},
@@ -121,32 +121,32 @@ function countItems(box){const c={};box.forEach(id=>{if(id)c[id]=(c[id]||0)+1});
 let DB;
 function defaultAnnouncer(){return {on:true,sticky:true,size:"M",cdColor:"#C8102E",cdBg:"#FFFFFF",cdFx:true,cdSize:"L",imgOn:true,imgFx:true,
   live:{text:"Flash sale: {name}. {off} {applies}.",label:"Ends in",bg:"#C8102E",ink:"#FFFFFF",img:""},
-  soon:{text:"Coming up: {name}, {off} {applies}.",label:"Starts in",bg:"#EEF0FF",ink:"#000096",img:""},
+  soon:{text:"Coming up: {name}, {off} {applies}.",label:"Starts in",bg:"#FBF4EE",ink:"#5A3221",img:""},
   fdlive:{text:"{name}: free delivery on {applies}.",label:"Ends in",bg:"#0A6B34",ink:"#FFFFFF",img:""},
   fdsoon:{text:"Coming up: {name}, free delivery on {applies}.",label:"Starts in",bg:"#E6F7EC",ink:"#0A6B34",img:""},
-  giftlive:{text:"🎁 {name}: free gifts with {applies}!",label:"Ends in",bg:"#FFE066",ink:"#000096",img:""},
-  giftsoon:{text:"Coming up: {name}, free gifts with {applies}.",label:"Starts in",bg:"#FFF7D6",ink:"#000096",img:""},
-  mq:{bg:"#000096",ink:"#FFFFFF",font:"display",fontData:"",fontName:"",size:"M",speed:"medium",sepOn:true,sepImg:""},
-  custom:{on:false,text:"Free delivery this weekend!",label:"Ends in",endsAt:"",bg:"#000096",ink:"#FFFFFF",img:""}}}
-function defaultMarquee(){return {on:true,texts:["Baked fresh every morning","Build a box your way","Pickup or local delivery","Order by 8pm for next-day cookies"],images:[],bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium",fontData:null,fontName:"",mode:"both",imgH:0,links:[],rich:true}}
+  giftlive:{text:"🎁 {name}: free gifts with {applies}!",label:"Ends in",bg:"#FFE066",ink:"#5A3221",img:""},
+  giftsoon:{text:"Coming up: {name}, free gifts with {applies}.",label:"Starts in",bg:"#FFF7D6",ink:"#5A3221",img:""},
+  mq:{bg:"#5A3221",ink:"#FFFFFF",font:"display",fontData:"",fontName:"",size:"M",speed:"medium",sepOn:true,sepImg:""},
+  custom:{on:false,text:"Free delivery this weekend!",label:"Ends in",endsAt:"",bg:"#5A3221",ink:"#FFFFFF",img:""}}}
+function defaultMarquee(){return {on:true,texts:["Baked fresh every morning","Build a box your way","Pickup or local delivery","Order by 8pm for next-day cookies"],images:[],bg:"#5A3221",color:"#ffffff",font:"display",size:"M",speed:"medium",fontData:null,fontName:"",mode:"both",imgH:0,links:[],rich:true}}
 function defaultThanks(){return {logo:"",cookies:[],fx:true,amount:28,title:"Order placed",titleUpd:"Order updated",
   text:"Thanks, {name}! Your box of {size} is set for {mode} on {when}.",
   urgent:"Your cookies are waiting! Pay within {hours} to keep them.",
   cdLabel:"Time left to pay",payBtn:"Pay now & secure my cookies 🍪",trackBtn:"Track my order",buildBtn:"Build another box",
-  bg:"#ffffff",accent:"#000096",cdColor:"#C8102E"}}
+  bg:"#ffffff",accent:"#5A3221",cdColor:"#C8102E"}}
 function defaultProofPop(){return {on:true,emoji:"🙏",img:"",cookies:[],fx:true,amount:36,
   title:"Thank you, {name}! ✅",
   text:"We have received your payment proof for order {code}. We will check it and confirm it shortly. You can follow the progress in My orders.",
-  btn:"Track my order",bg:"#ffffff",accent:"#000096",ink:"#0B0B45"}}
+  btn:"Track my order",bg:"#ffffff",accent:"#5A3221",ink:"#2B1A12"}}
 function defaultAlerts(){return {on:true,sound:true,vol:70,repeat:false,stay:true,custom:"",customName:"",
   ev:{order:{on:true,snd:"register"},proof:{on:true,snd:"chime"},paid:{on:false,snd:"bell"},complaint:{on:true,snd:"alarm"},courier:{on:true,snd:"alarm"}}}}
 function defaultRev(){return {on:false,days:7,minBox:6,mode:"random",daily:20,validDays:7,redeemDays:30,claimMin:6,claimMode:"auto",
-  upg:{icon:"🎁",one:"You have 1 reward waiting! Upgrade to a box of {min} or more to claim it.",many:"You have {n} rewards waiting! Upgrade to a box of {min} or more to claim one.",man:"You have {n} reward code(s) saved. Type one in the coupon box to claim it.",chg:"You have {n} rewards. Only one can be used per order.",pickTitle:"Choose the reward for this order",exp:"{n} of your rewards expired and can't be used any more.",useBtn:"Use my reward",changeBtn:"Change",bg:"#FFF4D6",ink:"#0B0B45"},
+  upg:{icon:"🎁",one:"You have 1 reward waiting! Upgrade to a box of {min} or more to claim it.",many:"You have {n} rewards waiting! Upgrade to a box of {min} or more to claim one.",man:"You have {n} reward code(s) saved. Type one in the coupon box to claim it.",chg:"You have {n} rewards. Only one can be used per order.",pickTitle:"Choose the reward for this order",exp:"{n} of your rewards expired and can't be used any more.",useBtn:"Use my reward",changeBtn:"Change",bg:"#FFF4D6",ink:"#2B1A12"},
   rem:{on:true,hot:24,text:"Unclaimed reward: {name}",cd:"Expires in {time}",tip:"Last chance! Your reward {name} expires in {time}"},
-  bn:{card:true,star:true,icon:"⭐",starImg:"",starFx:"blink",starSpeed:100,waitIcon:"📦",waitImg:"",waitFx:"shake",waitSpeed:100,title:"How was your order {code}?",sub:"Rate your cookies and open a blind box 🎁",bg:"#FFF4D6",ink:"#0B0B45",line:"#FFD166",fx:"shine",tipOn:true,tip:"Rate your order and open a blind box!",cd:true,cdText:"Review ends in {time}",cdHot:24,cdTip:"Last chance! Review ends in {time}"},
-  win:{icon:"🎉",img:"",fx:"confetti",title:"You won a surprise!",text:"{reward}",btn:"Great!",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
-  sad:{icon:"🥺",img:"",fx:"rain",title:"Thank you for rating",text:"We're sorry it wasn't perfect this time. We'd love to make it right, so please order again soon.",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
-  none:{icon:"🎁",img:"",fx:"sparkle",title:"Thanks for rating!",text:"No surprise this time, but we loved hearing from you. See you at your next order!",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#0B0B45",acc:"#000096"},
+  bn:{card:true,star:true,icon:"⭐",starImg:"",starFx:"blink",starSpeed:100,waitIcon:"📦",waitImg:"",waitFx:"shake",waitSpeed:100,title:"How was your order {code}?",sub:"Rate your cookies and open a blind box 🎁",bg:"#FFF4D6",ink:"#2B1A12",line:"#FFD166",fx:"shine",tipOn:true,tip:"Rate your order and open a blind box!",cd:true,cdText:"Review ends in {time}",cdHot:24,cdTip:"Last chance! Review ends in {time}"},
+  win:{icon:"🎉",img:"",fx:"confetti",title:"You won a surprise!",text:"{reward}",btn:"Great!",bg:"#FFFFFF",ink:"#2B1A12",acc:"#5A3221"},
+  sad:{icon:"🥺",img:"",fx:"rain",title:"Thank you for rating",text:"We're sorry it wasn't perfect this time. We'd love to make it right, so please order again soon.",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#2B1A12",acc:"#5A3221"},
+  none:{icon:"🎁",img:"",fx:"sparkle",title:"Thanks for rating!",text:"No surprise this time, but we loved hearing from you. See you at your next order!",btn1:"Buy again",btn2:"Close",bg:"#FFFFFF",ink:"#2B1A12",acc:"#5A3221"},
   choose:{title:"Pick your gift",text:"Choose the surprise you want:"}}}
 function defaultLabel(){return {logo:"",qr:"",qrCaption:"",notes:"",warnOn:true,warn1:"UNBOXING WITH UNCUT VIDEO!",warn2:"CONTACT US IF SEAL BROKEN"}}
 // time slots can be any range ("13:30 to 15:00"); the label is built from two time pickers
@@ -176,7 +176,7 @@ function migrate(db){
   if(db.settings&&db.settings.menuSort===undefined)db.settings.menuSort="popular";
   if(!Array.isArray(db.coupons))db.coupons=[{id:"cp1",code:"WELCOME10",desc:"10% off your box",type:"percent",value:10,minSpend:0,appliesTo:"all",startsAt:"",endsAt:"",maxUses:0,onePerPhone:true,stack:true,show:true,on:true}];
   db.alerts=deepFill(defaultAlerts(),db.alerts);
-  if(!Array.isArray(db.payMethods))db.payMethods=[{id:"pm1",name:"Bank transfer",details:(db.settings&&db.settings.payBank)||"Example Bank\nAccount 123 456 7890\nName: Delidome Cookies",img:"",on:true}];
+  if(!Array.isArray(db.payMethods))db.payMethods=[{id:"pm1",name:"Bank transfer",details:(db.settings&&db.settings.payBank)||"Example Bank\nAccount 123 456 7890\nName: BakeByCulture Cookies",img:"",on:true}];
   db.proofpop=Object.assign(defaultProofPop(),db.proofpop||{});
   db.prelaunch=preNorm(db.prelaunch);if(!Array.isArray(db.preRegs))db.preRegs=[];
   if(db.page&&db.page.strip&&db.page.strip.mode){const st=db.page.strip,d=defaultPage().strip.items;
@@ -189,14 +189,14 @@ function migrate(db){
   if(db.settings.complaintWindowH===undefined)db.settings.complaintWindowH=24;
   {const t=db.settings,d={scOn:true,scName:"Store Courier",scMode:"flat",scPerKg:0,scPerPcs:0,scGrams:100,scBoxG:200,scShow:"always",scNote:"Delivered by our own team",schedMsg:"Scheduled delivery: pick a day and time. We deliver within {km} km of the shop. {courier}"};for(const k in d)if(t[k]===undefined)t[k]=d[k]}
   if(db.settings.waCountry===undefined)db.settings.waCountry="62";
-  if(db.settings.payWindowH===undefined)Object.assign(db.settings,{payWindowH:24,payBank:"Example Bank\nAccount 123 456 7890\nName: Delidome Cookies"});
+  if(db.settings.payWindowH===undefined)Object.assign(db.settings,{payWindowH:24,payBank:"Example Bank\nAccount 123 456 7890\nName: BakeByCulture Cookies"});
   if(db.settings.lowStockAt===undefined)db.settings.lowStockAt=10;
   if(db.settings.customOn===undefined)Object.assign(db.settings,{customOn:true,customMin:14,customStep:2,customMax:48,customPer:3.25});
   if(db.settings.fabGest===undefined)Object.assign(db.settings,{fabGest:true,fabBgType:"color",fabBg2:"#FF9F43",fabRing:"",fabImgSize:84,fabSizePx:58,fabOpacity:100,fabImg:"",rbImg:"",rbImg2:""});
   if(db.settings.guardOn===undefined)Object.assign(db.settings,{guardOn:true,guardClear:true,guardShuf:true,guardIcon:"🛡️",guardImg:"",
     guardClearTitle:"Clear your box?",guardClearText:"You already picked a courier. This will empty your whole box. Your courier choice stays.",guardClearOk:"Yes, clear it",guardClearNo:"Keep my box",
     guardShufTitle:"Shuffle your box?",guardShufText:"You already picked a courier. This swaps only the flavors we picked for you. The ones you chose yourself stay.",guardShufOk:"Yes, shuffle",guardShufNo:"Keep my box"});
-  if(db.settings.rbOn===undefined)Object.assign(db.settings,{rbOn:true,rbIcon:"🎲",rbIcon2:"🔀",rbBg:"#FFD43B",rbFx:"wiggle",rbScroll:true,fabOn:true,fabIcon:"📦",fabText:"My box",fabTextOn:true,fabFx:"bounce",fabBg:"#FFD43B",fabInk:"#000096",fabHide:true});
+  if(db.settings.rbOn===undefined)Object.assign(db.settings,{rbOn:true,rbIcon:"🎲",rbIcon2:"🔀",rbBg:"#FFD43B",rbFx:"wiggle",rbScroll:true,fabOn:true,fabIcon:"📦",fabText:"My box",fabTextOn:true,fabFx:"bounce",fabBg:"#FFD43B",fabInk:"#5A3221",fabHide:true});
   if(!Array.isArray(db.categories)){db.categories=DEFAULT_CATS.map(c=>({...c}));db.products.forEach(p=>{if(p.cat===undefined)p.cat=CAT_OF[p.id]||""})}
   db.products.forEach(p=>{if(p.cat===undefined)p.cat="";if(!Array.isArray(p.reviews))p.reviews=[]});
   db.products.forEach(p=>{if(p.track===undefined){p.track=true;p.stock=p.status==="soldout"?0:40}if(typeof p.stock!=="number")p.stock=0});
@@ -372,7 +372,7 @@ function cookieSVG(f, seed){
 const seedOf = id => [...id].reduce((a,c)=>a+c.charCodeAt(0),0)*97+3;
 const artOf = p => ART[p?.art]||ART.bb;
 const plateColorOf = p => {const i=DB.products.indexOf(p);return PLATES[(i<0?DB.products.length:i)%PLATES.length]};
-const DARK_PLATES = ["#000096","#2328C8"];
+const DARK_PLATES = ["#5A3221","#8A5236"];
 const hasImage = p => p.art!=="none" && !(p.art==="photo"&&!p.img);
 const initials = n => (n||"?").split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase();
 function plateInner(p){
@@ -388,9 +388,9 @@ function plateBg(p,b){
   b=b||p.bg||{};const d=plateColorOf(p);let css,dark;
   if(b.type==="color"&&HEX6.test(b.c1||"")){css=`background:${b.c1}`;dark=lumOf(b.c1)<.3}
   else if(b.type==="gradient"&&HEX6.test(b.c1||"")&&HEX6.test(b.c2||"")){css=`background:${BG_DIRS[b.dir]||BG_DIRS.diag}${b.c1},${b.c2})`;dark=(lumOf(b.c1)+lumOf(b.c2))/2<.3}
-  else if(b.type==="image"&&imgOk(b.img)){css=`background:#000096 url("${imgOk(b.img)}") center/cover no-repeat`;dark=true}
+  else if(b.type==="image"&&imgOk(b.img)){css=`background:#5A3221 url("${imgOk(b.img)}") center/cover no-repeat`;dark=true}
   else if(b.type==="none"){css="background:transparent";dark=false}
-  else{css=`background:${d};${d==="#EEF0FF"?"box-shadow:inset 0 0 0 2px #000096":""}`;dark=DARK_PLATES.includes(d)}
+  else{css=`background:${d};${d==="#FBF4EE"?"box-shadow:inset 0 0 0 2px #5A3221":""}`;dark=DARK_PLATES.includes(d)}
   if(b.ring&&HEX6.test(b.ring))css+=`;box-shadow:inset 0 0 0 4px ${b.ring}`;
   const z=+b.size;if(z>=40&&z<=100)css+=`;--ck:${Math.round(z)}%`;
   return {css,dark};
@@ -398,7 +398,7 @@ function plateBg(p,b){
 function plateHTML(p,bgDraft){const g=plateBg(p,bgDraft);return `<div class="plate${g.dark?" dark":""}${hasImage(p)?"":" blank"}" style="${esc(g.css)}">${plateInner(p)}</div>`}
 function crumbColors(p){
   if(p.art==="photo"&&p.tints)return {dough:p.tints[0],edge:p.tints[1],chips:[p.tints[2]]};
-  if(!hasImage(p))return {dough:"#000096",edge:"#2328C8",chips:["#D9DCFA"]};
+  if(!hasImage(p))return {dough:"#5A3221",edge:"#8A5236",chips:["#EFDFD2"]};
   return artOf(p);
 }
 
@@ -529,7 +529,7 @@ function defaultBadges(){return {autoBest:true,bestTop:3,list:[
   {id:"best",text:"🔥 Best seller",font:"display",color:"#FFFFFF",bg:"#C8102E",fx:"shine"},
   {id:"wanted",text:"💛 Most wanted",font:"display",color:"#3B2200",bg:"#FFC53D",fx:"pulse"},
   {id:"seasonal",text:"🍂 Seasonal",font:"display",color:"#FFFFFF",bg:"#B5541B",fx:"glow"},
-  {id:"new",text:"✨ New flavor",font:"display",color:"#FFFFFF",bg:"#000096",fx:"bounce"},
+  {id:"new",text:"✨ New flavor",font:"display",color:"#FFFFFF",bg:"#5A3221",fx:"bounce"},
   {id:"limited",text:"⏳ Limited",font:"display",color:"#FFFFFF",bg:"#6B2BD9",fx:"wiggle"}]}}
 const PAID_SET=["new","baking","ready","completed"];
 // how many of each flavor were bought (last 90 days). Visitors get the totals from the server.
@@ -810,7 +810,7 @@ function ghostOut(i){
 }
 function celebrate(){if(RM)return;const p=$(".boxpanel");
   p.animate([{transform:"scale(1)"},{transform:"scale(1.03) rotate(-.6deg)"},{transform:"scale(.99) rotate(.4deg)"},{transform:"scale(1)"}],{duration:600,delay:400,easing:"ease-out"});
-  if(inView(p.getBoundingClientRect()))crumbs(p.querySelector(".slots"),{dough:"#FFFFFF",edge:"#D9DCFA",chips:["#FFFFFF","#EEF0FF"]})}
+  if(inView(p.getBoundingClientRect()))crumbs(p.querySelector(".slots"),{dough:"#FFFFFF",edge:"#EFDFD2",chips:["#FFFFFF","#FBF4EE"]})}
 
 /* --- box actions --- */
 // a smaller box: the cookies move up to fit
@@ -834,7 +834,7 @@ function renderGiftBox(){
   const cl=(v,d)=>/^(#[0-9a-f]{6}|transparent)$/i.test(v||"")?v:d;
   el.hidden=false;
   el.innerHTML=nt+pgPanelHTML()+pl.map(x=>{const t=x.sale,rnd=x.mode==="random",gv=GV_KEYS.includes(t.view)?t.view:"teaser";
-    return `<div class="gb fx-${["shine","pulse","none"].includes(t.fx)?t.fx:"shine"}" style="--gb:${cl(t.bg,"#FFE066")};--gi:${cl(t.ink,"#000096")}"><div class="gh"><span class="gtag">${esc(t.tag||"Gifts")}</span><b class="gt">${esc(t.name)}</b><span class="gend">Ends in <span class="cd" data-exp="${t.end}">${fmtLeft(t.end-Date.now())}</span></span></div>
+    return `<div class="gb fx-${["shine","pulse","none"].includes(t.fx)?t.fx:"shine"}" style="--gb:${cl(t.bg,"#FFE066")};--gi:${cl(t.ink,"#5A3221")}"><div class="gh"><span class="gtag">${esc(t.tag||"Gifts")}</span><b class="gt">${esc(t.name)}</b><span class="gend">Ends in <span class="cd" data-exp="${t.end}">${fmtLeft(t.end-Date.now())}</span></span></div>
       <p class="gs">🎁 FREE with your box of ${S.size}. No extra cost:</p><div class="gl big">${rnd?`<span class="gcard rnd"><i aria-hidden="true">🎲</i><b>${giftSurprise(x.limit)}</b><em>FREE</em></span>${gv==="full"?`<div class="gpool">${x.gifts.map(g=>giftChip(g," sm")).join("")}</div>`:gv==="teaser"?giftTeaser(x.gifts,"possible"):""}`:gv==="full"||x.gifts.length<2?(gv==="hidden"?"":x.gifts.map(g=>giftCard(g)).join("")):gv==="teaser"?giftTeaser(x.gifts,"included"):""}</div>
       <button class="gbsee" type="button" data-giftsee="${S.size}">👀 See what you ${rnd?"may get":"get"}</button><p class="gnote">${GIFT_NOTE}</p></div>`}).join("");
 }
@@ -960,8 +960,8 @@ function fabPlateCss(t){
   return plateBg({},{type,c1:hexOk(t.fabBg,"#FFD43B"),c2:hexOk(t.fabBg2,"#FF9F43"),dir:"diag",ring,size:fabNum(t.fabImgSize,40,100,84)}).css;
 }
 const fabIconHTML=(img,emoji,dflt,cut)=>imgOk(img)?`<img class="fab-img${imgIsCut(img,cut)?" cut":""}" src="${esc(imgOk(img))}" alt="" draggable="false">`:esc(String(emoji||"").trim()||dflt);
-function fabPillCss(t){const ink=hexOk(t.fabInk,"#000096");return `background:${ink};color:${lumOf(ink)<.5?"#fff":"#000"}`}
-const FAB_KEY="delidome-fab-v1";
+function fabPillCss(t){const ink=hexOk(t.fabInk,"#5A3221");return `background:${ink};color:${lumOf(ink)<.5?"#fff":"#000"}`}
+const FAB_KEY="bakebyculture-fab-v1";
 const fabPrefs=()=>{try{return JSON.parse(localStorage.getItem(FAB_KEY)||"null")||{}}catch(e){return {}}};
 const fabSave=o=>{try{localStorage.setItem(FAB_KEY,JSON.stringify(Object.assign(fabPrefs(),o)))}catch(e){}};
 /* size and fade: the owner sets the starting values, a customer can only make it smaller or fainter (pinch, or press and hold) */
@@ -987,7 +987,7 @@ function renderFab(){
   const pl=$("#fabPl"),css=fabPlateCss(t);if(pl.dataset.c!==css){pl.dataset.c=css;pl.style.cssText=css}
   const tt=$("#fabTx");if(tt.textContent!==tx)tt.textContent=tx;tt.hidden=!tx;tt.style.cssText=fabPillCss(t);
   f.className="fab fx-"+fxOk(t.fabFx,["bounce","pulse","glow","none"],"bounce")+(f.classList.contains("dragging")?" dragging":"")+(t.fabHide!==false&&boxSeen?" away":"");
-  f.style.setProperty("--fab-ink",hexOk(t.fabInk,"#000096"));
+  f.style.setProperty("--fab-ink",hexOk(t.fabInk,"#5A3221"));
   const d=fabDims();f.style.setProperty("--fab-s",d.s+"px");f.style.setProperty("--fab-o",d.o/100);
   f.title=tx||"Show my box";
   if(!f.dataset.placed){f.dataset.placed="1";if(window.fabApply)fabApply()}
@@ -1050,8 +1050,8 @@ $("#gdSheet").addEventListener("click",e=>{
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#gdSheet").hidden)closeGuard()});
 /* friendly pop-ups when a visitor gets close to a limit ("warn") or reaches it ("slow" = stop); look and wording set in the Security tab */
 const POP_DEF={
-  slow:{Title:"Slow down a little, friends!",Text:"Cookies are best eaten slowly… and so is this website. Please wait a moment and try again.",Btn:"OK, I'll slow down",Icon:"🍪",Bg:"#FFF4D6",Ink:"#0B0B45",BtnBg:"#000096",BtnInk:"#FFFFFF",Fx:"bounce",BtnFx:"shine"},
-  warn:{Title:"Easy there, cookie lover!",Text:"You're going a little fast. Take a breath, cookies taste better slowly.",Btn:"Got it",Icon:"🐢",Bg:"#EAF6FF",Ink:"#0B0B45",BtnBg:"#0A7F5A",BtnInk:"#FFFFFF",Fx:"float",BtnFx:"pulse"}};
+  slow:{Title:"Slow down a little, friends!",Text:"Cookies are best eaten slowly… and so is this website. Please wait a moment and try again.",Btn:"OK, I'll slow down",Icon:"🍪",Bg:"#FFF4D6",Ink:"#2B1A12",BtnBg:"#5A3221",BtnInk:"#FFFFFF",Fx:"bounce",BtnFx:"shine"},
+  warn:{Title:"Easy there, cookie lover!",Text:"You're going a little fast. Take a breath, cookies taste better slowly.",Btn:"Got it",Icon:"🐢",Bg:"#EAF6FF",Ink:"#2B1A12",BtnBg:"#0A7F5A",BtnInk:"#FFFFFF",Fx:"float",BtnFx:"pulse"}};
 // which part of the shop the limit belongs to (each can have its own message)
 const POP_GRP={place_order:"Orders",track_order:"Track",check_coupon:"Coupon",courier:"Courier",submit_proof:"Upload",submit_complaint:"Upload",submit_place:"Upload"};
 const SLOW_FX=[["bounce","Bounce"],["wiggle","Wiggle"],["float","Float up and down"],["pulse","Pulse"],["spin","Slow spin"],["none","Still"]],SLOW_BFX=[["shine","Shine sweep"],["pulse","Gentle pulse"],["wiggle","Wiggle"],["none","Still"]];
@@ -1094,7 +1094,7 @@ function lvHTML(o,dflt,px,still){
 const addonIcon=a=>{const n=String(a.name||"").toLowerCase();return /wrap|gift|ribbon/.test(n)?"🎀":/card|note|message/.test(n)?"💌":/candle/.test(n)?"🕯️":/box|bag/.test(n)?"🛍️":"✨"};
 const lvAddon=(a,px,still)=>lvHTML(a,addonIcon(a),px,still);
 // "FREE" badges in the checkout box: gift, delivery / pickup, free extra
-const FB_DEF={Gift:{icon:"🎁",bg:"#FFE066",ink:"#000096",fx:"pulse",label:"Free gift"},Del:{icon:"🛵",bg:"#D9F7E8",ink:"#0A5F43",fx:"float",label:"Free delivery or pickup"},Extra:{icon:"✨",bg:"#E5E8FF",ink:"#000096",fx:"wiggle",label:"Free extra"}};
+const FB_DEF={Gift:{icon:"🎁",bg:"#FFE066",ink:"#5A3221",fx:"pulse",label:"Free gift"},Del:{icon:"🛵",bg:"#D9F7E8",ink:"#0A5F43",fx:"float",label:"Free delivery or pickup"},Extra:{icon:"✨",bg:"#F5EAE1",ink:"#5A3221",fx:"wiggle",label:"Free extra"}};
 function fbHTML(kind){const t=DB.settings,D=FB_DEF[kind],p="fb"+kind;
   if(t[p+"On"]===false)return "Free";
   const txt=String(t[p+"Txt"]||"").trim()||"FREE",o={img:t[p+"Img"],imgCut:t[p+"ImgCut"],icon:t[p+"Icon"],fx:t[p+"Fx"]||D.fx,bgMode:"none"};
@@ -1186,7 +1186,7 @@ function bsSumDraw(){
 }
 /* guided tour for the courier pop-up: shows once, can be skipped, replay with the "?" button */
 /* guided tour of the shop for a new visitor: starts when they tap the main button, follows them through the box, the day and time, and checkout. It can be skipped and replayed with "How does it work?". */
-const GT_KEY="delidome-shop-tour",GT={i:-1,on:false,iv:0};
+const GT_KEY="bakebyculture-shop-tour",GT={i:-1,on:false,iv:0};
 const gtShown=el=>!!(el&&el.getClientRects().length);
 const gtCta=()=>[$("#barCta"),$("#panelCta")].find(gtShown)||null;
 const GT_STEPS=[
@@ -1220,7 +1220,7 @@ $("#gtBtn").addEventListener("click",()=>{GT.sizeTap=false;gtStart(true)});
 $("#sizes").addEventListener("click",()=>{if(GT.on)GT.sizeTap=true});
 document.addEventListener("click",e=>{const a=e.target.closest(".hero-ctas a");if(a&&a===$("#dome .hero-ctas a"))setTimeout(()=>gtStart(false),700)});
 addEventListener("resize",()=>{if(GT.on)gtTick()});document.addEventListener("scroll",()=>{if(GT.on&&!$("#gt").hidden){const s=GT_STEPS[GT.i],el=s&&s.el();if(el)gtPlace(el)}},true);
-const BS_TIP="delidome-courier-tour",BST={i:-1};
+const BS_TIP="bakebyculture-courier-tour",BST={i:-1};
 const BS_STEPS=[
   {el:()=>$("#bsPhoneF"),t:"WhatsApp",m:"Type your WhatsApp number. We use it to find your address and show courier prices.",ex:"Example: 81234567890"},
   {el:()=>$("#coAddr"),t:"Delivery address",m:"Type your full address, in this order:",ex:"Place / Residence / Apartment · City · Street name · House or location number · Postal code"},
@@ -1258,7 +1258,7 @@ $("#bsPop").addEventListener("click",e=>{if(e.target.id==="bsPop")bsPopClose()})
 $("#bsPop").addEventListener("input",e=>{if(e.target.id==="coAddr"||e.target.id==="coDNote")saveCust()});
 $("#bsPhone").addEventListener("input",e=>{const v=e.target.value.replace(/\D/g,"");if(v!==e.target.value)e.target.value=v;$("#coPhone").value=v;saveCust();if(normPhone(v).length>=7&&BSD.err&&/WhatsApp/.test(BSD.err)){BSD.err="";bsDraw()}});
 
-const CUST_KEY="delidome-cust-v1";
+const CUST_KEY="bakebyculture-cust-v1";
 function loadCust(){try{return JSON.parse(localStorage.getItem(CUST_KEY)||"{}")||{}}catch(e){return {}}}
 function saveCust(){try{const r=document.querySelector('input[name="coNotify"]:checked');localStorage.setItem(CUST_KEY,JSON.stringify(Object.assign(loadCust(),{name:$("#coName").value,phone:$("#coPhone").value,email:$("#coEmail").value,address:$("#coAddr").value,dnote:$("#coDNote").value,notify:r?r.value:"both"})))}catch(e){}}
 // remember the delivery area and map pin too, so a repeat order only needs a courier choice
@@ -1453,7 +1453,7 @@ function rateOrder(o,rt){
 }
 /* --- "Become an affiliator": the apply form and the status page (private link) --- */
 const AP={f:{name:"",phone:"",email:"",handle:"",social:"",why:""},busy:false,err:"",done:null,status:null};
-const AP_KEY="delidome-affapp";
+const AP_KEY="bakebyculture-affapp";
 function apOpen(){AP.err="";AP.done=null;AP.status=null;let tok="";try{tok=localStorage.getItem(AP_KEY)||""}catch(e){}apDraw();$("#apSheet").hidden=false;document.body.style.overflow="hidden";if(tok)apStatus(tok,true)}
 function apClose(){const m=$("#apSheet");if(!m||m.hidden)return;m.hidden=true;document.body.style.overflow=""}
 async function apStatus(tok,quiet){if(!SBH.on)return;try{const r=await SBH.rpcPub("aff_app_status",{p_token:tok});if(r&&r.ok){AP.status=r;apDraw()}else if(!quiet){AP.err="We could not find that application.";apDraw()}}catch(e){}}
@@ -1615,7 +1615,7 @@ let dnTimer;
 function fxBurst(fx,T,fb){
   clearTimeout(fx._t);fx.innerHTML="";
   if(RM||!T.fx)return;
-  const imgs=T.cookies.length?T.cookies:(fb&&fb.length?fb:[COOKIE_SVG]),n=Math.max(4,Math.min(60,+T.amount||28)),cols=["#000096","#ffffff","#F5B942","#7A7AFF"];let h="";
+  const imgs=T.cookies.length?T.cookies:(fb&&fb.length?fb:[COOKIE_SVG]),n=Math.max(4,Math.min(60,+T.amount||28)),cols=["#5A3221","#ffffff","#F5B942","#7A7AFF"];let h="";
   for(let i=0;i<n;i++){const sz=26+Math.random()*34;h+=`<i class="dn-p" style="--x:${(Math.random()*96).toFixed(1)}%;--s:${sz.toFixed(0)}px;--d:${(Math.random()*2.4).toFixed(2)}s;--t:${(2.6+Math.random()*2.4).toFixed(2)}s;--sw:${(Math.random()*160-80).toFixed(0)}px;--r:${(Math.random()*900-450).toFixed(0)}deg"><img src="${esc(imgs[i%imgs.length])}" alt="" draggable="false"></i>`}
   for(let i=0;i<Math.round(n/2);i++){h+=`<i class="dn-p dot" style="--x:${(Math.random()*98).toFixed(1)}%;--s:${(8+Math.random()*8).toFixed(0)}px;--d:${(Math.random()*2.6).toFixed(2)}s;--t:${(2.2+Math.random()*2).toFixed(2)}s;--sw:${(Math.random()*120-60).toFixed(0)}px;--r:${(Math.random()*1000-500).toFixed(0)}deg;background:${cols[i%cols.length]};${i%cols.length===1?"box-shadow:0 0 0 1px #c9c9ee":""}"></i>`}
   fx.innerHTML=h;fx._t=setTimeout(()=>{fx.innerHTML=""},9000);
@@ -1626,7 +1626,7 @@ function renderDone(o,ed,preview){
   const T=DB.thanks,box=$("#doneBox");
   box.style.setProperty("--dn-acc",T.accent);box.style.setProperty("--dn-cd",T.cdColor);
   $("#sheet .sheet-card").style.background=T.bg;
-  const bd=$("#doneBadge");bd.classList.toggle("logo",!!T.logo);bd.innerHTML=T.logo?`<img src="${esc(T.logo)}" alt="${esc(DB.page.name||"Delidome")}">`:"✓";
+  const bd=$("#doneBadge");bd.classList.toggle("logo",!!T.logo);bd.innerHTML=T.logo?`<img src="${esc(T.logo)}" alt="${esc(DB.page.name||"BakeByCulture")}">`:"✓";
   $("#doneTitle").textContent=ed?T.titleUpd:T.title;
   $("#doneText").textContent=thFill(T.text,o);$("#doneUrgent").textContent=thFill(T.urgent,o);
   $("#doneCode").textContent=o.code;
@@ -1644,8 +1644,8 @@ function endPreview(){const sv=$("#storeView");if(sv.classList.contains("th-only
 /* the blind box art: the owner's own picture/GIF/video link, or the drawn red box; it shakes the way the owner chose */
 function bbCfg(){return Object.assign({name:"Blind box",img:"",fx:"wiggle",speed:100,size:120,tip:"Tap the box to open it!"},(DB.page&&DB.page.bb)||{})}
 function bbName(){return String(bbCfg().name||"").trim()||"Blind box"}
-function bbOpened(k){try{return !!JSON.parse(localStorage.getItem("delidome-bbopen")||"{}")[k]}catch(e){return false}}
-function bbMark(k){try{const o=JSON.parse(localStorage.getItem("delidome-bbopen")||"{}");o[k]=1;const ks=Object.keys(o);if(ks.length>300)delete o[ks[0]];localStorage.setItem("delidome-bbopen",JSON.stringify(o))}catch(e){}}
+function bbOpened(k){try{return !!JSON.parse(localStorage.getItem("bakebyculture-bbopen")||"{}")[k]}catch(e){return false}}
+function bbMark(k){try{const o=JSON.parse(localStorage.getItem("bakebyculture-bbopen")||"{}");o[k]=1;const ks=Object.keys(o);if(ks.length>300)delete o[ks[0]];localStorage.setItem("bakebyculture-bbopen",JSON.stringify(o))}catch(e){}}
 function bbBoxHTML(id,small){const b=bbCfg(),fx=["wiggle","shake","bounce","pulse","float","none"].includes(b.fx)?b.fx:"wiggle",sp=Math.max(40,Math.min(250,+b.speed||100)),w=Math.max(70,Math.min(220,+b.size||120)),img=safeMedia(b.img),tag=small?"span":"button";
   const art=img?(mqIsVideo(img)?`<video src="${esc(img)}" autoplay loop muted playsinline></video>`:`<img src="${esc(img)}" alt="">`):`<i class="gm-glow"></i><i class="gm-body"></i><i class="gm-lid"></i><i class="gm-bow">🎀</i>`;
   return `<${tag} class="gm-box${img?" gm-cust":""} bbfx-${fx}${small?" bbsm":""}" ${small?"":`type="button" id="${id||"gmBox"}" aria-label="Open your ${esc(bbName())}"`} style="--bbd:${(100/sp).toFixed(2)}s;--bbw:${small?64:w}px">${art}</${tag}>`}
@@ -1673,7 +1673,7 @@ function gmOpen(){
 document.addEventListener("click",e=>{if(e.target.closest("#gmBox"))gmOpen()});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-bbopen]");if(!b)return;const [id,w]=b.dataset.bbopen.split("|"),o=DB.orders.find(x=>x.id===id);if(!o)return;
   const gl=w==="p"?(o.preGift&&o.preGift.items||[]).map(g=>({...g,random:true})):(o.gifts||[]).filter(g=>g.random);if(!gl.length)return;
-  rvPop(`<div class="rvbox rvt-win" style="--rpbg:#fff;--rpink:#0B0B45;--rpacc:#000096"><div class="rvin">${gmHTML(gl,b.dataset.bbopen)}<button class="rvb rvb2" type="button" data-rvclose>Close</button></div></div>`);setTimeout(gmOpen,250)});
+  rvPop(`<div class="rvbox rvt-win" style="--rpbg:#fff;--rpink:#2B1A12;--rpacc:#5A3221"><div class="rvin">${gmHTML(gl,b.dataset.bbopen)}<button class="rvb rvb2" type="button" data-rvclose>Close</button></div></div>`);setTimeout(gmOpen,250)});
 function ppShow(o,preview){
   const P=DB.proofpop,pgi=!preview&&o.preGift&&o.preGift.mode==="surprise"&&o.preGift.drawn&&(o.preGift.items||[]).length?o.preGift.items.map(g=>({...g,random:true})):[],gl=!preview&&((o.gifts&&o.gifts.length)||pgi.length)?[...(o.gifts||[]),...pgi]:null;if(!P.on&&!preview&&!gl)return false;
   const pop=$("#ppPop");
@@ -1693,7 +1693,7 @@ async function banShow(preview){
   let M=preview||BANM;
   if(!M){try{M=Object.assign({},BANM_DEF,await SBH.banMsg())}catch(e){M=BANM_DEF}BANM=M}
   const pop=$("#ppPop"),P=DB.proofpop||{};
-  pop.style.setProperty("--pp-bg",P.bg||"#fff");pop.style.setProperty("--pp-acc",P.accent||"#000096");pop.style.setProperty("--pp-ink",P.ink||"#0B0B45");
+  pop.style.setProperty("--pp-bg",P.bg||"#fff");pop.style.setProperty("--pp-acc",P.accent||"#5A3221");pop.style.setProperty("--pp-ink",P.ink||"#2B1A12");
   $("#ppCard").innerHTML=banHTML(M,banContact());pop.hidden=false;
   fxBurst($("#ppFx"),{fx:M.fx!==false,cookies:Array.isArray(M.items)?M.items:[],amount:M.amount},null);
 }
@@ -1707,7 +1707,7 @@ $("#newBox").addEventListener("click",()=>{S=fresh();renderEditBar();$("#coForm"
 
 /* --- My orders (customer): pay, proof, track, edit --- */
 const normPhone=v=>String(v||"").replace(/\D/g,"").replace(/^(0|62)/,"");
-const MINE_KEY="delidome-mine-v1";let MINE=[];try{MINE=JSON.parse(localStorage.getItem(MINE_KEY)||"[]")||[]}catch(e){}
+const MINE_KEY="bakebyculture-mine-v1";let MINE=[];try{MINE=JSON.parse(localStorage.getItem(MINE_KEY)||"[]")||[]}catch(e){}
 const addMine=id=>{if(!MINE.includes(id))MINE.unshift(id);try{localStorage.setItem(MINE_KEY,JSON.stringify(MINE))}catch(e){}};
 const mineOrders=()=>MINE.map(id=>DB.orders.find(o=>o.id===id)).filter(Boolean);
 function fmtLeft(ms){ms=Math.max(0,ms);const t=Math.floor(ms/1000),h=Math.floor(t/3600),m=Math.floor(t%3600/60),sec=t%60;return [h,m,sec].map(n=>String(n).padStart(2,"0")).join(":")}
@@ -1723,14 +1723,14 @@ function expireOrders(){
   DB.orders.forEach(o=>{if(o.status==="awaiting"&&o.expiresAt&&now>=o.expiresAt){o.status="cancelled";o.cancelReason="It was not paid in time, so it was cancelled automatically.";releaseHold(o);logMsg(o,chanList(o.notify||"both"),"cancelled",msgText(o,"cancelled"),"system");ch=true}});
   if(ch)saveDB();return ch;
 }
-const SEEN_KEY="delidome-seen-v1";let SEEN=0,SEENV=0;try{SEEN=+localStorage.getItem(SEEN_KEY)||0}catch(e){}
+const SEEN_KEY="bakebyculture-seen-v1";let SEEN=0,SEENV=0;try{SEEN=+localStorage.getItem(SEEN_KEY)||0}catch(e){}
 function notifs(){
   const map=new Map();
   mineOrders().forEach(o=>(o.msgs||[]).filter(m=>m.status!=="refunded").forEach(m=>{const k=o.id+"|"+m.at+"|"+m.text;const e=map.get(k);if(e){if(!e.ch.includes(m.channel))e.ch.push(m.channel)}else map.set(k,{o,m,ch:[m.channel]})}));
   return [...map.values()].sort((a,b)=>b.m.at-a.m.at);
 }
 // a friendly nudge to rate orders that were delivered / picked up
-const RN_KEY="delidome-ratenudge-v1";let RN_SEEN={};try{RN_SEEN=JSON.parse(localStorage.getItem(RN_KEY)||"{}")||{}}catch(e){}
+const RN_KEY="bakebyculture-ratenudge-v1";let RN_SEEN={};try{RN_SEEN=JSON.parse(localStorage.getItem(RN_KEY)||"{}")||{}}catch(e){}
 function rateNudge(){
   if(view!=="store"||!$("#rnPop")||!$("#rnPop").hidden||!$("#moSheet").hidden||!$("#sheet").hidden)return;
   if(Date.now()-(RN_SEEN._last||0)<864e5)return;   // one reminder a day at most
@@ -1754,17 +1754,17 @@ function rvRender(){const card=$("#rvCard"),star=$("#rvStar");if(!card||!star)re
   card.hidden=!(o&&b.card!==false);star.hidden=!(o&&b.star!==false);
   if(!o){const t=$("#rvTip");if(t)t.hidden=true;return}
   const fx=["shine","pulse","glow","bounce","none"].includes(b.fx)?b.fx:"shine";
-  if(!card.hidden){card.className="rvc rvfx-"+fx;card.style.setProperty("--rbg",hexOk(b.bg,"#FFF4D6"));card.style.setProperty("--rink",hexOk(b.ink,"#0B0B45"));card.style.setProperty("--rline",hexOk(b.line,"#FFD166"));card.dataset.rvgo=o.id;
+  if(!card.hidden){card.className="rvc rvfx-"+fx;card.style.setProperty("--rbg",hexOk(b.bg,"#FFF4D6"));card.style.setProperty("--rink",hexOk(b.ink,"#2B1A12"));card.style.setProperty("--rline",hexOk(b.line,"#FFD166"));card.dataset.rvgo=o.id;
     card.innerHTML=o.rv?`<span class="rvst" aria-hidden="true">📦</span><b>${esc("Your "+bbName()+" is waiting!")}</b><small>${esc(bbCfg().tip)}${list.length>1?` · ${list.length} orders`:""}</small>`
       :`<span class="rvst" aria-hidden="true">★★★★★</span><b>${esc(String(b.title||"").replace(/\{code\}/g,"#"+o.code))}</b><small>${esc(b.sub||"")}${list.length>1?` · ${list.length} orders`:""}</small>${rvCd(o)}`}
   if(!star.hidden){const wt=!!o.rv,ic=wt?String(b.waitIcon||"📦").trim().slice(0,2)||"📦":String(b.icon||"⭐").trim().slice(0,2)||"⭐",im=wt?(safeMedia(b.waitImg)||safeMedia(bbCfg().img)):safeMedia(b.starImg),fxk=wt?b.waitFx:b.starFx,sfx=["blink","shake","bounce","pulse","float","glow","none"].includes(fxk)?fxk:wt?"shake":"blink";
     star.className="bagbtn rvstar rvsfx-"+sfx;star.style.setProperty("--rvsd",(100/Math.max(40,Math.min(250,+(wt?b.waitSpeed:b.starSpeed)||100))).toFixed(2));star.dataset.ic=ic;
     star.innerHTML=im?(mqIsVideo(im)?`<video src="${esc(im)}" autoplay loop muted playsinline></video>`:`<img src="${esc(im)}" alt="">`):esc(ic);star.dataset.rvgo=o.id;star.setAttribute("aria-label",String(b.tip||"Rate your order"))}
-  let seen={};try{seen=JSON.parse(localStorage.getItem("delidome-rvtip")||"{}")}catch(e){}
+  let seen={};try{seen=JSON.parse(localStorage.getItem("bakebyculture-rvtip")||"{}")}catch(e){}
   if(b.tipOn!==false&&!star.hidden&&!seen[o.id]&&!RVT.t){RVT.t=setTimeout(()=>{RVT.t=0;const t=$("#rvTip"),s2=$("#rvStar");if(!t||!s2||s2.hidden||!$("#moSheet").hidden)return;
     t.innerHTML="<b>"+esc(s2.dataset.ic||"⭐")+" "+esc(String(DB.revrew.bn.tipTitle||"Review time"))+"</b><span>"+esc(String(DB.revrew.bn.tip||""))+"</span>";t.hidden=false;
     const br=s2.getBoundingClientRect(),tr=t.getBoundingClientRect();t.style.setProperty("--ar",Math.max(10,Math.round(tr.right-(br.left+br.width/2)-6))+"px");
-    seen[o.id]=1;try{localStorage.setItem("delidome-rvtip",JSON.stringify(seen))}catch(e){}setTimeout(()=>{t.hidden=true},9000)},4200)}}
+    seen[o.id]=1;try{localStorage.setItem("bakebyculture-rvtip",JSON.stringify(seen))}catch(e){}setTimeout(()=>{t.hidden=true},9000)},4200)}}
 const RVT={t:0};
 const rvEnd=o=>(+o.completedAt||+o.updatedAt||0)+(+DB.revrew.days||7)*864e5;
 const rvTime=ms=>{const m=Math.max(0,Math.floor(ms/6e4)),d=Math.floor(m/1440),h=Math.floor(m%1440/60);return d?d+"d "+h+"h":h?h+"h "+String(m%60).padStart(2,"0")+"m":m+"m"};
@@ -1772,8 +1772,8 @@ const rvHot=o=>!o.rv&&rvEnd(o)-Date.now()<=(+DB.revrew.bn.cdHot||24)*36e5;
 const rvCd=o=>{const b=DB.revrew.bn||{};return !o.rv&&rvOn()&&b.cd!==false?`<span class="rvcd${rvHot(o)?" rvhot":""}" data-rvend="${rvEnd(o)}">⏰ ${esc(String(b.cdText||"Review ends in {time}").replace(/\{time\}/g,rvTime(rvEnd(o)-Date.now())))}</span>`:""};
 // morning, afternoon and night: the arm tip comes back once in each while the deadline is close
 function rvSlotTip(){const l=rvOrders().filter(rvHot),o=l[0],b=DB.revrew.bn||{},t=$("#rvTip"),st=$("#rvStar");if(!o||b.cd===false||b.tipOn===false||!t||!st||st.hidden||!$("#moSheet").hidden||!$("#rvPop").hidden)return;
-  const h=new Date().getHours(),sl=h<12?"m":h<17?"a":"n",k=o.id+"|"+new Date().toDateString()+"|"+sl;let seen={};try{seen=JSON.parse(localStorage.getItem("delidome-rvtip2")||"{}")}catch(e){}
-  if(seen[k])return;seen[k]=1;for(const x in seen)if(x.split("|")[1]!==new Date().toDateString())delete seen[x];try{localStorage.setItem("delidome-rvtip2",JSON.stringify(seen))}catch(e){}
+  const h=new Date().getHours(),sl=h<12?"m":h<17?"a":"n",k=o.id+"|"+new Date().toDateString()+"|"+sl;let seen={};try{seen=JSON.parse(localStorage.getItem("bakebyculture-rvtip2")||"{}")}catch(e){}
+  if(seen[k])return;seen[k]=1;for(const x in seen)if(x.split("|")[1]!==new Date().toDateString())delete seen[x];try{localStorage.setItem("bakebyculture-rvtip2",JSON.stringify(seen))}catch(e){}
   t.innerHTML="<b>⏰ "+esc(String(b.tipTitle||"Review time"))+"</b><span>"+esc(String(b.cdTip||"Last chance! Review ends in {time}").replace(/\{time\}/g,rvTime(rvEnd(o)-Date.now())))+"</span>";t.hidden=false;setTimeout(()=>{t.hidden=true},9000)}
 function rvTick(){if(!DB||!DB.revrew)return;const now=Date.now(),hot=(+DB.revrew.bn.cdHot||24)*36e5,tx=String(DB.revrew.bn.cdText||"Review ends in {time}");let any=false;
   document.querySelectorAll("[data-rvend]").forEach(e=>{const l=+e.dataset.rvend-now,own=e.dataset.rvtx;any=true;if(l<=0){rvRender();renderBell();return}e.textContent="⏰ "+(own||tx).replace(/\{time\}/g,rvTime(l));e.classList.toggle("rvhot",l<=(own?(+((DB.revrew.rem||{}).hot)||24)*36e5:hot))});
@@ -1783,7 +1783,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-rvgo]");if
 const rvFill=(t,d)=>String(t||"").replace(/\{reward\}/g,(d&&d.item&&d.item.name)||"").replace(/\{code\}/g,(d&&d.code)||"");
 const rvFree=p=>PG.info&&PG.code&&(PG.info.items||[]).some(g=>g&&g.pid===p.id)?`<span class="rvfree">🎁 your free reward</span>`:"";
 /* reminders for every reward the customer holds and has not claimed: a bell line each day, and 3 times a day (morning, afternoon, night) with a blinking countdown in the last hours */
-const RVC_KEY="delidome-rvcoup";let RVC=[];try{RVC=JSON.parse(localStorage.getItem(RVC_KEY)||"[]").filter(x=>x&&typeof x.code==="string").slice(0,20)}catch(e){}
+const RVC_KEY="bakebyculture-rvcoup";let RVC=[];try{RVC=JSON.parse(localStorage.getItem(RVC_KEY)||"[]").filter(x=>x&&typeof x.code==="string").slice(0,20)}catch(e){}
 const rvcSave=()=>{try{localStorage.setItem(RVC_KEY,JSON.stringify(RVC))}catch(e){}};
 function rvcAdd(rv){if(!rv||rv.kind!=="coupon"||!rv.code||RVC.some(x=>x.code===rv.code))return;RVC.push({code:rv.code,name:(rv.item&&rv.item.name)||rv.code,exp:rv.exp||null,at:Date.now()});rvcSave()}
 function rvRemList(){const rm=(DB.revrew||{}).rem||{};if(!DB.revrew||rm.on===false)return [];const now=Date.now();
@@ -1801,12 +1801,12 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-rvclaim]")
   if(b.dataset.rvk==="coupon"){try{navigator.clipboard.writeText(b.dataset.rvclaim)}catch(x){}toast("Coupon "+b.dataset.rvclaim+" copied. Type it at checkout.")}else toast("Pick a box of "+rvwMin()+" or more to use your reward.");
   const bd=$("#build");bd&&scrollToEl(bd)});
 function rvRemTip(){const rm=DB.revrew.rem||{},t=$("#rvTip");if(!t||rm.on===false||(DB.revrew.bn||{}).tipOn===false)return;if(!$("#moSheet").hidden||!$("#rvPop").hidden)return;
-  const x=rvRemList().filter(rvRemHot)[0];if(!x)return;const d=new Date(),h=d.getHours(),k=x.code+"|"+d.toDateString()+"|"+(h<12?"m":h<17?"a":"n");let seen={};try{seen=JSON.parse(localStorage.getItem("delidome-rvtip3")||"{}")}catch(e){}
-  if(seen[k])return;for(const y in seen)if(y.split("|")[1]!==d.toDateString())delete seen[y];seen[k]=1;try{localStorage.setItem("delidome-rvtip3",JSON.stringify(seen))}catch(e){}
+  const x=rvRemList().filter(rvRemHot)[0];if(!x)return;const d=new Date(),h=d.getHours(),k=x.code+"|"+d.toDateString()+"|"+(h<12?"m":h<17?"a":"n");let seen={};try{seen=JSON.parse(localStorage.getItem("bakebyculture-rvtip3")||"{}")}catch(e){}
+  if(seen[k])return;for(const y in seen)if(y.split("|")[1]!==d.toDateString())delete seen[y];seen[k]=1;try{localStorage.setItem("bakebyculture-rvtip3",JSON.stringify(seen))}catch(e){}
   t.innerHTML="<b>⏰ "+esc(String((DB.revrew.bn||{}).tipTitle||"Reward"))+"</b><span>"+esc(rvRemFill(rm.tip||"Last chance! Your reward {name} expires in {time}",x))+"</span>";t.hidden=false;setTimeout(()=>{t.hidden=true},9000)}
 function rvPop(html){const p=$("#rvPop");if(p.parentNode!==document.body)document.body.appendChild(p);p.innerHTML=html;p.hidden=false;document.body.style.overflow="hidden"}
 function rvClose(){const p=$("#rvPop");p.hidden=true;p.innerHTML="";if(!$("#moSheet").hidden){try{renderMO()}catch(e){}}if($("#moSheet").hidden&&$("#sheet").hidden)document.body.style.overflow=""}
-function rvReveal(o,rv){const b=bbCfg();rvPop(`<div class="rvbox rvt-win" style="--rpbg:#fff;--rpink:#0B0B45;--rpacc:#000096"><div class="rvin gmagic">${bbBoxHTML("rvBbBox")}<h2>${esc(bbName())}</h2><p>${esc(b.tip)}</p></div></div>`);RVR.o=o;RVR.rv=rv}
+function rvReveal(o,rv){const b=bbCfg();rvPop(`<div class="rvbox rvt-win" style="--rpbg:#fff;--rpink:#2B1A12;--rpacc:#5A3221"><div class="rvin gmagic">${bbBoxHTML("rvBbBox")}<h2>${esc(bbName())}</h2><p>${esc(b.tip)}</p></div></div>`);RVR.o=o;RVR.rv=rv}
 const RVR={o:null,rv:null};
 document.addEventListener("click",e=>{const x=e.target.closest("#rvBbBox");if(!x||x.dataset.go)return;x.dataset.go="1";x.classList.add("bbopening");setTimeout(()=>{if(RVR.rv)rvOutcome(RVR.rv,RVR.o)},720)});
 function rvOutcome(rv,o,pv){if(!pv&&o)bbMark("rv|"+o.id);if(!pv&&rv.st==="win"&&rv.kind==="coupon")rvcAdd(rv);const R=DB.revrew,k=rv.st==="win"?"win":rv.st==="sad"?"sad":"none",m=R[k]||{},img=safeMedia(m.img),fx=RV_FX[m.fx]||[];
@@ -1817,10 +1817,10 @@ function rvOutcome(rv,o,pv){if(!pv&&o)bbMark("rv|"+o.id);if(!pv&&rv.st==="win"&&
   if(k==="win"){body+=`<div class="rvcode" data-notr>${esc(rv.code||"")}</div><p class="rvnote">${rv.kind==="gift"?"We saved this code on this phone. It is added to your next order by itself, one reward gift per order. Valid until "+esc(fmtDT(rv.exp))+".":"Type this coupon code at checkout on your next order."+(rv.exp?" Valid until "+esc(fmtDT(rv.exp))+".":"")}</p>
     <div class="rvbtns"><button class="rvb rvb1" type="button" data-rvcopy="${esc(rv.code||"")}">📋 Copy code</button><button class="rvb rvb2" type="button" data-rvclose>${esc(m.btn||"Great!")}</button></div>`}
   else body+=`<div class="rvbtns"><button class="rvb rvb1" type="button" data-rvbuy>${esc(m.btn1||"Buy again")}</button><button class="rvb rvb2" type="button" data-rvclose>${esc(m.btn2||"Close")}</button></div>`;
-  rvPop(`<div class="rvbox rvt-${k}" style="--rpbg:${hexOk(m.bg,"#FFFFFF")};--rpink:${hexOk(m.ink,"#0B0B45")};--rpacc:${hexOk(m.acc,"#000096")}">${fx.length?preRain(fx):""}<div class="rvin">${art}${body}</div></div>`);
+  rvPop(`<div class="rvbox rvt-${k}" style="--rpbg:${hexOk(m.bg,"#FFFFFF")};--rpink:${hexOk(m.ink,"#2B1A12")};--rpacc:${hexOk(m.acc,"#5A3221")}">${fx.length?preRain(fx):""}<div class="rvin">${art}${body}</div></div>`);
   if(k==="win"&&rv.kind==="gift"&&rv.code&&!pv)rvwAdd(rv.code)}
 function rvChoose(id,opts){const c=DB.revrew.choose||{};
-  rvPop(`<div class="rvbox rvt-win" style="--rpbg:#fff;--rpink:#0B0B45;--rpacc:#000096"><div class="rvin"><div class="rvic" aria-hidden="true">🎁</div><h2>${esc(c.title||"Pick your gift")}</h2><p>${esc(c.text||"")}</p>
+  rvPop(`<div class="rvbox rvt-win" style="--rpbg:#fff;--rpink:#2B1A12;--rpacc:#5A3221"><div class="rvin"><div class="rvic" aria-hidden="true">🎁</div><h2>${esc(c.title||"Pick your gift")}</h2><p>${esc(c.text||"")}</p>
     <div class="rvopts">${(opts||[]).map(x=>`<button class="rvopt" type="button" data-rvpick="${esc(x.id)}" data-rvfor="${esc(id)}">${safeMedia(x.img)?`<img src="${esc(safeMedia(x.img))}" alt="">`:`<i aria-hidden="true">${x.type==="coupon"?"🎟️":"🎁"}</i>`}<b>${esc(x.name)}</b></button>`).join("")}</div></div></div>`)}
 async function rvDraw(id,choice){let d;try{d=await SBH.rvClaim(id,choice||"")}catch(e){toast(e.message);return}
   const o=DB.orders.find(x=>x.id===id);
@@ -1929,7 +1929,7 @@ async function savePayImg(id){
   const m=DB.payMethods.find(x=>x.id===id);if(!m||!m.img)return;
   const mt=/^data:(image\/(png|jpeg|webp));base64,(.*)$/.exec(m.img);if(!mt){toast("Can't save this image");return}
   const bin=atob(mt[3]),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
-  const ext=mt[2]==="jpeg"?"jpg":mt[2],name=`${(DB.page.name||"delidome").replace(/[^a-z0-9]+/gi,"-").toLowerCase()}-${(m.name||"payment").replace(/[^a-z0-9]+/gi,"-").toLowerCase()}.${ext}`,blob=new Blob([u],{type:mt[1]});
+  const ext=mt[2]==="jpeg"?"jpg":mt[2],name=`${(DB.page.name||"BakeByCulture").replace(/[^a-z0-9]+/gi,"-").toLowerCase()}-${(m.name||"payment").replace(/[^a-z0-9]+/gi,"-").toLowerCase()}.${ext}`,blob=new Blob([u],{type:mt[1]});
   let dl=null;try{dl=window.claude&&await window.claude.use("downloads")}catch(e){}
   if(dl){try{await dl.save({filename:name,data:blob});toast("Image saved")}catch(err){if(err&&err.code!=="declined")toast("Couldn't save the image here. Press and hold it to save.")}return}
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast("Image saved");
@@ -2187,13 +2187,13 @@ setInterval(()=>{try{rvTick()}catch(e){}tickCountdowns();if(Math.round(Date.now(
    opening, the free Gift Set, and a form for the first X people. Each one gets a personal gift code (made on the server). */
 function defaultPre(){return {on:false,max:100,openAt:0,autoOpen:true,
   hero:Object.assign(JSON.parse(JSON.stringify(defaultPage().hero)),{eyebrow:"Pre-launch",title:"Something sweet is coming 🍪",lede:"",btn1:"🎁 Claim my gift",btn2:"🍪 Play while you wait",floats:false,shape:"rounded"}),
-  text:"Be one of the first {max} to register and get a FREE Gift Set on opening day.",cdLabel:"Opening in",cdSize:"M",cdStyle:"pulse",cdBg:"#000096",cdInk:"#FFE066",
-  bg:"#FFF4D6",ink:"#0B0B45",accent:"#000096",btnBg:"#C8102E",btnInk:"#ffffff",spots:true,
+  text:"Be one of the first {max} to register and get a FREE Gift Set on opening day.",cdLabel:"Opening in",cdSize:"M",cdStyle:"pulse",cdBg:"#5A3221",cdInk:"#FFE066",
+  bg:"#FFF4D6",ink:"#2B1A12",accent:"#5A3221",btnBg:"#C8102E",btnInk:"#ffffff",spots:true,
   form:{btn:"🎁 Claim my free Gift Set",email:true},
-  gifts:{on:true,mode:"set",title:"Your Free Gift Set",items:[],fx:"float",icon:"🎁",setText:"Everything below is yours:",surText:"Your blind box holds 1 of these:",bg:"#ffffff",ink:"#0B0B45",title2:"#000096",tile:"#FFF4D6"},
+  gifts:{on:true,mode:"set",title:"Your Free Gift Set",items:[],fx:"float",icon:"🎁",setText:"Everything below is yours:",surText:"Your blind box holds 1 of these:",bg:"#ffffff",ink:"#2B1A12",title2:"#5A3221",tile:"#FFF4D6"},
   codePrefix:"GIFT-",expMode:"days",expDays:7,expAt:0,
-  done:{title:"You're in, {name}!",text:"You're #{rank} of {max}. Your Free Gift Set is waiting for you on opening day.",icon:"🎁",img:"",fx:"gifts",bg:"#ffffff",ink:"#0B0B45",title2:"#000096",codeBg:"#FFF4D6",codeInk:"#000096",note:"This phone remembers it for you. Ordering from another phone? Type this code in the coupon box.",tip:"📸 Tip: take a screenshot of this page",wa:true},
-  closed:{icon:"🎉",img:"",fx:"confetti",title:"All {max} Gift Sets are taken!",text:"Thank you for the amazing enthusiasm 💙 Stay tuned, more exciting events are coming soon.",btn:"Follow us on Instagram",link:"",bg:"#000096",ink:"#ffffff"},
+  done:{title:"You're in, {name}!",text:"You're #{rank} of {max}. Your Free Gift Set is waiting for you on opening day.",icon:"🎁",img:"",fx:"gifts",bg:"#ffffff",ink:"#2B1A12",title2:"#5A3221",codeBg:"#FFF4D6",codeInk:"#5A3221",note:"This phone remembers it for you. Ordering from another phone? Type this code in the coupon box.",tip:"📸 Tip: take a screenshot of this page",wa:true},
+  closed:{icon:"🎉",img:"",fx:"confetti",title:"All {max} Gift Sets are taken!",text:"Thank you for the amazing enthusiasm 💙 Stay tuned, more exciting events are coming soon.",btn:"Follow us on Instagram",link:"",bg:"#5A3221",ink:"#ffffff"},
   fx:{on:true,mode:"float",imgs:[],n:8,speed:"normal",size:"M",op:55},
   game:{on:true,imgs:[],gold:"",burnt:"",sec:20,speed:"normal",tap:"crumble",bg:"#FFF4D6",end:"You caught {score} cookies!",share:"I caught {score} cookies 🍪 Join the {shop} pre-launch: {link}"}}}
 function preNorm(p){const d=defaultPre(),o=p&&typeof p==="object"?p:{},r=Object.assign({},d,o);
@@ -2201,14 +2201,14 @@ function preNorm(p){const d=defaultPre(),o=p&&typeof p==="object"?p:{},r=Object.
   ["items"].forEach(k=>{if(!Array.isArray(r.gifts[k]))r.gifts[k]=[]});if(!Array.isArray(r.fx.imgs))r.fx.imgs=[];if(!Array.isArray(r.game.imgs))r.game.imgs=[];
   if(!Array.isArray(r.hero.media))r.hero.media=[];
   r.gifts.items=r.gifts.items.filter(g=>g&&typeof g==="object");r.gifts.items.forEach((g,i)=>{if(!g.id)g.id="i"+i});return r}
-const PRE_KEY="delidome-pre-v1",PRE={st:null,me:null,busy:false,err:"",t:0,poll:0};
+const PRE_KEY="bakebyculture-pre-v1",PRE={st:null,me:null,busy:false,err:"",t:0,poll:0};
 const preForced=()=>/[?&]prelaunch\b/.test(location.search);
 // the owner's preview acts like a private window: nothing is read from or saved to this phone, and nobody is registered
 if(!preForced())try{PRE.me=JSON.parse(localStorage.getItem(PRE_KEY)||"null")}catch(e){}
 const preNow=()=>Date.now()+((window.SBH&&SBH.skew)||0);
 function preOn(){const P=DB.prelaunch;if(!P)return false;if(preForced())return true;
   if(!P.on)return false;return !(P.autoOpen!==false&&+P.openAt>0&&preNow()>=+P.openAt)}
-const preFill=(t,x)=>String(t||"").replace(/\{max\}/g,(DB.prelaunch||{}).max||"").replace(/\{name\}/g,x&&x.name?String(x.name).split(" ")[0]:"").replace(/\{rank\}/g,x&&x.rank||"").replace(/\{shop\}/g,(DB.page&&DB.page.name)||"Delidome");
+const preFill=(t,x)=>String(t||"").replace(/\{max\}/g,(DB.prelaunch||{}).max||"").replace(/\{name\}/g,x&&x.name?String(x.name).split(" ")[0]:"").replace(/\{rank\}/g,x&&x.rank||"").replace(/\{shop\}/g,(DB.page&&DB.page.name)||"BakeByCulture");
 function preView(){let v=document.getElementById("preView");if(!v){v=document.createElement("div");v.id="preView";v.hidden=true;document.body.insertBefore(v,document.body.firstChild);
   v.addEventListener("click",preClick);v.addEventListener("submit",preSubmit)}return v}
 // called at the start of renderStore: true = the pre-launch page is showing instead of the shop
@@ -2219,11 +2219,11 @@ async function preStatus(){if(PRE.busy)return;
   if(!SBH.on){const n=(DB.preRegs||[]).length,mx=+DB.prelaunch.max||0;PRE.st={count:n,max:mx,full:n>=mx};renderPre(true);return}
   try{PRE.st=await SBH.preStatus()}catch(e){}renderPre(true)}
 function preCdHTML(P,dark){if(!(+P.openAt>0))return "";
-  return `<div class="pcd pcd-${["S","M","L","XL"].includes(P.cdSize)?P.cdSize:"M"} pcs-${["still","pulse","flip","glow"].includes(P.cdStyle)?P.cdStyle:"pulse"}" data-pcd="${+P.openAt}" style="--pcb:${hexOk(P.cdBg,"#000096")};--pci:${hexOk(P.cdInk,"#FFE066")}">
+  return `<div class="pcd pcd-${["S","M","L","XL"].includes(P.cdSize)?P.cdSize:"M"} pcs-${["still","pulse","flip","glow"].includes(P.cdStyle)?P.cdStyle:"pulse"}" data-pcd="${+P.openAt}" style="--pcb:${hexOk(P.cdBg,"#5A3221")};--pci:${hexOk(P.cdInk,"#FFE066")}">
     ${P.cdLabel?`<p class="pcd-l">${esc(P.cdLabel)}</p>`:""}<div class="pcd-n">${["d","h","m","s"].map((k,i)=>`<div><b data-pk="${k}">00</b><span>${["DAYS","HRS","MIN","SEC"][i]}</span></div>`).join("")}</div></div>`}
 function preGiftsHTML(P){const G=P.gifts;if(!G.on||!G.items.length)return "";
   const sub=G.mode==="surprise"?G.surText:G.setText;
-  return `<section class="pre-gifts" style="--gbx:${hexOk(G.bg,"#ffffff")};--gink:${hexOk(G.ink,"#0B0B45")};--gttl:${hexOk(G.title2,"#000096")};--gtile:${hexOk(G.tile,"#FFF4D6")}"><h3>${G.icon?esc(G.icon)+" ":""}${esc(G.title||"Your Free Gift Set")}</h3>${sub?`<p>${esc(sub)}</p>`:""}
+  return `<section class="pre-gifts" style="--gbx:${hexOk(G.bg,"#ffffff")};--gink:${hexOk(G.ink,"#2B1A12")};--gttl:${hexOk(G.title2,"#5A3221")};--gtile:${hexOk(G.tile,"#FFF4D6")}"><h3>${G.icon?esc(G.icon)+" ":""}${esc(G.title||"Your Free Gift Set")}</h3>${sub?`<p>${esc(sub)}</p>`:""}
     <div class="pg-grid gfx-${["float","wiggle","spin","pulse","shine","none"].includes(G.fx)?G.fx:"float"}">${G.items.map((g,i)=>`<div class="pg-it" style="--d:${(i*.35).toFixed(2)}s">${g.img?`<img src="${esc(imgOk(g.img))}" alt="">`:`<i aria-hidden="true">🎁</i>`}<span>${esc(g.name||"")}</span></div>`).join("")}</div></section>`}
 function preFxHTML(P){const F=P.fx;if(!F.on)return "";const imgs=F.imgs.length?F.imgs:[COOKIE_SVG],n=Math.max(2,Math.min(20,+F.n||8)),sz={S:26,M:38,L:54}[F.size]||38,sp={slow:1.6,normal:1,fast:.6}[F.speed]||1;let h="";
   for(let i=0;i<n;i++){const fall=F.mode==="fall"||(F.mode==="both"&&i%2),s=sz*(.7+Math.random()*.6);
@@ -2232,17 +2232,17 @@ function preFxHTML(P){const F=P.fx;if(!F.on)return "";const imgs=F.imgs.length?F
 function renderPre(force){const v=preView();if(v.hidden)return;const P=DB.prelaunch,me=PRE.me,st=PRE.st||{},full=(!!st.full||!!PRE.pvFull)&&!me;
   const sig=JSON.stringify([P,me,st.count,st.full,PRE.pvFull,PRE.err,PRE.busy,window.DDLANG?DDLANG():""]);if(!force&&sig===v._sig)return;v._sig=sig;
   const pg=DB.page||{},lg=safeMedia(pg.logo),mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG,C=P.closed;
-  v.style.cssText=`--pbg:${hexOk(P.bg,"#FFF4D6")};--pink:${hexOk(P.ink,"#0B0B45")};--pacc:${hexOk(P.accent,"#000096")};--pbtn:${hexOk(P.btnBg,"#C8102E")};--pbtnk:${hexOk(P.btnInk,"#ffffff")};--display:${lpFamily(pg.headFont,pg,"head")};--body:${lpFamily(pg.bodyFont,pg,"body")}`;
+  v.style.cssText=`--pbg:${hexOk(P.bg,"#FFF4D6")};--pink:${hexOk(P.ink,"#2B1A12")};--pacc:${hexOk(P.accent,"#5A3221")};--pbtn:${hexOk(P.btnBg,"#C8102E")};--pbtnk:${hexOk(P.btnInk,"#ffffff")};--display:${lpFamily(pg.headFont,pg,"head")};--body:${lpFamily(pg.bodyFont,pg,"body")}`;
   const left=st.max?Math.max(0,st.max-(st.count||0)):null;
-  const top=`<header class="pre-top"><span class="pre-mk">${mark}</span><b>${esc(pg.name||"delidome")}</b>${window.DDlangBtnHTML?`<button class="langbtn" type="button" data-prelang>${DDlangBtnHTML()}</button>`:""}</header>`;
+  const top=`<header class="pre-top"><span class="pre-mk">${mark}</span><b>${esc(pg.name||"BakeByCulture")}</b>${window.DDlangBtnHTML?`<button class="langbtn" type="button" data-prelang>${DDlangBtnHTML()}</button>`:""}</header>`;
   let body;
   if(full){const ic=C.img?`<img class="pre-big" src="${esc(imgOk(C.img))}" alt="">`:`<div class="pre-big">${esc(C.icon||"🎉")}</div>`;
-    body=`<section class="pre-closed" style="--cbg:${hexOk(C.bg,"#000096")};--cink:${hexOk(C.ink,"#ffffff")}">${C.fx!=="none"?preRain(C.fx==="gifts"?["🎁","🍪","🎁"]:["✨","🎉","✨","🎊"]):""}${ic}<h2>${esc(preFill(C.title))}</h2><p>${esc(preFill(C.text))}</p>${preCdHTML(P)}
+    body=`<section class="pre-closed" style="--cbg:${hexOk(C.bg,"#5A3221")};--cink:${hexOk(C.ink,"#ffffff")}">${C.fx!=="none"?preRain(C.fx==="gifts"?["🎁","🍪","🎁"]:["✨","🎉","✨","🎊"]):""}${ic}<h2>${esc(preFill(C.title))}</h2><p>${esc(preFill(C.text))}</p>${preCdHTML(P)}
       ${C.btn&&C.link?`<a class="pre-btn pre-btn-w" href="${esc(socialUrl(C.link)||"#")}" target="_blank" rel="noopener">${esc(C.btn)}</a>`:""}${P.game.on?`<button class="pre-btn pre-btn-y" type="button" data-pregame>🍪 Play while you wait</button>`:""}</section>`}
   else{
-    const D=P.done,reg=me?`<section class="pre-done" id="preForm" style="--dbx:${hexOk(D.bg,"#ffffff")};--dink:${hexOk(D.ink,"#0B0B45")};--dttl:${hexOk(D.title2,"#000096")};--dcbg:${hexOk(D.codeBg,"#FFF4D6")};--dcink:${hexOk(D.codeInk,"#000096")}">${D.fx==="none"?"":preRain(D.fx==="confetti"?["✨","🎉","✨","🎊"]:D.fx==="cookies"?["🍪","🍪","✨"]:["🎁","🍪","🎁"])}${D.img?`<img class="pre-big" src="${esc(imgOk(D.img))}" alt="">`:`<div class="pre-big">${esc(D.icon||"🎁")}</div>`}<h2>${esc(preFill(D.title,me))}</h2><p>${esc(preFill(D.text,me))}</p>
+    const D=P.done,reg=me?`<section class="pre-done" id="preForm" style="--dbx:${hexOk(D.bg,"#ffffff")};--dink:${hexOk(D.ink,"#2B1A12")};--dttl:${hexOk(D.title2,"#5A3221")};--dcbg:${hexOk(D.codeBg,"#FFF4D6")};--dcink:${hexOk(D.codeInk,"#5A3221")}">${D.fx==="none"?"":preRain(D.fx==="confetti"?["✨","🎉","✨","🎊"]:D.fx==="cookies"?["🍪","🍪","✨"]:["🎁","🍪","🎁"])}${D.img?`<img class="pre-big" src="${esc(imgOk(D.img))}" alt="">`:`<div class="pre-big">${esc(D.icon||"🎁")}</div>`}<h2>${esc(preFill(D.title,me))}</h2><p>${esc(preFill(D.text,me))}</p>
         <div class="pre-code" data-notr>${esc(me.code)}</div>${D.note?`<p class="pre-sm">${esc(D.note)}</p>`:""}
-        <div class="pre-row"><button class="pre-btn pre-btn-l" type="button" data-precopy>📋 Copy code</button>${D.wa===false?"":`<a class="pre-btn pre-btn-wa" href="https://wa.me/?text=${encodeURIComponent(`My ${pg.name||"Delidome"} gift code: ${me.code}${me.exp?` (claim before ${fmtDT(me.exp)})`:""}`)}" target="_blank" rel="noopener">💬 Save to my WhatsApp</a>`}</div>
+        <div class="pre-row"><button class="pre-btn pre-btn-l" type="button" data-precopy>📋 Copy code</button>${D.wa===false?"":`<a class="pre-btn pre-btn-wa" href="https://wa.me/?text=${encodeURIComponent(`My ${pg.name||"BakeByCulture"} gift code: ${me.code}${me.exp?` (claim before ${fmtDT(me.exp)})`:""}`)}" target="_blank" rel="noopener">💬 Save to my WhatsApp</a>`}</div>
         ${me.exp?`<p class="pre-exp">⏳ Claim before ${esc(fmtDT(me.exp))}</p>`:""}${D.tip?`<p class="pre-sm">${esc(D.tip)}</p>`:""}</section>`
       :`<form class="pre-form" id="preForm" novalidate><p class="pre-lead">${esc(preFill(P.text))}</p>
         ${P.spots!==false&&left!==null?`<div class="pre-spots">🔥 <b>${left} of ${st.max}</b> Gift Sets left<div class="pre-bar"><i style="width:${st.max?Math.round(left/st.max*100):0}%"></i></div></div>`:""}
@@ -2297,7 +2297,7 @@ async function preSubmit(e){if(e.target.id!=="preForm")return;e.preventDefault()
 addEventListener("ddlang",()=>{if(!preView().hidden)renderPre(true)});
 /* pre-launch mini game "Catch the cookies": runs only on the visitor's phone (no server calls while playing) */
 const PGM={run:false,score:0,best:0,t:0,raf:0,cks:[],combo:0,last:0,acc:0,lt:0};
-try{PGM.best=+localStorage.getItem("delidome-game-best")||0}catch(e){}
+try{PGM.best=+localStorage.getItem("bakebyculture-game-best")||0}catch(e){}
 window.preGameStart=function(){const G=DB.prelaunch.game;let ov=document.getElementById("preGame");
   if(!ov){ov=document.createElement("div");ov.id="preGame";ov.setAttribute("role","dialog");ov.setAttribute("aria-label","Catch the cookies");document.body.appendChild(ov);
     ov.addEventListener("pointerdown",pgmTap);ov.addEventListener("click",e=>{const b=e.target.closest("button,a");if(!b)return;const d=b.dataset;
@@ -2327,7 +2327,7 @@ function pgmTap(ev){if(!PGM.run)return;const st=document.getElementById("pgmStag
   for(let i=0;i<(fx==="crumble"?10:8);i++){const k=document.createElement("i");k.className="pgm-p pgm-"+(fx==="sparkle"?"sp":fx==="hearts"?"ht":"cr")+(c.kind?" "+c.kind:"");k.style.left=cx+"px";k.style.top=cy+"px";k.style.setProperty("--dx",(Math.random()*110-55)+"px");k.style.setProperty("--dy",(Math.random()*110-55)+"px");if(fx==="hearts")k.textContent="💛";if(fx==="sparkle")k.textContent="✨";st.appendChild(k);setTimeout(()=>k.remove(),650)}
   const p=document.createElement("i");p.className="pgm-pop"+(pts<0?" neg":"");p.textContent=(pts>0?"+":"")+pts+(c.kind==="gold"?" ✨":"");p.style.left=(cx-14)+"px";p.style.top=(cy-24)+"px";st.appendChild(p);setTimeout(()=>p.remove(),800);
   if(PGM.combo===3||PGM.combo===6){const cb=document.getElementById("pgmCombo");cb.textContent=PGM.combo===3?"x2 combo!":"🔥 x3!";cb.classList.remove("on");void cb.offsetWidth;cb.classList.add("on")}}
-function pgmOver(){PGM.run=false;cancelAnimationFrame(PGM.raf);const G=DB.prelaunch.game,best=PGM.score>PGM.best;if(best){PGM.best=PGM.score;try{localStorage.setItem("delidome-game-best",PGM.best)}catch(e){}}
+function pgmOver(){PGM.run=false;cancelAnimationFrame(PGM.raf);const G=DB.prelaunch.game,best=PGM.score>PGM.best;if(best){PGM.best=PGM.score;try{localStorage.setItem("bakebyculture-game-best",PGM.best)}catch(e){}}
   const link=location.origin+location.pathname,txt=preFill(G.share).replace(/\{score\}/g,PGM.score).replace(/\{link\}/g,link);
   document.getElementById("preGame").innerHTML=`<div class="pgm-card"><button class="pgm-x" type="button" data-pgmx aria-label="Close">✕</button><div class="pgm-big">🏆</div><h2>${esc(preFill(G.end).replace(/\{score\}/g,PGM.score))}</h2><p>${best?"🎉 New best score!":`Best: <b>${PGM.best}</b>`}</p>${PGM.score>=10?`<p class="pgm-badge">🏅 Cookie Catcher</p>`:""}
     <button class="pre-btn" type="button" data-pgmgo>↻ Play again</button><a class="pre-btn pre-btn-wa" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">💬 Share my score</a></div>`}
@@ -2337,9 +2337,9 @@ addEventListener("keydown",e=>{if(e.key==="Escape"){const ov=document.getElement
 
 /* pre-launch gift code in the shop (after opening): remembered on the phone that registered, or typed in the coupon box.
    It shows as a gift panel in the box and a line in checkout; the server attaches it to the order right after it is placed. */
-const PG_KEY="delidome-pregift-v1",PG={code:null,info:null,exp:null,checked:false};
+const PG_KEY="bakebyculture-pregift-v1",PG={code:null,info:null,exp:null,checked:false};
 /* review rewards the customer holds (saved on this phone): one can be used per order, and only on a box of the minimum size or more */
-const RVW_KEY="delidome-rvcodes",RVW={list:[],checked:false,pick:"",off:false,expired:0},isRvCode=c=>/^RV-/i.test(c||"");
+const RVW_KEY="bakebyculture-rvcodes",RVW={list:[],checked:false,pick:"",off:false,expired:0},isRvCode=c=>/^RV-/i.test(c||"");
 const rvwSaved=()=>{try{return JSON.parse(localStorage.getItem(RVW_KEY)||"[]").filter(x=>typeof x==="string").slice(0,20)}catch(e){return []}};
 const rvwSave=()=>{try{localStorage.setItem(RVW_KEY,JSON.stringify(RVW.list.map(x=>x.code)))}catch(e){}};
 const rvwMin=()=>Math.max(1,Math.round(+(DB.revrew||{}).claimMin)||6);
@@ -2358,7 +2358,7 @@ const rvwArt=g=>{const p=g&&g.pid&&prod(g.pid);return p?`<span class="gplate">${
 function rvwNoticeHTML(){const R=DB.revrew;if(!R)return "";const U0=R.upg||{},xp=RVW.expired>0?`<div class="rvu" style="--ub:#FDECEC;--ui:#8A1020"><span aria-hidden="true">⌛</span><p>${esc(String(U0.exp||"{n} of your rewards expired and can't be used any more.").replace(/\{n\}/g,RVW.expired))}</p><button type="button" data-rvwxp>OK</button></div>`:"";
   return xp+rvwNoticeMain()}
 function rvwNoticeMain(){const R=DB.revrew;if(!RVW.list.length)return "";const U=R.upg||{},n=RVW.list.length,min=rvwMin(),ok=(S.size||0)>=min,man=R.claimMode==="manual",
-    fill=t=>esc(String(t||"").replace(/\{n\}/g,n).replace(/\{min\}/g,min)),st=`style="--ub:${hexOk(U.bg,"#FFF4D6")};--ui:${hexOk(U.ink,"#0B0B45")}"`,ic=`<span aria-hidden="true">${esc(String(U.icon||"🎁").slice(0,4))}</span>`;
+    fill=t=>esc(String(t||"").replace(/\{n\}/g,n).replace(/\{min\}/g,min)),st=`style="--ub:${hexOk(U.bg,"#FFF4D6")};--ui:${hexOk(U.ink,"#2B1A12")}"`,ic=`<span aria-hidden="true">${esc(String(U.icon||"🎁").slice(0,4))}</span>`;
   if(!ok)return `<div class="rvu" ${st}>${ic}<p>${fill(n===1?U.one:U.many)}</p></div>`;
   if(man)return PG.code?"":`<div class="rvu" ${st}>${ic}<p>${fill(U.man)}</p></div>`;
   if(rvwApplied())return n>1?`<div class="rvu" ${st}>${ic}<p>${fill(U.chg)}</p><button type="button" data-rvwchange>${esc(U.changeBtn||"Change")}</button></div>`:"";
@@ -2383,7 +2383,7 @@ async function pgCheck(code,phone,quiet){code=String(code||"").trim().toUpperCas
 function pgForget(used){const had=PG.info&&(PG.info.items||[]).some(g=>g&&g.pid),c=PG.code;PG.code=null;PG.info=null;PG.exp=null;if(had)setTimeout(renderMenu,0);
   if(isRvCode(c)){if(used)rvwUsed(c);else RVW.off=true}else try{localStorage.removeItem(PG_KEY)}catch(e){}}
 function pgPanelHTML(){if(!PG.info)return "";const I=PG.info,its=(I.items||[]).filter(g=>g&&(g.name||g.img));
-  return `<div class="gb pgb fx-shine" style="--gb:#FFE9A8;--gi:#000096"><div class="gh"><span class="gtag">${esc(I.tag||"PRE-LAUNCH GIFT")}</span><b class="gt">${esc(I.title||"Free Gift Set")}</b>${PG.exp?`<span class="gend">Claim before ${esc(fmtDT(PG.exp))}</span>`:""}</div>
+  return `<div class="gb pgb fx-shine" style="--gb:#FFE9A8;--gi:#5A3221"><div class="gh"><span class="gtag">${esc(I.tag||"PRE-LAUNCH GIFT")}</span><b class="gt">${esc(I.title||"Free Gift Set")}</b>${PG.exp?`<span class="gend">Claim before ${esc(fmtDT(PG.exp))}</span>`:""}</div>
     <p class="gs">🎁 Reserved for you with code <b>${esc(PG.code)}</b>${I.mode==="surprise"?". Your ${esc(bbName())} is picked when you send your payment proof. Then tap it to open! 🤫":". Comes free with this order:"}</p>
     <div class="gl big">${I.mode==="surprise"?`<span class="gcard"><i aria-hidden="true">🎁</i><b>${esc(bbName())}</b><em>FREE</em></span>`:its.length?its.map(g=>giftCard(g)).join(""):`<span class="gcard"><i aria-hidden="true">🎁</i><b>${esc(I.title||"Free Gift Set")}</b><em>FREE</em></span>`}</div></div>`}
 const preGiftHTML=(o,cust)=>o.preGift&&cust&&o.preGift.mode==="surprise"&&o.preGift.drawn&&(o.preGift.items||[]).length&&!bbOpened(o.id+"|p")?`<div class="dsec"><h4>🎁 Your pre-launch gift · ${esc(o.preGift.code||"")}</h4>${bbCardHTML(o.id+"|p")}</div>`:o.preGift?`<div class="dsec"><h4>🎁 ${o.preGift.src==="review"?(cust?"Your review reward":"Review reward to pack"):(cust?"Your pre-launch gift":"Pre-launch gift to pack")} · ${esc(o.preGift.code||"")}</h4><div class="gl">${(o.preGift.items||[]).map(g=>giftChip(g)).join("")||giftChip({name:o.preGift.mode==="surprise"&&o.preGift.drawn===false?bbName():o.preGift.soldOut?"Out of stock":o.preGift.title||"Free Gift Set"})}</div>${o.preGift.mode==="surprise"&&o.preGift.drawn===false?`<p class="note" style="margin:8px 0 0">${cust?"Your ${esc(bbName())} is picked when you send your payment proof.":"Not drawn yet. It is picked when the payment proof is sent."}</p>`:o.preGift.soldOut?`<p class="note" style="margin:8px 0 0">${cust?"Sorry, the free gifts ran out.":"No gift left in stock for this order."}</p>`:o.preGift.mode==="surprise"&&o.preGift.pool>1?`<p class="note" style="margin:8px 0 0">Picked at random from ${o.preGift.pool} gifts.</p>`:""}</div>`:"";
@@ -2391,9 +2391,9 @@ const preGiftHTML=(o,cust)=>o.preGift&&cust&&o.preGift.mode==="surprise"&&o.preG
 
 /* ================= ADMIN ================= */
 const A={sel:new Set(),lbl:null,lblPrev:"sample",rvPid:null,tab:"dashboard",nf:{type:"news",title:"",text:"",pid:"",code:"",until:""},dd:"today",vr:"today",dsig:"",filter:"all",od:"all",q:"",pq:"",pcat:"all",modal:null,np:null,bakeDay:null,openOrder:null,
-  draft:{kind:"discount",name:"Flash sale",type:"percent",value:20,appliesTo:"all",fdAll:true,fdSizes:[],fdCustom:false,dkind:"free",damount:0,dscope:"all",startMode:"now",startAt:"",durH:1,durM:0,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#000096",fx:"shine",view:"teaser"}};
+  draft:{kind:"discount",name:"Flash sale",type:"percent",value:20,appliesTo:"all",fdAll:true,fdSizes:[],fdCustom:false,dkind:"free",damount:0,dscope:"all",startMode:"now",startAt:"",durH:1,durM:0,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#5A3221",fx:"shine",view:"teaser"}};
 // the page the team is on survives a refresh (and coming back later in the same browser)
-{const KEY="delidome-admin-tab",TABS="dashboard orders complaints customers products badges sales coupons boxes notify announcer hero landing marquee revrew delivery labels settings security affiliates afcoupons prelaunch log team".split(" ");
+{const KEY="bakebyculture-admin-tab",TABS="dashboard orders complaints customers products badges sales coupons boxes notify announcer hero landing marquee revrew delivery labels settings security affiliates afcoupons prelaunch log team".split(" ");
   let cur="dashboard";try{const v=localStorage.getItem(KEY);if(TABS.includes(v))cur=v}catch(e){}
   Object.defineProperty(A,"tab",{enumerable:true,get:()=>cur,set:v=>{cur=v;if(TABS.includes(v))try{localStorage.setItem(KEY,v)}catch(e){}}})}
 function toast(msg){if(typeof toastHook==="function")msg=toastHook(msg);const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,Math.max(1600,msg.length*45))}
@@ -2593,7 +2593,7 @@ function hrDraw(){
   const d=hrDirty();["hrDirty"].forEach(i=>{const n=document.getElementById(i);if(n)n.hidden=!d});
   ["hrSave","hrDisc"].forEach(i=>{const n=document.getElementById(i);if(n)n.disabled=!d});
 }
-const HB_DEF=i=>i===1?{fill:true,bg:"#ffffff",ink:hexOk(DB.page.brand,"#000096"),line:"#ffffff",shape:"pill",size:"M",fx:"none"}:{fill:false,bg:"#ffffff",ink:"#ffffff",line:"#ffffff",shape:"pill",size:"M",fx:"none"};
+const HB_DEF=i=>i===1?{fill:true,bg:"#ffffff",ink:hexOk(DB.page.brand,"#5A3221"),line:"#ffffff",shape:"pill",size:"M",fx:"none"}:{fill:false,bg:"#ffffff",ink:"#ffffff",line:"#ffffff",shape:"pill",size:"M",fx:"none"};
 function hbEditor(h,i){const st=Object.assign(HB_DEF(i),h["b"+i]||{});
   const cin=(l,k)=>`<label class="af" style="font-size:12px;margin:0">${l}<input type="color" data-hrb="${i}.${k}" value="${hexOk(st[k],"#ffffff")}" style="width:100%;height:36px"></label>`;
   const chips=(k,opts)=>`<div class="chips" style="gap:6px">${opts.map(([v,l])=>`<button class="fchip" type="button" data-hrbset="${i}.${k}.${v}" aria-pressed="${st[k]===v}" style="padding:5px 10px;font-size:12.5px">${l}</button>`).join("")}</div>`;
@@ -2607,11 +2607,11 @@ function viewHero(){
   const pg=DB.page,h=hrDraft(),prods=DB.products.filter(p=>p.status!=="hidden"&&hasImage(p)).slice(0,6);
   const inp=(label,path,max,rows)=>`<label class="af">${label}${rows?`<textarea class="in" rows="${rows}" data-hr="${path}" maxlength="${max}">${esc(h[path])}</textarea>`:`<input class="in" data-hr="${path}" maxlength="${max}" value="${esc(h[path])}">`}</label>`;
   const slot=i=>{const c=safeMedia(h.cookies[i]),pr=prods[i],x=heroCkx(h,i);
-    const thumb=c?`<img src="${esc(c)}" alt="" style="width:100%;height:100%;object-fit:contain">`:pr?`<div class="plate" style="background:#1A1FB0;width:100%">${plateInner(pr)}</div>`:`<span class="note">Empty</span>`;
-    return `<div class="pmcard" style="text-align:center;gap:8px${x.show?"":";opacity:.6"}"><b style="font-size:13px">Cookie ${i+1}</b><label class="sw" style="justify-self:center"><input type="checkbox" data-hrx="${i}.show" ${x.show?"checked":""} aria-label="Show Cookie ${i+1}"><span></span></label><span class="note" style="margin:0">${x.show?"Shown":"Hidden"}</span><div style="width:72px;height:72px;margin:0 auto;display:grid;place-items:center;background:#EEF0FF;border-radius:50%;overflow:hidden">${thumb}</div>
+    const thumb=c?`<img src="${esc(c)}" alt="" style="width:100%;height:100%;object-fit:contain">`:pr?`<div class="plate" style="background:#744329;width:100%">${plateInner(pr)}</div>`:`<span class="note">Empty</span>`;
+    return `<div class="pmcard" style="text-align:center;gap:8px${x.show?"":";opacity:.6"}"><b style="font-size:13px">Cookie ${i+1}</b><label class="sw" style="justify-self:center"><input type="checkbox" data-hrx="${i}.show" ${x.show?"checked":""} aria-label="Show Cookie ${i+1}"><span></span></label><span class="note" style="margin:0">${x.show?"Shown":"Hidden"}</span><div style="width:72px;height:72px;margin:0 auto;display:grid;place-items:center;background:#FBF4EE;border-radius:50%;overflow:hidden">${thumb}</div>
       <span class="note" style="margin:0">${c?"Your image":pr?"Default (flavor photo)":"Nothing to show"}</span>
       <label class="ghost mqbtn" style="justify-self:center">${c?"Replace":"Upload"}<input type="file" accept="image/*" hidden data-hrck="${i}"></label>${c?`<button class="danger" type="button" data-hrckrm="${i}">Use default</button>`:""}
-      <label class="af" style="margin:0;text-align:left;font-size:12px">Background<input type="color" data-hrx="${i}.bg" value="${x.bg||(i%2?"#2328C8":"#1A1FB0")}" style="width:100%;height:34px"></label>
+      <label class="af" style="margin:0;text-align:left;font-size:12px">Background<input type="color" data-hrx="${i}.bg" value="${x.bg||(i%2?"#8A5236":"#744329")}" style="width:100%;height:34px"></label>
       <label class="af" style="margin:0;text-align:left;font-size:12px">Opacity: ${x.op}%<input type="range" min="10" max="100" step="5" value="${x.op}" data-hrx="${i}.op"></label>
       <label class="af" style="margin:0;text-align:left;font-size:12px">Effect<select class="in" data-hrx="${i}.fx">${HERO_FX.map(([k,l])=>`<option value="${k}"${x.fx===k?" selected":""}>${l}</option>`).join("")}</select></label>
       ${i>=6?`<button class="danger" type="button" data-hrckdel="${i}">Remove cookie</button>`:""}</div>`};
@@ -2816,10 +2816,10 @@ function viewNotify(){
   </div>`;
 }
 /* --- Dashboard (owner) --- */
-const VIS_KEY="delidome-visits-v1",VID_KEY="delidome-vid-v1",LASTV_KEY="delidome-lastv-v1",STAFF_KEY="delidome-staff-v1";
+const VIS_KEY="bakebyculture-visits-v1",VID_KEY="bakebyculture-vid-v1",LASTV_KEY="bakebyculture-lastv-v1",STAFF_KEY="bakebyculture-staff-v1";
 let VIS=[];const loadVis=()=>{try{VIS=JSON.parse(localStorage.getItem(VIS_KEY)||"[]")||[]}catch(e){VIS=[]}};loadVis();
 // affiliate links: ?ref=CODE&src=ig&to=flavorId&cp=COUPON (kept 30 days; the order is credited on the server)
-const AFF_KEY="delidome-aff-v1";let affDone=false;
+const AFF_KEY="bakebyculture-aff-v1";let affDone=false;
 function affCapture(){if(affDone)return;affDone=true;try{
   const q=new URLSearchParams(location.search),code=(q.get("ref")||"").trim().toUpperCase(),to=q.get("to")||"",cp=(q.get("cp")||"").trim().toUpperCase().slice(0,30);
   if(code&&/^[A-Z0-9_-]{2,20}$/.test(code)&&!(navigator.webdriver||/bot|crawl|spider|slurp|headless|preview/i.test(navigator.userAgent))){
@@ -3266,7 +3266,7 @@ $("#modal").addEventListener("click",e=>{
 const CHANNELS={whatsapp:"WhatsApp",email:"Email",bell:"Shop bell"};
 function rejMsg(o,reason){const nm=(o.customer.name.split(" ")[0]||"there");return `Hi ${nm}, we couldn't accept the payment proof for order ${o.code}${reason?": "+reason:""}. Please send a new payment proof in My orders before the time runs out, or your order will be cancelled automatically.`}
 function msgText(o,st){
-  const nm=(o.customer.name.split(" ")[0]||"there"),shop=DB.page.name||"Delidome",when=whenTxt(o);
+  const nm=(o.customer.name.split(" ")[0]||"there"),shop=DB.page.name||"BakeByCulture",when=whenTxt(o);
   const t={
     awaiting:`Hi ${nm}, your ${shop} order ${o.code} (${money(o.total)}) is waiting for payment. Please pay and send your proof in My orders before it is cancelled automatically.`,
     review:`Hi ${nm}, we got your payment proof for order ${o.code} and we're checking it now.`,
@@ -3280,7 +3280,7 @@ function msgText(o,st){
   return t[st]||`Hi ${nm}, your order ${o.code} is now: ${stLabel(st,o.mode)}.`;
 }
 function waLink(o,text){let d=String(o.customer.phone).replace(/\D/g,"");if(d.startsWith("0"))d=DB.settings.waCountry+d.slice(1);return `https://wa.me/${d}?text=${encodeURIComponent(text)}`}
-function mailLink(o,text){return `mailto:${encodeURIComponent(o.customer.email)}?subject=${encodeURIComponent((DB.page.name||"Delidome")+" order "+o.code)}&body=${encodeURIComponent(text)}`}
+function mailLink(o,text){return `mailto:${encodeURIComponent(o.customer.email)}?subject=${encodeURIComponent((DB.page.name||"BakeByCulture")+" order "+o.code)}&body=${encodeURIComponent(text)}`}
 function logMsg(o,channels,st,text,by){o.msgs=o.msgs||[];channels.forEach(ch=>o.msgs.push({at:Date.now(),channel:ch,status:st,text,by}))}
 const chanList=v=>v==="both"?["whatsapp","email"]:v==="none"?[]:[v];
 function applyStatus(id,st){
@@ -3558,12 +3558,12 @@ function reuseSale(id){
   const mins=Math.max(5,Math.round((s.end-s.start)/60e3)),kind=isFD(s)?"freedelivery":isGift(s)?"gifts":"discount";
   const lst=kind==="freedelivery"?(s.appliesTo==="list"?{fdAll:false,fdSizes:(s.sizes||[]).map(Number),fdCustom:!!s.custom}:s.appliesTo==="all"||!s.appliesTo?{fdAll:true,fdSizes:[],fdCustom:false}:{fdAll:false,fdSizes:[+s.appliesTo],fdCustom:false}):{fdAll:true,fdSizes:[],fdCustom:false};
   const d={...lst,dkind:s.kind==="amount"?"amount":"free",damount:+s.amount||0,dscope:s.scope==="store"?"store":"all",kind,name:s.name,type:s.type==="amount"?"amount":"percent",value:+s.value||20,appliesTo:String(s.appliesTo==="list"?"all":s.appliesTo||"all"),startMode:"now",startAt:"",
-    durH:Math.min(168,Math.floor(mins/60)),durM:Math.min(168,Math.floor(mins/60))>=168?0:mins%60,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#000096",fx:"shine",view:"teaser"};
+    durH:Math.min(168,Math.floor(mins/60)),durM:Math.min(168,Math.floor(mins/60))>=168?0:mins%60,gifts:[],rules:[],tag:"Gifts",bg:"#FFE066",ink:"#5A3221",fx:"shine",view:"teaser"};
   if(kind==="gifts"){
     const gm={};
     d.gifts=(s.gifts||[]).map(g=>{const n=uid();gm[g.id]=n;return {id:n,name:g.name,img:g.img||"",stock:g.stock==null?"":g.stock,pct:g.pct==null?"":g.pct}});
     d.rules=(s.rules||[]).map(r=>({id:uid(),from:r.from,to:r.to,limit:r.limit,mode:r.mode==="random"?"random":"specific",ids:(r.ids||[]).map(i=>gm[i]).filter(Boolean),custom:!(+r.from===+r.to&&DB.sizes.some(z=>z.n===+r.from))}));
-    Object.assign(d,{tag:s.tag||"Gifts",bg:s.bg||"#FFE066",ink:s.ink||"#000096",fx:s.fx||"shine",view:GV_KEYS.includes(s.view)?s.view:"teaser"});
+    Object.assign(d,{tag:s.tag||"Gifts",bg:s.bg||"#FFE066",ink:s.ink||"#5A3221",fx:s.fx||"shine",view:GV_KEYS.includes(s.view)?s.view:"teaser"});
   }
   A.draft=d;renderAdmin();showNew("#saleForm",false);
   const f=$("#saleForm");if(f)f.scrollIntoView({behavior:"smooth",block:"start"});
@@ -3632,7 +3632,7 @@ function giftForm(D){
     <label class="af">Gift pictures in the customer's box<select class="in" data-draft="view">${GV_OPTS.map(([k,l,n])=>`<option value="${k}" ${(D.view||"teaser")===k?"selected":""}>${l} – ${n}</option>`).join("")}</select></label>
     <div class="af">1. Gift pool<p class="note" style="margin:0">Add every gift you may give away. Leave Stock empty for unlimited. The rules below choose which gifts each box size gets. For rules that draw at random, "% chance" sets how likely each gift is compared with the others (1 and 99 means 1% and 99%, decimals like 0.5 are fine). Empty = equal chance. A random rule always gives a gift.</p></div>
     <div class="stack" style="gap:10px">${D.gifts.map((g,i)=>`<div class="pmcard" style="gap:8px">
-      <div class="colin"><div style="width:56px;height:56px;border-radius:12px;background:#EEF0FF;display:grid;place-items:center;overflow:hidden;flex:none">${g.img?`<img src="${esc(g.img)}" alt="" style="width:100%;height:100%;object-fit:cover">`:`<span style="font-size:26px">🎁</span>`}</div>
+      <div class="colin"><div style="width:56px;height:56px;border-radius:12px;background:#FBF4EE;display:grid;place-items:center;overflow:hidden;flex:none">${g.img?`<img src="${esc(g.img)}" alt="" style="width:100%;height:100%;object-fit:cover">`:`<span style="font-size:26px">🎁</span>`}</div>
         <input class="in" data-gname="${i}" maxlength="40" placeholder="Gift name (e.g. Tote bag)" value="${esc(g.name)}" aria-label="Gift ${i+1} name">
         <button class="danger" type="button" data-gdel="${i}" aria-label="Remove gift ${i+1}">×</button></div>
       <div class="colin" style="flex-wrap:wrap"><label class="ghost mqbtn">${g.img?"Replace picture":"Upload picture"}<input type="file" accept="image/*" hidden data-gimg="${i}"></label>${g.img?`<button class="danger" type="button" data-gimgrm="${i}">Remove picture</button>`:""}
@@ -3893,7 +3893,7 @@ function addCat(){
 /* --- Flavor background editor (preview first, saved only on "Save") --- */
 let BG=null;
 function openBg(id,dr){const p=prod(id);if(!p)return;const cur=(dr?dr.bg:p.bg)||{};
-  BG={id,d:Object.assign({type:"auto",c1:"#EEF0FF",c2:"#000096",dir:"diag",img:"",size:84,ring:""},JSON.parse(JSON.stringify(cur)))};
+  BG={id,d:Object.assign({type:"auto",c1:"#FBF4EE",c2:"#5A3221",dir:"diag",img:"",size:84,ring:""},JSON.parse(JSON.stringify(cur)))};
   if(!BG.d.size)BG.d.size=84;
   if(dr){BG.done=dr.done;BG.back=dr.back}
   openModal("","pbg");renderBg();}
@@ -3901,7 +3901,7 @@ function bgPrev(){const p=prod(BG.id),el=$("#bgPrev");if(!p||!el)return;
   el.innerHTML=[["Menu",""],["Small","sm"]].map(([l,c])=>`<div class="bgp ${c}"><div class="bgp-plate">${plateHTML(p,BG.d)}</div><span>${l}</span></div>`).join("")}
 function renderBg(){const p=prod(BG.id),d=BG.d,t=d.type;
   const types=[["auto","Automatic"],["color","Colour"],["gradient","Gradient"],["image","Picture"],["none","None"]];
-  const col=(id,lbl,v)=>`<label class="af">${lbl}<span class="bgcol"><input type="color" id="${id}" value="${HEX6.test(v||"")?v:"#000096"}"><input class="in" id="${id}Hex" value="${esc(v||"")}" maxlength="7" placeholder="#000096"></span></label>`;
+  const col=(id,lbl,v)=>`<label class="af">${lbl}<span class="bgcol"><input type="color" id="${id}" value="${HEX6.test(v||"")?v:"#5A3221"}"><input class="in" id="${id}Hex" value="${esc(v||"")}" maxlength="7" placeholder="#5A3221"></span></label>`;
   $("#modalCard").innerHTML=`<div class="sheet-top"><h3 id="modalTitle">Background · ${esc(p.name)}</h3><button class="x" type="button" data-mclose aria-label="Close">✕</button></div>
     <p class="note" style="margin-top:6px">The circle behind this flavor's photo in the shop. Nothing changes for customers until you tap Save.</p>
     <div class="bgprev" id="bgPrev"></div>
@@ -3914,7 +3914,7 @@ function renderBg(){const p=prod(BG.id),d=BG.d,t=d.type;
       ${t==="image"?`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="upl">${d.img?"Change picture":"Choose picture"}<input type="file" accept="image/*" id="bgFile"></label>${d.img?`<span class="note" style="margin:0">Picture ready</span>`:`<span class="note" style="margin:0">Square pictures work best (pattern, texture, colour splash).</span>`}</div>`:""}
       ${t==="none"?`<p class="note" style="margin:0">No circle. Best with cut-out photos (transparent PNG).</p>`:""}
       <label class="af">Photo size inside the circle: <b id="bgSizeV">${d.size}%</b><input type="range" id="bgSize" min="50" max="100" step="1" value="${d.size}"></label>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="sw"><input type="checkbox" id="bgRingOn" ${d.ring?"checked":""}><span></span></label><span class="stlabel">Outline ring</span>${d.ring?`<span class="bgcol"><input type="color" id="bgRing" value="${HEX6.test(d.ring)?d.ring:"#000096"}"></span>`:""}</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="sw"><input type="checkbox" id="bgRingOn" ${d.ring?"checked":""}><span></span></label><span class="stlabel">Outline ring</span>${d.ring?`<span class="bgcol"><input type="color" id="bgRing" value="${HEX6.test(d.ring)?d.ring:"#5A3221"}"></span>`:""}</div>
     </div>
     <p class="err" id="bgErr" hidden></p>
     <div class="modal-actions"><button class="btn btn-ghost-blue" type="button" data-bgreset>Reset to automatic</button><button class="btn btn-ghost-blue" type="button" data-mclose>Cancel</button><button class="btn btn-blue" type="button" data-bgsave>Save</button></div>`;
@@ -3948,7 +3948,7 @@ $("#modal").addEventListener("input",e=>{if(A.modal!=="pbg"||!BG)return;const el
 });
 $("#modal").addEventListener("change",async e=>{if(A.modal!=="pbg"||!BG)return;const el=e.target;
   if(el.id==="bgDir"){BG.d.dir=el.value;bgPrev()}
-  else if(el.id==="bgRingOn"){BG.d.ring=el.checked?(BG.d.ring||"#000096"):"";renderBg()}
+  else if(el.id==="bgRingOn"){BG.d.ring=el.checked?(BG.d.ring||"#5A3221"):"";renderBg()}
   else if(el.id==="bgFile"&&el.files[0]){try{const r=await processImage(el.files[0]);BG.d.img=r.img;renderBg()}catch(x){const er=$("#bgErr");er.textContent=x.message;er.hidden=false}}
 });
 
@@ -4020,7 +4020,7 @@ function guardPanel(){
       <div class="af">Preview<div class="grid2" id="gdPrev">${guardPrevHTML()}</div></div>
     </div></section>`;
 }
-const guardPrevHTML=()=>["clear","shuf"].map(k=>`<div class="sheet-card cw-card cw-prev" style="position:static;max-width:none;box-shadow:0 2px 12px rgba(0,0,60,.12);animation:none">${guardCardHTML(k,DB.settings)}</div>`).join("");
+const guardPrevHTML=()=>["clear","shuf"].map(k=>`<div class="sheet-card cw-card cw-prev" style="position:static;max-width:none;box-shadow:0 2px 12px rgba(43,26,18,.12);animation:none">${guardCardHTML(k,DB.settings)}</div>`).join("");
 /* Boxes & extras: the phone bar random button and the floating "show my box" circle */
 const BTN_FX_RB=[["wiggle","Wiggle now and then"],["pulse","Gentle pulse"],["none","No movement"]],BTN_FX_FAB=[["bounce","Bounce"],["pulse","Gentle pulse"],["glow","Glowing ring"],["none","No movement"]];
 function fpInit(){document.querySelectorAll("[data-fpk]").forEach(r=>{const [,lo,hi]=FP_KEYS[r.dataset.fpk];r.style.setProperty("--p",((+r.value-lo)/(hi-lo)*100)+"%")})}
@@ -4028,7 +4028,7 @@ function btnPreviewHTML(){
   const t=DB.settings,d=fabDims(),tx=t.fabTextOn!==false?String(t.fabText||"").trim().slice(0,14):"",bg=hexOk(t.rbBg,"#FFD43B");
   return `<span class="barrand fx-${fxOk(t.rbFx,["wiggle","pulse","none"],"wiggle")}" style="--rb-bg:${bg}" title="Random fill">${fabIconHTML(t.rbImg,t.rbIcon,"🎲",t.rbImgCut)}</span>
     <span class="barrand fx-none" style="--rb-bg:${bg}" title="After the box is full (shuffle)">${fabIconHTML(t.rbImg2,t.rbIcon2,"🔀",t.rbImg2Cut)}</span>
-    <span class="fab fx-${fxOk(t.fabFx,["bounce","pulse","glow","none"],"bounce")}" style="--fab-ink:${hexOk(t.fabInk,"#000096")};--fab-s:${d.ds}px;--fab-o:${d.dopa/100}"><span class="fab-pl" style="${esc(fabPlateCss(t))}"><span>${fabIconHTML(t.fabImg,t.fabIcon,"📦",t.fabImgCut)}</span></span>${tx?`<small class="fab-tx" style="${esc(fabPillCss(t))}">${esc(tx)}</small>`:""}</span>`;
+    <span class="fab fx-${fxOk(t.fabFx,["bounce","pulse","glow","none"],"bounce")}" style="--fab-ink:${hexOk(t.fabInk,"#5A3221")};--fab-s:${d.ds}px;--fab-o:${d.dopa/100}"><span class="fab-pl" style="${esc(fabPlateCss(t))}"><span>${fabIconHTML(t.fabImg,t.fabIcon,"📦",t.fabImgCut)}</span></span>${tx?`<small class="fab-tx" style="${esc(fabPillCss(t))}">${esc(tx)}</small>`:""}</span>`;
 }
 function btnPanels(){
   const t=DB.settings,sw=(k,label)=>`<label class="chk"><span class="sw"><input type="checkbox" data-k="settings::${k}" ${t[k]!==false?"checked":""}><span></span></span><span>${label}</span></label>`,
@@ -4057,9 +4057,9 @@ function btnPanels(){
       <div class="af">Background behind the icon or picture (like the flavor plates)
         <div style="margin-top:6px"><label class="af">Style${sel("fabBgType",[["color","Solid colour"],["gradient","Gradient"],["none","None (see through)"]])}</label></div>
         <div class="grid2" style="margin-top:6px">${col("fabBg","Colour")}${col("fabBg2","Second colour (gradient)","#FF9F43")}</div>
-        <div class="grid2" style="margin-top:6px"><label class="af">Ring colour (optional)<input type="color" data-k="settings::fabRing" value="${hexOk(t.fabRing,"#000096")}" style="width:100%;height:42px"></label>
+        <div class="grid2" style="margin-top:6px"><label class="af">Ring colour (optional)<input type="color" data-k="settings::fabRing" value="${hexOk(t.fabRing,"#5A3221")}" style="width:100%;height:42px"></label>
           <div class="af">&nbsp;<button class="ghost" type="button" data-fabringoff>${/^#[0-9a-f]{6}$/i.test(t.fabRing||"")?"Remove the ring":"No ring"}</button></div></div></div>
-      <div class="grid2">${col("fabInk","Tiny text and icon colour","#000096")}<label class="af">Movement${sel("fabFx",BTN_FX_FAB)}</label></div>
+      <div class="grid2">${col("fabInk","Tiny text and icon colour","#5A3221")}<label class="af">Movement${sel("fabFx",BTN_FX_FAB)}</label></div>
       ${sw("fabGest","Let customers make it smaller and fainter (pinch it, or press and hold it)")}
       ${sw("fabHide","Hide the circle while the box is already on screen")}
       <div class="af">Size, fade and picture size
@@ -4108,11 +4108,11 @@ function bsPanel(){
     <p class="note" style="margin:0 0 6px">${BSA.hasGoogle?"A Google key is saved. Addresses are found with Google Maps.":"No Google key: addresses are found with a free map service (less exact). Add a key for Google Maps accuracy."}</p>
     <div class="colin" style="flex-wrap:wrap"><input class="in" id="bsGKey" type="password" autocomplete="off" placeholder="AIza…" style="flex:1;min-width:180px"><button class="btn btn-blue btn-sm" type="button" data-bsa="savegkey">Save Google key</button>${BSA.hasGoogle?`<button class="danger" type="button" data-bsa="rmgkey">Remove</button>`:""}</div>
     <h3 style="margin:18px 0 4px;font-size:15px">2. Pickup details</h3>
-    <div class="grid2">${inp("Business name","origin.business",o.business,"Delidome")}${inp("Contact name","origin.name",o.name,"Your name")}${inp("Contact phone","origin.phone",o.phone,"08123456789")}${inp("Postal code","origin.postal",o.postal,"12345")}</div>
+    <div class="grid2">${inp("Business name","origin.business",o.business,"BakeByCulture")}${inp("Contact name","origin.name",o.name,"Your name")}${inp("Contact phone","origin.phone",o.phone,"08123456789")}${inp("Postal code","origin.postal",o.postal,"12345")}</div>
     <div style="margin-top:10px">${inp("Pickup address","origin.address",o.address,"Street, number, area, city")}</div>
     <div class="grid2" style="margin-top:10px">${inp("Latitude","origin.lat",o.lat,"-6.2088")}${inp("Longitude","origin.lng",o.lng,"106.8456")}</div>
     <p class="note" style="margin:6px 0 0">Coordinates are needed for Gojek, Grab and Lalamove. In Google Maps, press and hold your shop and copy the two numbers.</p>
-    <div style="margin-top:10px">${inp("Note for the courier (optional)","origin.note",o.note,"e.g. Ask for Delidome at the front desk")}</div>
+    <div style="margin-top:10px">${inp("Note for the courier (optional)","origin.note",o.note,"e.g. Ask for BakeByCulture at the front desk")}</div>
     <h3 style="margin:18px 0 4px;font-size:15px">3. Couriers customers can choose</h3>
     <div class="chips">${BS_COURIERS.map(([k,l])=>`<button class="fchip" type="button" data-bscour="${k}" aria-pressed="${cou.includes(k)}">${l}</button>`).join("")}</div>
     <p class="note" style="margin:6px 0 0">Gojek, Grab and Lalamove deliver within hours, best for fresh cookies. The others need the postal codes.</p>
@@ -4207,7 +4207,7 @@ function viewDelivery(){
 const DKA={st:null,loading:false,busy:false};
 async function dkLoad(){if(DKA.loading||!SBH.on)return;DKA.loading=true;try{DKA.st=await SBH.dokuGet()}catch(e){DKA.st={err:e.message}}DKA.loading=false;if(A.tab==="settings")renderAdmin()}
 function viewDoku(){const D=DB.settings.doku,st=DKA.st;if(SBH.on&&st===null&&!DKA.loading)dkLoad();
-  const url=((window.DELIDOME_CONFIG||{}).supabaseUrl||"")+"/functions/v1/doku-webhook";
+  const url=((window.BAKEBYCULTURE_CONFIG||{}).supabaseUrl||"")+"/functions/v1/doku-webhook";
   return `<h3 style="margin:18px 0 4px;font-size:16px">Online payment (DOKU)</h3><p class="sub" style="margin-top:0">Customers choose <b>Auto confirmation</b> (DOKU) or <b>Manual confirmation</b> by you. Turn DOKU off and only manual confirmation stays. Goes live when you press Save &amp; publish.</p>
     <label class="chk"><input type="checkbox" data-dk="on" ${D.on?"checked":""}> <b>DOKU payment is ${D.on?"ON":"OFF"}</b></label>
     <div class="grid2" style="margin-top:10px"><label class="af">Environment<select class="in" data-dkk="env"><option value="sandbox" ${!st||st.env!=="production"?"selected":""}>Sandbox (test, fake money)</option><option value="production" ${st&&st.env==="production"?"selected":""}>Production (real money)</option></select></label>
@@ -4249,12 +4249,12 @@ function viewSettings(){
     <section class="panel"><h2>Top bar</h2><p class="sub">The bar at the top of the shop with your logo, the bell and My orders.</p>
       <div style="display:flex;gap:10px;align-items:center;margin:10px 0"><label class="sw"><input type="checkbox" data-k="settings::hdrOn" ${s.hdrOn?"checked":""} aria-label="Use my own top bar look"><span></span></label><span class="stlabel">Use my own top bar look${s.hdrOn?"":" (off: the standard white bar)"}</span></div>
       <div style="display:flex;gap:10px;align-items:center;margin:0 0 10px"><label class="sw"><input type="checkbox" data-lp="nameShow" ${DB.page.nameShow!==false?"checked":""} aria-label="Show the shop name next to the logo"><span></span></label><span class="stlabel">Show the shop name next to the logo (turn off for logo only)</span></div>
-      ${s.hdrOn?`<div class="grid3">${hsel("Bar shape","hdrShape",[["flat","Straight (full width)"],["rounded","Rounded bottom corners"],["float","Floating rounded bar"],["pill","Floating pill (fully round ends)"]],"flat")}${hc("Bar border color","hdrLine","#D9DCFA")}</div>
-      <div class="grid3" style="margin-top:10px">${hc("Bar background","hdrBg","#ffffff")}${hc("Logo background","hdrLogoBg","#ffffff")}${hc("Logo text color","hdrLogoInk","#000096")}</div>
+      ${s.hdrOn?`<div class="grid3">${hsel("Bar shape","hdrShape",[["flat","Straight (full width)"],["rounded","Rounded bottom corners"],["float","Floating rounded bar"],["pill","Floating pill (fully round ends)"]],"flat")}${hc("Bar border color","hdrLine","#EFDFD2")}</div>
+      <div class="grid3" style="margin-top:10px">${hc("Bar background","hdrBg","#ffffff")}${hc("Logo background","hdrLogoBg","#ffffff")}${hc("Logo text color","hdrLogoInk","#5A3221")}</div>
       <div class="grid3" style="margin-top:10px">${hsel("Logo shape","hdrLogoShape",[["none","No box"],["pill","Pill"],["rounded","Rounded box"],["square","Square box"]],"none")}${hsel("Bell and My orders shape","hdrIconShape",[["circle","Circle"],["rounded","Rounded box"],["square","Square box"]],"circle")}</div>
-      <div class="grid3" style="margin-top:10px">${hc("Bell and My orders background","hdrIconBg","#ffffff")}${hc("Icon color","hdrIconInk","#000096")}${hc("Icon border","hdrIconLine","#D9DCFA")}</div>
-      <div class="grid3" style="margin-top:10px">${hc("\"Your box\" button background","hdrPillBg","#000096")}${hc("\"Your box\" text","hdrPillInk","#ffffff")}${hc("\"Your box\" border","hdrPillLine","#000096")}</div>
-      <div class="grid3" style="margin-top:10px">${hc("Count circle (0/6) background","hdrNumBg","#ffffff")}${hc("Count circle text","hdrNumInk","#000096")}</div>`:""}
+      <div class="grid3" style="margin-top:10px">${hc("Bell and My orders background","hdrIconBg","#ffffff")}${hc("Icon color","hdrIconInk","#5A3221")}${hc("Icon border","hdrIconLine","#EFDFD2")}</div>
+      <div class="grid3" style="margin-top:10px">${hc("\"Your box\" button background","hdrPillBg","#5A3221")}${hc("\"Your box\" text","hdrPillInk","#ffffff")}${hc("\"Your box\" border","hdrPillLine","#5A3221")}</div>
+      <div class="grid3" style="margin-top:10px">${hc("Count circle (0/6) background","hdrNumBg","#ffffff")}${hc("Count circle text","hdrNumInk","#5A3221")}</div>`:""}
     </section>
     <section class="panel">
       <h2>Ordering</h2><p class="sub">Customers can order up to 7 days ahead.</p>
@@ -4322,7 +4322,7 @@ function viewSettings(){
     <section class="panel">
       <div class="phead"><div><h2>Order placed page</h2><p class="sub">The celebration customers see after placing an order. You can use {name}, {size}, {mode}, {when}, {hours}, {code} and {total} in the sentences.</p></div><button class="btn btn-blue btn-sm" type="button" data-thpreview>Preview</button></div>
       <div class="stack" style="gap:14px">
-        <div class="af">Logo (shown instead of the check mark)<div class="colin" style="flex-wrap:wrap"><label class="ghost mqbtn">${th.logo?"Replace logo":"Upload Delidome logo"}<input type="file" accept="image/*" hidden data-thlogo></label>${th.logo?`<img class="lpthumb" style="max-height:44px;max-width:140px" src="${esc(th.logo)}" alt="Logo"><button class="danger" type="button" data-thlogorm>Remove</button>`:""}</div></div>
+        <div class="af">Logo (shown instead of the check mark)<div class="colin" style="flex-wrap:wrap"><label class="ghost mqbtn">${th.logo?"Replace logo":"Upload BakeByCulture logo"}<input type="file" accept="image/*" hidden data-thlogo></label>${th.logo?`<img class="lpthumb" style="max-height:44px;max-width:140px" src="${esc(th.logo)}" alt="Logo"><button class="danger" type="button" data-thlogorm>Remove</button>`:""}</div></div>
         <div class="af">Falling cookie pictures (up to 8, a built-in cookie is used if you add none)<div class="thck">${th.cookies.map((c,i)=>`<span class="th"><img src="${esc(c)}" alt="Cookie ${i+1}"><button type="button" data-thckrm="${i}" aria-label="Remove cookie picture ${i+1}">×</button></span>`).join("")}${th.cookies.length<8?`<label class="ghost mqbtn">Add cookie pictures<input type="file" accept="image/*" multiple hidden data-thck></label>`:""}</div><p class="note" style="margin:0">PNG with a transparent background looks best.</p></div>
         <div class="grid2"><label class="af" style="flex-direction:row;display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink)"><span class="sw"><input type="checkbox" data-thc="fx" ${th.fx?"checked":""}><span></span></span> Falling cookies effect</label>
         <label class="af">How many cookies fall<input class="in" type="range" min="6" max="60" step="2" data-thr="amount" value="${th.amount}"></label></div>
@@ -4929,11 +4929,11 @@ am.addEventListener("click",e=>{
 
 /* --- landing page editor --- */
 const LP_DEFAULT_SVG=`<svg viewBox="0 0 30 24" aria-hidden="true"><path d="M3 21a12 12 0 0 1 24 0Z" fill="currentColor"/><circle cx="15" cy="5" r="2.6" fill="currentColor"/><rect x="1" y="20.5" width="28" height="3" rx="1.5" fill="currentColor"/></svg>`;
-function defaultPage(){return {name:"delidome",logo:"",brand:"#000096",bg:"#ffffff",xtra:{on:true,text:"Flavors marked with a price cost that much extra per cookie.",icon:"✨",bg:"#FFF4D6",ink:"#5A4300",line:"#FFD166",fx:"shine",size:"M",shape:"rounded"},
+function defaultPage(){return {name:"BakeByCulture",logo:"",brand:"#5A3221",bg:"#ffffff",xtra:{on:true,text:"Flavors marked with a price cost that much extra per cookie.",icon:"✨",bg:"#FFF4D6",ink:"#5A4300",line:"#FFD166",fx:"shine",size:"M",shape:"rounded"},
   favicon:{mode:"auto",img:"",emoji:"🍪",bg:""},
   logoSize:0,nameShow:true,nameSize:0,bb:{name:"Blind box",img:"",fx:"wiggle",speed:100,size:120,tip:"Tap the box to open it!"},nameSide:"right",logoPos:{m:"normal",x:0,y:0},adm:{name:"",show:true,size:0,logo:""},
-  mq2:{on:false,noFont:true,texts:["Hello there! Fresh cookies, baked daily"],images:[],links:[],mode:"both",imgH:0,bg:"#000096",color:"#ffffff",font:"display",size:"M",speed:"medium"},bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},
-  snow:{on:false,icon:"❄️",imgs:[],n:40,speed:4,size:30,op:80,layer:"front",sway:true,spin:false,shop:true,aff:true,admin:false},ink:"#0B0B45",headFont:"display",bodyFont:"body",fonts:[],
+  mq2:{on:false,noFont:true,texts:["Hello there! Fresh cookies, baked daily"],images:[],links:[],mode:"both",imgH:0,bg:"#5A3221",color:"#ffffff",font:"display",size:"M",speed:"medium"},bgx:{mode:"off",color:"",img:"",fit:"cover",veil:25,op:100,shop:true,aff:true,admin:true},
+  snow:{on:false,icon:"❄️",imgs:[],n:40,speed:4,size:30,op:80,layer:"front",sway:true,spin:false,shop:true,aff:true,admin:false},ink:"#2B1A12",headFont:"display",bodyFont:"body",fonts:[],
   hero:{eyebrow:"Baked fresh every morning",title:"Warm cookies, boxed your way.",lede:"Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.",btn1:"Build a box",btn2:"See the flavors",bg:"",color:"#ffffff",mediaType:"none",src:"",overlay:35,floats:true,cookies:["","","","","",""],media:[],carousel:true,carouselSec:5,waitVideo:true,swipe:true,shape:"dome",size:"auto",fit:"cover",hPh:360,hPc:480,btnPh:null,btnPc:null},
   strip:{items:[{t:"Boxes of {sizes}",on:true},{t:"Order by {cutoff} for the next day",on:true},{t:"Closed {closed}",on:true}]},
   build:{title:"Build your box",intro:"Choose a size, fill every spot, then tell us when you want it. Each box is baked the morning it leaves the oven room."},
@@ -5009,7 +5009,7 @@ function heroFloats(dome,h){
   for(let i=0;i<heroCkN(h);i++){const x=heroCkx(h,i);if(!x.show)continue;const c=safeMedia(cs[i]);let inner="";
     if(c)inner=`<img class="ck ph${/^data:image\/jpeg/i.test(c)?"":" cut"}" src="${esc(c)}" alt="" draggable="false">`;else if(prods[i])inner=plateInner(prods[i]);
     if(!inner)continue;
-    html+=`<div class="float fx-${x.fx}${k>=ph?" hid-ph":""}${k>=pc?" hid-pc":""}" aria-hidden="true" style="left:${HERO_SPOTS[k][0]}%;top:${HERO_SPOTS[k][1]}%;opacity:${x.op/100}"><div class="plate" style="background:${x.bg||(i%2?"#2328C8":"#1A1FB0")}">${inner}</div></div>`;k++}
+    html+=`<div class="float fx-${x.fx}${k>=ph?" hid-ph":""}${k>=pc?" hid-pc":""}" aria-hidden="true" style="left:${HERO_SPOTS[k][0]}%;top:${HERO_SPOTS[k][1]}%;opacity:${x.op/100}"><div class="plate" style="background:${x.bg||(i%2?"#8A5236":"#744329")}">${inner}</div></div>`;k++}
   dome.insertAdjacentHTML("afterbegin",html);
 }
 function heroFill(dome,h){
@@ -5035,7 +5035,7 @@ function heroFill(dome,h){
   heroFloats(dome,h);
   [h.b1,h.b2].forEach((st,i)=>{const a=ab[i];[...a.classList].filter(c=>/^hb/.test(c)).forEach(c=>a.classList.remove(c));if(!st)return;
     a.classList.add("hbc","hb-"+fxOk(st.shape,HB_SHAPES.map(x=>x[0]),"pill"),"hbz-"+fxOk(st.size,["S","M","L","A"],"M"),"hbfx-"+fxOk(st.fx,HB_FX.map(x=>x[0]),"none"));
-    a.style.setProperty("--hb-bg",st.fill===false?"transparent":hexOk(st.bg,"#ffffff"));a.style.setProperty("--hb-ink",hexOk(st.ink,"#000096"));
+    a.style.setProperty("--hb-bg",st.fill===false?"transparent":hexOk(st.bg,"#ffffff"));a.style.setProperty("--hb-ink",hexOk(st.ink,"#5A3221"));
     a.style.setProperty("--hb-line",hexOk(st.line,"#ffffff"));a.style.setProperty("--hb-glow",hexOk(st.fill===false?st.line:st.bg,"#ffffff"))});
   dome.classList.toggle("fit-contain",h.fit==="contain");
   dome._h=h;dome._ratio=null;
@@ -5138,7 +5138,7 @@ function renderLanding(){
   sv.style.setProperty("--blue",pg.brand);sv.style.setProperty("--ink",pg.ink);
   sv.style.setProperty("--display",lpFamily(pg.headFont,pg,"head"));sv.style.setProperty("--body",lpFamily(pg.bodyFont,pg,"body"));
   document.documentElement.style.setProperty("--pagebg",pg.bg);
-  const nm=pg.name||"delidome";document.title=`${nm} Cookie Boxes`;
+  const nm=pg.name||"BakeByCulture";document.title=`${nm} Cookie Boxes`;
   $("#brandTxt").textContent=nm;$("#ftBrand").textContent=nm;$(".top .logo").setAttribute("aria-label",`${nm} home`);
   const lg=safeMedia(pg.logo);const mark=lg?`<img src="${esc(lg)}" alt="">`:LP_DEFAULT_SVG;$("#logoMark").innerHTML=mark;$("#ftMark").innerHTML=mark;
   lpFavicon(pg);applyHeader();applyBrandSize();applyXtra();applyBgx();applySnow();renderMarquee($("#marq2"),pg.mq2);
@@ -5184,7 +5184,7 @@ function applyXtra(){const pg=DB.page,el=document.getElementById("xtraHint");if(
 function admBrandHTML(){const pg=DB.page||{},a=pg.adm||{},lg=safeMedia(a.logo)||safeMedia(pg.logo),z=Math.max(0,Math.min(72,+a.size||0))||28;
   const mk=lg?`<img src="${esc(lg)}" alt="" style="height:${z}px;width:auto;border-radius:6px;display:block">`:LP_DEFAULT_SVG.replace(/currentColor/g,"#fff").replace("<svg ",`<svg style="height:${z}px;width:auto" `);
   return `<span style="display:inline-flex;align-items:center;margin-right:${a.show===false?0:8}px">${mk}</span>${a.show===false?"":esc(admName())+" "}<small>Affiliate</small>`}
-const admName=()=>{const a=(DB.page&&DB.page.adm)||{};return a.name||(DB.page&&DB.page.name)||"delidome"};
+const admName=()=>{const a=(DB.page&&DB.page.adm)||{};return a.name||(DB.page&&DB.page.name)||"BakeByCulture"};
 function applyBrandSize(){const pg=DB.page,top=document.querySelector(".top");if(!pg||!top)return;const z=Math.max(0,Math.min(72,+pg.logoSize||0));top.classList.toggle("lgnotxt",pg.nameShow===false);const ns=Math.max(0,Math.min(40,+pg.nameSize||0));top.classList.toggle("nmsz",ns>0);if(ns)document.documentElement.style.setProperty("--nm-size",ns+"px");else document.documentElement.style.removeProperty("--nm-size");top.classList.toggle("lgsz",z>0);top.classList.toggle("nmtop",pg.nameSide==="top");top.classList.toggle("nmbot",pg.nameSide==="bottom");const lp=pg.logoPos||{},rt=document.documentElement.style;top.classList.toggle("lgcorner",lp.m==="corner");top.classList.toggle("lgfree",lp.m==="custom");
   if(lp.m==="custom"){rt.setProperty("--lg-x",Math.max(-200,Math.min(200,+lp.x||0))+"px");rt.setProperty("--lg-y",Math.max(-30,Math.min(30,+lp.y||0))+"px")}else{rt.removeProperty("--lg-x");rt.removeProperty("--lg-y")}if(z)document.documentElement.style.setProperty("--logo-h",z+"px");else document.documentElement.style.removeProperty("--logo-h")}
 function applyAdminBrand(){const pg=DB.page,box=document.getElementById("adLogo");if(!pg||!box)return;const a=pg.adm||{},mk=document.getElementById("adLogoMark"),nm=document.getElementById("adLogoName"),z=Math.max(0,Math.min(72,+a.size||0));
@@ -5218,16 +5218,16 @@ function snowFrame(t){if(!SNOW.run)return;SNOW.raf=requestAnimationFrame(snowFra
     if(f.y>SNOW.h+f.s){SNOW.fl[i]=snowFlake(S,true);continue}
     const im=SNOW.spr[i%SNOW.spr.length];ctx.save();ctx.translate((x)*SNOW.dpr,f.y*SNOW.dpr);if(f.rs)ctx.rotate(f.rot);const w=f.s*SNOW.dpr,r=(im.naturalWidth||im.width)&&(im.naturalHeight||im.height)?(im.naturalHeight||im.height)/(im.naturalWidth||im.width):1;ctx.drawImage(im,-w/2,-w*r/2,w,w*r);ctx.restore()}}
 function snowSize(){if(!SNOW.cv)return;SNOW.dpr=Math.min(2,devicePixelRatio||1);SNOW.w=innerWidth;SNOW.h=innerHeight;SNOW.cv.width=Math.round(SNOW.w*SNOW.dpr);SNOW.cv.height=Math.round(SNOW.h*SNOW.dpr)}
-const snowOff=()=>{try{return localStorage.getItem("delidome-snow")==="off"}catch(e){return false}};
+const snowOff=()=>{try{return localStorage.getItem("bakebyculture-snow")==="off"}catch(e){return false}};
 // the visitor's own on/off button (shop only) and a one-time tip under the top bar. The effect plays even when the phone asks for less motion; this button is the visitor's way to stop it.
-function snowToggle(){try{localStorage.setItem("delidome-snow",snowOff()?"on":"off")}catch(x){}const t=document.getElementById("snowTip");if(t)t.hidden=true;applySnow()}
+function snowToggle(){try{localStorage.setItem("bakebyculture-snow",snowOff()?"on":"off")}catch(x){}const t=document.getElementById("snowTip");if(t)t.hidden=true;applySnow()}
 function snowBtnSync(S,on){const b=document.getElementById("snowBtn");if(!b)return;if(!b._sn){b._sn=1;b.addEventListener("click",snowToggle)}const show=on&&snowScope()==="shop";b.hidden=!show;if(!show)return;
   const ic=String(S.icon||"").trim()||"❄️";b.textContent=ic.slice(0,2);b.classList.toggle("off",snowOff());b.setAttribute("aria-pressed",snowOff()?"false":"true");
-  let seen=false;try{seen=!!localStorage.getItem("delidome-snow-tip")}catch(e){}
+  let seen=false;try{seen=!!localStorage.getItem("bakebyculture-snow-tip")}catch(e){}
   if(!seen&&!SNOW.tipT){SNOW.tipT=setTimeout(()=>{const t=document.getElementById("snowTip"),lt=document.getElementById("langTip");if(!t||b.hidden)return;if(lt&&!lt.hidden){SNOW.tipT=0;return snowBtnSync(S,on)}
     t.innerHTML="<b>"+b.textContent+" Falling effect</b><span>Tap this button to turn the falling effect on or off.</span>";t.hidden=false;
     const br=b.getBoundingClientRect(),tr=t.getBoundingClientRect();t.style.setProperty("--ar",Math.max(10,Math.round(tr.right-(br.left+br.width/2)-6))+"px");
-    try{localStorage.setItem("delidome-snow-tip","1")}catch(e){}setTimeout(()=>{t.hidden=true},9000)},9800)}}
+    try{localStorage.setItem("bakebyculture-snow-tip","1")}catch(e){}setTimeout(()=>{t.hidden=true},9000)},9800)}}
 function applySnow(){const pg=DB.page,S=pg&&pg.snow;if(!S||!document.body)return;
   const want=!!S.on&&S[snowScope()]!==false&&!document.body.classList.contains("pre-on");snowBtnSync(S,want);const ok=want&&!snowOff();
   if(!SNOW.iv)SNOW.iv=setInterval(applySnow,1500);
@@ -5291,14 +5291,14 @@ function viewLanding(){
     <label class="af">Brand name size: ${+pg.nameSize?pg.nameSize+"px":"Auto"}<div class="colin"><input type="range" min="10" max="36" step="1" value="${+pg.nameSize||14}" data-lp="nameSize" data-num="1" data-rr="1" style="flex:1">${+pg.nameSize?`<button class="ghost" type="button" data-lpclear="nameSize">Auto</button>`:""}</div></label>
     <label class="af">Logo size in the shop top bar: ${+pg.logoSize?pg.logoSize+"px":"Auto"}<div class="colin"><input type="range" min="20" max="72" step="2" value="${+pg.logoSize||28}" data-lp="logoSize" data-num="1" data-rr="1" style="flex:1">${+pg.logoSize?`<button class="ghost" type="button" data-lpclear="logoSize">Auto</button>`:""}</div></label>
     <div class="af">Logo position in the shop top bar<div class="chips" style="margin-top:6px">${[["normal","Normal"],["corner","Top-left corner (auto)"],["custom","Drag it myself"]].map(([k,l])=>`<button class="fchip" type="button" data-lgpos="${k}" aria-pressed="${(pg.logoPos.m||"normal")===k}">${l}</button>`).join("")}</div>
-      ${pg.logoPos.m==="custom"?`<div class="lgprev" id="lgPrev"><div class="lgbar"><span class="lgdrag" id="lgDrag" style="transform:translate(${Math.max(-200,Math.min(200,+pg.logoPos.x||0))}px,${Math.max(-30,Math.min(30,+pg.logoPos.y||0))}px)"><span class="lgm">${safeMedia(pg.logo)?`<img src="${esc(safeMedia(pg.logo))}" alt="">`:LP_DEFAULT_SVG}</span><b>${esc(pg.name||"delidome")}</b></span><span class="lgfake" aria-hidden="true">EN · 🔔 · 🛍 · Your box</span></div>
+      ${pg.logoPos.m==="custom"?`<div class="lgprev" id="lgPrev"><div class="lgbar"><span class="lgdrag" id="lgDrag" style="transform:translate(${Math.max(-200,Math.min(200,+pg.logoPos.x||0))}px,${Math.max(-30,Math.min(30,+pg.logoPos.y||0))}px)"><span class="lgm">${safeMedia(pg.logo)?`<img src="${esc(safeMedia(pg.logo))}" alt="">`:LP_DEFAULT_SVG}</span><b>${esc(pg.name||"BakeByCulture")}</b></span><span class="lgfake" aria-hidden="true">EN · 🔔 · 🛍 · Your box</span></div>
         <p class="note" style="margin:6px 0 0">Drag the logo to where you want it in the top bar. It is saved when you let go.</p><button class="ghost" type="button" data-lgreset style="margin-top:6px">Put it back</button></div>`:(pg.logoPos.m==="corner"?`<p class="note" style="margin:6px 0 0">The logo sits in the very top-left corner of the top bar, close to the screen edge.</p>`:"")}</div>
     <div class="af" style="border-top:1px solid var(--line);padding-top:12px"><b>Admin and affiliator top bar</b><p class="note" style="margin:2px 0 8px">The logo and name at the top of the admin menu and on the affiliator page.</p>
-      <div class="grid2">${lpIn("Name (empty = brand name)","adm.name",{max:30,ph:pg.name||"delidome"})}
+      <div class="grid2">${lpIn("Name (empty = brand name)","adm.name",{max:30,ph:pg.name||"BakeByCulture"})}
         <div class="af">Logo (empty = shop logo)<div class="colin"><label class="ghost mqbtn">${pg.adm.logo?"Replace logo":"Upload logo"}<input type="file" accept="image/*" hidden data-lpimg="adm.logo"></label>${pg.adm.logo?`<img class="lpthumb" style="max-height:36px;max-width:90px" src="${esc(safeMedia(pg.adm.logo))}" alt="Admin logo"><button class="danger" type="button" data-lpclear="adm.logo">Remove</button>`:""}</div></div></div>
       <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><label class="sw"><input type="checkbox" data-lp="adm.show" data-rr="1" ${pg.adm.show!==false?"checked":""} aria-label="Show the name"><span></span></label><span class="stlabel">Show the name next to the logo</span></div>
       <label class="af" style="margin-top:8px">Logo size: ${+pg.adm.size?pg.adm.size+"px":"Auto"}<div class="colin"><input type="range" min="20" max="72" step="2" value="${+pg.adm.size||28}" data-lp="adm.size" data-num="1" data-rr="1" style="flex:1">${+pg.adm.size?`<button class="ghost" type="button" data-lpclear="adm.size">Auto</button>`:""}</div></label></div>
-    <div class="grid3">${lpCol("Brand color (buttons, accents)","brand","#000096")}${lpCol("Page background","bg","#ffffff")}${lpCol("Text color","ink","#0B0B45")}</div>
+    <div class="grid3">${lpCol("Brand color (buttons, accents)","brand","#5A3221")}${lpCol("Page background","bg","#ffffff")}${lpCol("Text color","ink","#2B1A12")}</div>
     <div class="grid2">${lpFontSel("Heading font","headFont")}${lpFontSel("Body font","bodyFont")}</div>
     <div class="af">Your own fonts<div class="colin" style="flex-wrap:wrap">${pg.fonts.map(f=>`<span class="fchip">${esc(f.name)} <button class="danger" type="button" data-lpfontrm="${f.id}" style="padding:2px 8px">×</button></span>`).join("")}${pg.fonts.length<3?`<label class="ghost mqbtn">+ Upload font<input type="file" accept=".ttf,.otf,.woff,.woff2,font/*" hidden data-lpfont></label>`:""}</div>
       <p class="note">Up to 3 fonts (.ttf, .otf, .woff, .woff2, 1 MB each). They appear in the font lists above. Only upload fonts you're licensed to use on the web.</p></div>`,true)}
@@ -5356,12 +5356,12 @@ function viewLanding(){
       ${lpIn("Heading",`blocks.${i}.heading`,{max:90})}${lpIn("Text",`blocks.${i}.text`,{rows:3,max:600})}
       ${b.layout!=="text"?lpMedia(`blocks.${i}`,b):""}
       <div class="grid2">${lpIn("Button label (optional)",`blocks.${i}.btnLabel`,{max:30})}${lpIn("Button link (#build, #menu or https://...)",`blocks.${i}.btnLink`,{max:200,ph:"#build"})}</div>
-      <div class="grid2">${lpCol("Section background",`blocks.${i}.bg`,"#ffffff",true)}${lpCol("Section text color",`blocks.${i}.color`,"#0B0B45",true)}</div></div>`).join("")}
+      <div class="grid2">${lpCol("Section background",`blocks.${i}.bg`,"#ffffff",true)}${lpCol("Section text color",`blocks.${i}.color`,"#2B1A12",true)}</div></div>`).join("")}
     ${pg.blocks.length<8?`<button class="btn btn-blue btn-sm" type="button" data-lpbadd style="justify-self:start">+ Add section</button>`:`<p class="note">Maximum of 8 sections.</p>`}`,pg.blocks.length>0)}
   ${sec("Build your box heading",`${lpIn("Heading","build.title",{max:60})}${lpIn("Intro text","build.intro",{rows:3,max:300})}`)}
   ${sec("Come say hello and FAQ",`
     <div class="grid2">${lpIn("Heading","visit.title",{max:60})}${lpIn("FAQ heading","visit.faqTitle",{max:60})}</div>
-    ${lpIn("Text","visit.text",{rows:2,max:300})}${lpCol("Section background","visit.bg","#EEF0FF",true)}
+    ${lpIn("Text","visit.text",{rows:2,max:300})}${lpCol("Section background","visit.bg","#FBF4EE",true)}
     <p class="note">Opening hours and the address are edited in Shop settings. In an answer, <b>{cutoff}</b> becomes your order cutoff time.</p>
     ${pg.faq.map((f,i)=>`<div class="lpblock">${lpIn("Question",`faq.${i}.q`,{max:120})}${lpIn("Answer",`faq.${i}.a`,{rows:3,max:500})}<button class="danger" type="button" data-lpfdel="${i}" style="justify-self:start">Delete question</button></div>`).join("")}
     ${pg.faq.length<8?`<button class="btn btn-blue btn-sm" type="button" data-lpfadd style="justify-self:start">+ Add question</button>`:""}`)}
@@ -5600,7 +5600,7 @@ document.head.insertAdjacentHTML("beforeend",`<style id="lblCss">${LBL_CSS}
 document.body.insertAdjacentHTML("beforeend",'<div id="printArea" aria-hidden="true"></div>');
 const PAID_ST=["new","baking","ready","completed"];
 function labelHTML(o,L){
-  L=L||DB.label;const nm=(DB.page.name||"Delidome").toUpperCase(),del=o.mode==="delivery";
+  L=L||DB.label;const nm=(DB.page.name||"BakeByCulture").toUpperCase(),del=o.mode==="delivery";
   const items=Object.entries(o.items).map(([id,n])=>{const p=prod(id);return `<li>${n}× ${esc(p?p.name:"Flavor")}</li>`}).join("");
   const ad=(o.addons||[]).map(id=>{const a=DB.addons.find(x=>x.id===id);return a?`<li>+ ${esc(a.name)}</li>`:""}).join("");
   let qr="";if(L.qr&&L.qr.trim()){try{qr=`<div class="lbl-qr">${qrSvg(L.qr.trim())}${esc(L.qrCaption||"")}</div>`}catch(e){qr=""}}
@@ -5608,7 +5608,7 @@ function labelHTML(o,L){
   const notes=[L.notes,o.note?`GIFT NOTE: ${o.note}`:""].filter(Boolean).join("\n");
   return `<div class="lbl">
     <div class="lbl-h">${L.logo?`<img src="${esc(L.logo)}" alt="">`:""}<b>${esc(nm)}</b><span>${esc(o.code)}<br>${esc(fmtShort(o.createdAt))}</span></div>
-    <div class="lbl-from"><small>FROM</small>${esc(DB.page.name||"Delidome")}<br>${esc(DB.settings.address)}</div>
+    <div class="lbl-from"><small>FROM</small>${esc(DB.page.name||"BakeByCulture")}<br>${esc(DB.settings.address)}</div>
     <div class="lbl-box lbl-to"><small>${del?"Ship to":"Pickup"}</small><div class="nm">${esc(o.customer.name)}</div><div class="ph">${esc(o.customer.phone)}</div>${del&&o.customer.address?`<div class="ad">${esc(o.customer.address)}</div>`:""}<div class="wh">${del?"DELIVER":"PICK UP"}: ${esc(fmtDay(o.day))} · ${esc(o.time)}</div></div>
     ${del?`<div class="lbl-box lbl-awb"><small>Courier: ${esc(o.courier||"—")} · Airway bill</small><div class="no">${esc(o.awb||"")}</div></div>`:""}
     <div class="lbl-box lbl-items"><small>Items</small><ul><li><b>Box of ${o.size}</b></li>${items}${ad}</ul></div>
@@ -5644,7 +5644,7 @@ function downloadLabels(orders,L){
   if(!orders.length){return}
   markPrinted(orders);
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>Shipping labels</title><style>@page{size:4in 6in;margin:0}body{margin:0;background:#eee}${LBL_CSS}@media screen{.lbl{margin:12px auto;box-shadow:0 2px 10px rgba(0,0,0,.2)}}@media print{body{background:#fff}.lbl{margin:0}}</style></head><body>${orders.map(o=>labelHTML(o,L)).join("")}<script>onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>`;
-  const name=`delidome-labels-${ymd(new Date())}.html`;
+  const name=`bakebyculture-labels-${ymd(new Date())}.html`;
   (async()=>{
     let dl=null;try{dl=window.claude&&await window.claude.use("downloads")}catch(e){}
     if(dl){try{await dl.save({filename:name,data:html});toast("Label file saved. Open it to print.")}catch(err){if(err&&err.code!=="declined")toast("Couldn't save the label file here.")}return}
@@ -5667,7 +5667,7 @@ function bakeSheetHTML(day){
   const agg={};let cookies=0;const bySize={};let pick=0,del=0;
   live.forEach(o=>{Object.entries(o.items).forEach(([id,n])=>{agg[id]=(agg[id]||0)+n;cookies+=n});bySize[o.size]=(bySize[o.size]||0)+1;o.mode==="delivery"?del++:pick++});
   const rows=Object.entries(agg).sort((a,b)=>b[1]-a[1]);
-  return `<div class="bk"><h1>Bake sheet · ${esc(fmtDay(day))}</h1><p class="bk-sub">${esc(DB.page.name||"Delidome")} · printed ${esc(fmtDT(Date.now()))}</p>
+  return `<div class="bk"><h1>Bake sheet · ${esc(fmtDay(day))}</h1><p class="bk-sub">${esc(DB.page.name||"BakeByCulture")} · printed ${esc(fmtDT(Date.now()))}</p>
   <div class="bk-sum"><span>${cookies} cookies</span>${Object.entries(bySize).sort((a,b)=>a[0]-b[0]).map(([n,c])=>`<span>${c} × box of ${n}</span>`).join("")}<span>${pick} pickup</span><span>${del} delivery</span></div>
   <h2>Cookies to bake</h2>
   <table><thead><tr><th></th><th>Flavor</th><th style="text-align:right">Qty</th></tr></thead><tbody>${rows.map(([id,n])=>{const p=prod(id);return `<tr><td class="c">☐</td><td>${esc(p?p.name:"Removed flavor")}</td><td class="n">${n}</td></tr>`}).join("")||`<tr><td colspan="3">Nothing to bake.</td></tr>`}</tbody></table>
@@ -5687,7 +5687,7 @@ function printBake(day){
 function downloadBake(day){
   if(!day){toast("No orders to bake yet");return}
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>Bake sheet</title><style>@page{size:A4;margin:12mm}body{margin:16px}${BK_CSS}</style></head><body>${bakeSheetHTML(day)}<script>onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>`;
-  const name=`delidome-bake-sheet-${day}.html`;
+  const name=`bakebyculture-bake-sheet-${day}.html`;
   (async()=>{
     let dl=null;try{dl=window.claude&&await window.claude.use("downloads")}catch(e){}
     if(dl){try{await dl.save({filename:name,data:html});toast("Bake sheet saved. Open it to print.")}catch(err){if(err&&err.code!=="declined")toast("Couldn't save the file here.")}return}
@@ -5870,7 +5870,7 @@ am.addEventListener("change",e=>{const el=e.target;if(A.tab!=="badges")return;if
   else if(k==="menuSort"){DB.settings.menuSort=el.value==="manual"?"manual":"popular"}
   saveDB();toast("Saved");renderAdmin()});
 am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||A.tab!=="badges")return;const d=b.dataset;
-  if(d.bdnew!==undefined){BD.edit={isNew:true,id:"b"+uid().slice(0,6),text:"⭐ Chef's pick",font:"display",color:"#FFFFFF",bg:"#000096",fx:"shine"};renderAdmin();showNew("#bdForm")}
+  if(d.bdnew!==undefined){BD.edit={isNew:true,id:"b"+uid().slice(0,6),text:"⭐ Chef's pick",font:"display",color:"#FFFFFF",bg:"#5A3221",fx:"shine"};renderAdmin();showNew("#bdForm")}
   else if(d.bdedit){const x=DB.badges.list.find(y=>y.id===d.bdedit);if(x){BD.edit=Object.assign({},x);renderAdmin();showNew("#bdForm")}}
   else if(d.bdcancel!==undefined){BD.edit=null;renderAdmin()}
   else if(d.bdsave!==undefined){bdRead();const E=BD.edit,t=String(E.text||"").trim();
@@ -5883,7 +5883,7 @@ am.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||A.tab!
 });
 
 /* --- colour picker pop-up: swatches, HEX code, Transparent (replaces the phone's own colour box everywhere) --- */
-const CP_SW=["#000096","#1A1FB0","#2328C8","#2563EB","#06B6D4","#16A34A","#84CC16","#FACC15","#F97316","#C8102E","#EC4899","#7C3AED","#000000","#475569","#94A3B8","#FFFFFF"];
+const CP_SW=["#5A3221","#744329","#8A5236","#2563EB","#06B6D4","#16A34A","#84CC16","#FACC15","#F97316","#C8102E","#EC4899","#7C3AED","#000000","#475569","#94A3B8","#FFFFFF"];
 const cpShow=v=>v==="transparent"?"transparent":String(v||"").toUpperCase();
 const cpRecent=()=>{try{return JSON.parse(localStorage.getItem("dd_cp_recent")||"[]").filter(x=>HEX6.test(x)).slice(0,8)}catch(e){return[]}};
 function cpAttach(c){
@@ -5896,20 +5896,20 @@ function cpAttach(c){
 }
 function cpOpen(c){
   const old=document.getElementById("cpov");if(old)old.remove();
-  let v=HEX6.test(c.value)?c.value.toLowerCase():"#000096";const ov=document.createElement("div");ov.id="cpov";ov.className="cpov";
+  let v=HEX6.test(c.value)?c.value.toLowerCase():"#5A3221";const ov=document.createElement("div");ov.id="cpov";ov.className="cpov";
   const sw=x=>`<button type="button" class="cpsw" data-c="${x}" style="background:${x}" aria-label="${x}"></button>`,rec=cpRecent();
   ov.innerHTML=`<div class="cpcard" role="dialog" aria-modal="true" aria-label="Select colour"><h3>Select colour</h3>
     <div class="cpgrid">${CP_SW.map(sw).join("")}</div>
     ${rec.length?`<p class="note" style="margin:10px 0 6px">Recently chosen</p><div class="cpgrid">${rec.map(sw).join("")}</div>`:""}
     <div class="cprow"><button type="button" class="cpsw tr" data-c="transparent" aria-label="Transparent"></button><button type="button" class="ghost" data-c="transparent">Transparent</button>
       <label class="ghost cpwheel">Colour wheel<input type="color" hidden></label></div>
-    <label class="af" style="margin-top:10px">HEX code<div class="cprow" style="margin:0"><i class="cpprev" id="cpPrev"></i><input class="in" id="cpHex" maxlength="11" spellcheck="false" autocomplete="off" placeholder="#000096"></div></label>
+    <label class="af" style="margin-top:10px">HEX code<div class="cprow" style="margin:0"><i class="cpprev" id="cpPrev"></i><input class="in" id="cpHex" maxlength="11" spellcheck="false" autocomplete="off" placeholder="#5A3221"></div></label>
     <div class="cpact"><button type="button" class="ghost" data-cpx>Cancel</button><button type="button" class="btn btn-blue" id="cpSet" data-cpset>Set</button></div></div>`;
   document.body.appendChild(ov);
   const hx=ov.querySelector("#cpHex"),pv=ov.querySelector("#cpPrev"),st=ov.querySelector("#cpSet"),wheel=ov.querySelector("input[type=color]");
   const show=()=>{pv.classList.toggle("tr",v==="transparent");pv.style.background=v==="transparent"?"":v;hx.value=cpShow(v);hx.classList.remove("bad");st.disabled=false;ov.querySelectorAll(".cpsw").forEach(n=>n.classList.toggle("on",n.dataset.c.toLowerCase()===v))};
   const close=()=>{ov.remove();document.removeEventListener("keydown",esc)},esc=e=>{if(e.key==="Escape")close()};document.addEventListener("keydown",esc);
-  wheel.value=HEX6.test(v)&&v!=="transparent"?v:"#000096";
+  wheel.value=HEX6.test(v)&&v!=="transparent"?v:"#5A3221";
   wheel.addEventListener("input",()=>{v=wheel.value.toLowerCase();show()});
   hx.addEventListener("input",()=>{let t=hexNorm(hx.value);if(/^#[0-9a-f]{3}$/.test(t))t="#"+t.slice(1).split("").map(q=>q+q).join("");
     if(HEX6.test(t)){v=t;pv.classList.toggle("tr",v==="transparent");pv.style.background=v==="transparent"?"":v;hx.classList.remove("bad");st.disabled=false;ov.querySelectorAll(".cpsw").forEach(n=>n.classList.toggle("on",n.dataset.c.toLowerCase()===v))}
@@ -6115,7 +6115,7 @@ function cuRows(){
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" type="button" data-cuedit="${esc(c.id)}">Edit</button>${SBH.on?(c.ban?`<button class="ghost" type="button" data-cuunban="${esc(c.id)}">Unban</button>`:`<button class="ghost" type="button" data-cuban="${esc(c.id)}">🚫 Ban</button>`):""}${ROLE()==="owner"?`<button class="danger" type="button" data-cudel="${esc(c.id)}">Delete</button>`:""}</div></div>`).join("");
 }
 const BM_ICONS=["🚫","🙏","🎁","🍪","💙","😢","⚠️","📞"];
-function bmPrev(){const M=CU.bmd||BANM_DEF,P=DB.proofpop||{};return `<div class="bmprev" style="--pp-bg:${esc(P.bg||"#fff")};--pp-acc:${esc(P.accent||"#000096")};--pp-ink:${esc(P.ink||"#0B0B45")}">${banHTML(M,"#")}${M.fx&&(M.items||[]).length?`<div class="bmfall">${M.items.slice(0,4).map(u=>`<img src="${esc(u)}" alt="">`).join("")}</div>`:""}</div>`}
+function bmPrev(){const M=CU.bmd||BANM_DEF,P=DB.proofpop||{};return `<div class="bmprev" style="--pp-bg:${esc(P.bg||"#fff")};--pp-acc:${esc(P.accent||"#5A3221")};--pp-ink:${esc(P.ink||"#2B1A12")}">${banHTML(M,"#")}${M.fx&&(M.items||[]).length?`<div class="bmfall">${M.items.slice(0,4).map(u=>`<img src="${esc(u)}" alt="">`).join("")}</div>`:""}</div>`}
 function bmPanel(){
   if(!CU.bmd)return "";
   const M=CU.bmd,dirty=JSON.stringify(M)!==JSON.stringify(CU.bm);
@@ -6172,7 +6172,7 @@ async function loadTeam(){
   try{TM.list=await SBH.rpc("admin_team_list",{});TM.err=""}catch(e){TM.err=e.message;if(TM.list===null)TM.list=[]}
   TM.loading=false;if(A.tab==="team"&&!A.modal)renderAdmin();
 }
-const TEAM_DOMAIN="team.delidome.local";
+const TEAM_DOMAIN="team.bakebyculture.local";
 const permChips=m=>m.role==="owner"?`<span class="pchip own">Everything</span>`:((m.perms||[]).length?(m.perms||[]).map(k=>{const p=PERMS.find(x=>x[0]===k);return p?`<span class="pchip">${esc(p[1])}</span>`:""}).join(""):`<span class="pchip none">No access yet</span>`);
 function tmFormHTML(){const F=TM.form,isNew=F.mode==="new";
   return `<section class="panel" id="tmForm"><h2>${isNew?"Add a team member":"Change "+esc(F.name||F.username||F.email)}</h2>
@@ -6335,19 +6335,19 @@ function secAlertsPanel(){
    -> Waiting payout -> Paid out (with a proof picture). Voided orders show their reason. */
 const AF={list:null,orders:null,loading:false,err:"",range:"30d",from:"",to:"",group:"day",sel:null,rep:null,repLoading:false,form:null,ferr:"",prods:null,sf:"all",afs:"all",act:null,proof:"",busy:false,cfg:null,pf:null,perr:""};
 const AF_SRC={ig:"Instagram",tt:"TikTok",wa:"WhatsApp",fb:"Facebook",ads:"Ads",x:"X / Twitter",yt:"YouTube",google:"Google",direct:"Direct / unknown",coupon:"Coupon code",web:"Website"};
-const AF_ST={progress:["On progress","#1B4DB3","#E4EDFF"],hold:["On hold","#8A5A00","#FFF4D6"],review:["Needs approval","#B42318","#FDE8E6"],approved:["Waiting payout","#0A6B34","#E3F6EA"],paid:["Paid out","#000096","#E5E8FF"],voided:["VOIDED","#B42318","#FDE2E2"],cancelled:["Cancelled","#5A5F86","#EEF0F7"],waiting:["Waiting for payment","#5A5F86","#EEF0F7"]};
+const AF_ST={progress:["On progress","#1B4DB3","#E4EDFF"],hold:["On hold","#8A5A00","#FFF4D6"],review:["Needs approval","#B42318","#FDE8E6"],approved:["Waiting payout","#0A6B34","#E3F6EA"],paid:["Paid out","#5A3221","#F5EAE1"],voided:["VOIDED","#B42318","#FDE2E2"],cancelled:["Cancelled","#7A6458","#F7F2EE"],waiting:["Waiting for payment","#7A6458","#F7F2EE"]};
 const AF_STATUS={active:["Active","#0A6B34","#E3F6EA"],paused:["Paused","#8A5A00","#FFF4D6"],disabled:["Switched off","#9B1C1C","#FDE2E2"]};
 const AF_FILTERS=[["all","All"],["review","Needs approval"],["approved","Waiting payout"],["hold","On hold"],["progress","On progress"],["paid","Paid out"],["voided","Voided"],["cancelled","Cancelled"],["waiting","Waiting for payment"]];
 const AF_DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const AF_BANKS=["BCA","BRI","BNI","Mandiri","CIMB Niaga","Permata","BSI","Bank Jago","SeaBank","Jenius (BTPN)","GoPay","OVO","DANA","ShopeePay","LinkAja","Other"];
-const AF_PAY_ST={none:["No account","#5A5F86","#EEF0F7"],pending:["Waiting for verification","#B42318","#FDE8E6"],verified:["Verified","#0A6B34","#E3F6EA"],rejected:["Rejected","#9B1C1C","#FDE2E2"]};
+const AF_PAY_ST={none:["No account","#7A6458","#F7F2EE"],pending:["Waiting for verification","#B42318","#FDE8E6"],verified:["Verified","#0A6B34","#E3F6EA"],rejected:["Rejected","#9B1C1C","#FDE2E2"]};
 const afChip=(m,k,self)=>{const x=m[k]||m[Object.keys(m)[0]];return `<span class="afchip${!self&&(k==="review"||k==="pending")?" blink":""}" style="color:${x[1]};background:${x[2]}">${self&&k==="review"?"Under review":x[0]}</span>`};
 function afRange(){const n=Date.now(),d0=today0().getTime();
   if(AF.range==="today")return [d0,n+864e5];if(AF.range==="7d")return [d0-6*864e5,n+864e5];if(AF.range==="30d")return [d0-29*864e5,n+864e5];
   if(AF.range==="month"){const d=today0();d.setDate(1);return [d.getTime(),n+864e5]}
   if(AF.range==="custom"&&AF.from){const f=fromYmd(AF.from).getTime(),t=AF.to?fromYmd(AF.to).getTime()+864e5:n+864e5;return [f,t]}
   return [0,n+864e5]}
-const afShop=()=>String((window.DELIDOME_CONFIG||{}).shopUrl||location.origin).replace(/\/+$/,"");
+const afShop=()=>String((window.BAKEBYCULTURE_CONFIG||{}).shopUrl||location.origin).replace(/\/+$/,"");
 function afLink(code,to,ch,cp,size){const q=new URLSearchParams({ref:code});if(ch)q.set("src",ch);if(to)q.set("to",to);if(cp)q.set("cp",cp);if(size)q.set("size",size);return afShop()+"/?"+q.toString()}
 function afPeriodHTML(){return `<div class="chips" style="margin-top:4px">${[["today","Today"],["7d","Last 7 days"],["30d","Last 30 days"],["month","This month"],["all","All time"],["custom","Custom"]].map(([k,l])=>`<button class="fchip" type="button" data-afr="${k}" aria-pressed="${AF.range===k}">${l}</button>`).join("")}</div>
   ${AF.range==="custom"?`<div class="colin" style="margin-top:8px;gap:8px;flex-wrap:wrap"><label class="af" style="margin:0">From<input class="in" type="date" data-afd="from" value="${esc(AF.from)}"></label><label class="af" style="margin:0">To<input class="in" type="date" data-afd="to" value="${esc(AF.to)}"></label></div>`:""}`}
@@ -6429,7 +6429,7 @@ function afPayoutBanner(L){const c=AF.cfg||{min:20000,day:4},pv=L.filter(x=>x.pa
 const AFM={cpn:null,msg:"",pwMsg:"",busy:false};
 async function afCpnLoad(){try{AFM.cpn=await SBH.rpc("aff_coupon_info",{})}catch(e){AFM.cpn={ok:false}}affRender()}
 function afCpnText(c){const d=c.type==="freedelivery"?"free delivery":c.type==="amount"?money(+c.value)+" off":(+c.value)+"% off";return d+(+c.minSpend>0?" on orders from "+money(+c.minSpend):"")+(c.stack?", also on flash sales":", not on flash sales")+(c.endsAt?", until "+esc(String(c.endsAt).replace("T"," ")):"")}
-function afMyHTML(){const c=AFM.cpn;if(!c||!c.ok)return "";const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,"");
+function afMyHTML(){const c=AFM.cpn;if(!c||!c.ok)return "";const shop=String((window.BAKEBYCULTURE_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,"");
   return `<section class="panel"><h2 style="margin:0 0 6px">🎟️ My coupon</h2>${!c.ready?`<p class="sub">Your coupon is not ready yet. The owner sets the discount first, then you can choose its name here.</p>`
     :`<p class="sub" style="margin:0 0 8px">${c.coupon?`Your code <b>${esc(c.coupon)}</b>`:"You do not have a coupon name yet."} Customers who type it get <b>${afCpnText(c)}</b>. You earn <b>${+c.rate}%</b> of the order. Your link is remembered for 30 days, so orders from customers who came through it also count.</p>
     ${c.canName?`<div class="colin" style="flex-wrap:wrap;gap:8px"><input class="in" id="afCpIn" maxlength="20" placeholder="Choose a name, like ALPHA001" value="${esc(c.coupon||"")}" style="flex:1;min-width:180px;text-transform:uppercase"><button class="btn btn-blue btn-sm" type="button" data-afcpsave ${AFM.busy?"disabled":""}>${c.coupon?"Change name":"Save"}</button></div><p class="note" style="margin:6px 0 0">3 to 20 letters or numbers. You can change it once an hour.</p>`:`<p class="note" style="margin:0">The owner sets your coupon name.</p>`}
@@ -6472,10 +6472,10 @@ const AF_QUICK={flash:["🔥 Flash sale is on","A flash sale is running now. Sha
 const AFA={list:null,loading:false,err:"",open:null,f:{},msg:null,busy:false};
 async function afaLoad(){if(AFA.loading||!SBH.on)return;AFA.loading=true;try{AFA.list=await SBH.rpc("admin_aff_apps",{});AFA.err=""}catch(e){AFA.err=e.message;AFA.list=[]}AFA.loading=false;if(A.tab==="affiliates")renderAdmin()}
 const afaPw=()=>{const c="abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";let s="";for(let i=0;i<10;i++)s+=c[Math.floor(Math.random()*c.length)];return s};
-function afaMsgFor(a,kind,d){const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,""),site=location.origin+location.pathname.replace(/[^/]*$/,"");
+function afaMsgFor(a,kind,d){const shop=String((window.BAKEBYCULTURE_CONFIG||{}).shopUrl||"").replace(/\/+$/,""),site=location.origin+location.pathname.replace(/[^/]*$/,"");
   return kind==="approve"?`Hi ${a.name}! Your application to become an affiliator at ${(DB.page&&DB.page.name)||"our shop"} is approved. 🎉\nSign in here: ${site}\nUsername: ${d.username}\nPassword: ${d.password}\nPlease change your password after you sign in. In your dashboard you can also choose your own coupon name.`
     :`Hi ${a.name}, thank you for applying to become an affiliator at ${(DB.page&&DB.page.name)||"our shop"}. Sorry, we cannot accept your application this time.\nReason: ${d.reason}\nYou are welcome to apply again later.`}
-function afAppsHTML(){const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,""),link=shop+"/?apply=affiliate";
+function afAppsHTML(){const shop=String((window.BAKEBYCULTURE_CONFIG||{}).shopUrl||"").replace(/\/+$/,"")||location.origin.replace(/admin[^/]*/,""),link=shop+"/?apply=affiliate";
   if(AFA.list===null&&!AFA.loading)afaLoad();const L=AFA.list||[],pend=L.filter(x=>x.status==="pending").length,F=AFA.f;
   const wa=(a,t)=>`https://wa.me/${String(a.phone).replace(/\D/g,"").replace(/^0/,"62")}?text=${encodeURIComponent(t)}`;
   const card=a=>{const open=AFA.open===a.id;return `<div class="pmcard" style="gap:6px"><div class="afhead"><div><b>${esc(a.name)}</b> <span class="note" style="margin:0">${esc(a.phone)}${a.email?" · "+esc(a.email):""}</span><div class="note" style="margin:2px 0 0">${new Date(a.at).toLocaleString()} · ${a.status==="pending"?"⏳ waiting":a.status==="approved"?"✅ approved":"✕ rejected"}${a.handle?" · wants @"+esc(a.handle):""}</div></div></div>
@@ -6686,7 +6686,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build __BUILD__</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#5A3221")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build __BUILD__</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;afCpnLoad();AF.rep=null;AF.sf="all";AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
@@ -6702,7 +6702,7 @@ function viewPrelaunch(){
   const sw=(k,l)=>`<div style="display:flex;gap:10px;align-items:center"><label class="sw"><input type="checkbox" data-pre="${k}" ${preGet(k)!==false&&preGet(k)?"checked":""} aria-label="${esc(l)}"><span></span></label><span class="stlabel">${l}</span></div>`;
   const chips=(k,opts)=>`<div class="chips" style="margin-top:6px">${opts.map(([v,l])=>`<button class="fchip" type="button" data-preset="${k}|${v}" aria-pressed="${String(preGet(k))===String(v)}">${l}</button>`).join("")}</div>`;
   const thumbs=(k,max)=>{const a=preGet(k)||[];return `<div class="prth">${a.map((u,i)=>`<span><img src="${esc(imgOk(u))}" alt=""><button class="ghost sm" type="button" data-prerm="${k}|${i}" aria-label="Remove">✕</button></span>`).join("")}${a.length<max?`<label class="ghost mqbtn">+ Add<input type="file" accept="image/*" multiple hidden data-preup="${k}"></label>`:""}</div>`};
-  const shop=String((window.DELIDOME_CONFIG||{}).shopUrl||"").replace(/\/+$/,""),prev=(shop||location.origin)+"/?prelaunch=1";
+  const shop=String((window.BAKEBYCULTURE_CONFIG||{}).shopUrl||"").replace(/\/+$/,""),prev=(shop||location.origin)+"/?prelaunch=1";
   const st=s=>s==="claimed"?`<span style="color:#0A6B34;font-weight:700">Claimed ✓</span>`:s==="expired"?`<span style="color:#C8102E;font-weight:700">Expired</span>`:`<span style="color:#B07A3F;font-weight:700">Not used yet</span>`;
   return head("Pre-launch","A page that replaces your shop before opening: countdown, free Gift Set for the first customers, and a form. Only owners can see this.")+MOCK+`<div class="stack">
   <section class="panel prsw${on?" on":""}">${sw("on",on?"<b>Pre-launch is ON</b>: customers only see the pre-launch page. The shop is hidden and takes no orders.":"<b>Pre-launch is OFF</b>: customers see your normal shop.")}
@@ -6721,15 +6721,15 @@ function viewPrelaunch(){
   <section class="panel"><h2>✍️ Look and words</h2>
     <div class="grid2" style="margin-top:10px">${inp("Text above the form","text",{rows:2,max:300})}${inp("Form button","form.btn",{max:40})}</div>
     <div style="display:grid;gap:8px;margin-top:10px">${sw("form.email","Ask for email (optional for customers)")}${sw("spots","Show \"X of Y Gift Sets left\"")}</div>
-    <div class="grid3" style="margin-top:10px">${col("Page background","bg","#FFF4D6")}${col("Main color","accent","#000096")}${col("Text color","ink","#0B0B45")}${col("Button color","btnBg","#C8102E")}${col("Button text","btnInk","#ffffff")}</div>
+    <div class="grid3" style="margin-top:10px">${col("Page background","bg","#FFF4D6")}${col("Main color","accent","#5A3221")}${col("Text color","ink","#2B1A12")}${col("Button color","btnBg","#C8102E")}${col("Button text","btnInk","#ffffff")}</div>
     <h3 class="sech" style="margin-top:14px">Countdown</h3>
     <div class="grid2">${inp("Label","cdLabel",{max:40})}<div class="af">Size${chips("cdSize",[["S","Small"],["M","Medium"],["L","Large"],["XL","Huge"]])}</div></div>
-    <div class="grid3" style="margin-top:8px"><div class="af">Style${chips("cdStyle",[["still","Still"],["pulse","Pulse"],["flip","Flip"],["glow","Glow"]])}</div>${col("Box color","cdBg","#000096")}${col("Number color","cdInk","#FFE066")}</div></section>
+    <div class="grid3" style="margin-top:8px"><div class="af">Style${chips("cdStyle",[["still","Still"],["pulse","Pulse"],["flip","Flip"],["glow","Glow"]])}</div>${col("Box color","cdBg","#5A3221")}${col("Number color","cdInk","#FFE066")}</div></section>
   <section class="panel"><h2>🎁 Gift showcase</h2>${sw("gifts.on","Show the gifts on the page")}
     <div class="grid2" style="margin-top:10px">${inp("Title","gifts.title",{max:60})}<div class="af">Mode${chips("gifts.mode",[["set","Gift Set (they get all)"],["surprise","Blind box (1 of these)"]])}</div></div>
     <div class="grid2" style="margin-top:8px"><div class="af">Title icon${chips("gifts.icon",[["🎁","🎁"],["🍪","🍪"],["✨","✨"],["💙","💙"],["","None"]])}</div>${inp("Line under the title (Gift Set mode)","gifts.setText",{max:120})}</div>
     <div class="grid2" style="margin-top:8px">${inp("Line under the title (Surprise mode)","gifts.surText",{max:120})}</div>
-    <div class="grid3" style="margin-top:8px">${col("Box color","gifts.bg","#ffffff")}${col("Title color","gifts.title2","#000096")}${col("Text color","gifts.ink","#0B0B45")}${col("Gift tile color","gifts.tile","#FFF4D6")}</div>
+    <div class="grid3" style="margin-top:8px">${col("Box color","gifts.bg","#ffffff")}${col("Title color","gifts.title2","#5A3221")}${col("Text color","gifts.ink","#2B1A12")}${col("Gift tile color","gifts.tile","#FFF4D6")}</div>
     <div class="af" style="margin-top:8px">Effect${chips("gifts.fx",[["float","Float"],["wiggle","Wiggle"],["spin","Spin"],["pulse","Pulse"],["shine","Shine"],["none","None"]])}</div>
     <div class="stack" style="gap:8px;margin-top:10px">${P.gifts.items.map((g,i)=>`<div class="pmcard prgift"><span class="prgimg">${g.img?`<img src="${esc(imgOk(g.img))}" alt="">`:"🎁"}</span><input class="in" data-pre="gifts.items.${i}.name" maxlength="40" value="${esc(g.name||"")}" placeholder="Gift name"><label class="prstock">Chance %<input class="in" type="number" min="0" max="100" step="0.01" data-pre="gifts.items.${i}.pct" value="${esc(g.pct===undefined||g.pct===null?"":g.pct)}" placeholder="equal"></label><label class="prstock">Stock<input class="in" type="number" min="0" max="999999" data-pre="gifts.items.${i}.stock" value="${esc(g.stock===undefined||g.stock===null?"":g.stock)}" placeholder="∞">${(()=>{const q=((L&&L.pool)||[]).find(x=>x.id===g.id);return q&&q.stock!=null?`<small>${q.used} used · ${q.left} left</small>`:`<small>unlimited</small>`})()}</label><label class="ghost mqbtn">${g.img?"Change":"Picture"}<input type="file" accept="image/*" hidden data-preup="gifts.items.${i}.img"></label><button class="danger" type="button" data-pregrm="${i}">Remove</button></div>`).join("")}</div>
     <p class="note" style="margin:8px 0 0">Chance %: for the "surprise" mode, how likely each gift is compared with the others still in stock (1 and 99 = 1% and 99%, decimals ok, blank = equal). Every customer still gets a gift. Stock: leave blank for unlimited. A gift is held for an order when the customer sends the payment proof (or you confirm it) and comes back if that order is cancelled. A gift code always gets the same gift, so cancelling and re-ordering can't re-roll it.</p>
@@ -6740,13 +6740,13 @@ function viewPrelaunch(){
       <div class="af">Falling effect${chips("done.fx",[["gifts","🎁 Gifts"],["confetti","✨ Confetti"],["cookies","🍪 Cookies"],["none","None"]])}</div></div>
     <div class="grid2" style="margin-top:8px">${inp("Note under the code","done.note",{rows:2,max:200})}${inp("Tip at the bottom","done.tip",{max:120})}</div>
     <div style="margin-top:8px">${sw("done.wa","Show \"Save to my WhatsApp\" button")}</div>
-    <div class="grid3" style="margin-top:8px">${col("Box color","done.bg","#ffffff")}${col("Title color","done.title2","#000096")}${col("Text color","done.ink","#0B0B45")}${col("Code box color","done.codeBg","#FFF4D6")}${col("Code color","done.codeInk","#000096")}</div>
+    <div class="grid3" style="margin-top:8px">${col("Box color","done.bg","#ffffff")}${col("Title color","done.title2","#5A3221")}${col("Text color","done.ink","#2B1A12")}${col("Code box color","done.codeBg","#FFF4D6")}${col("Code color","done.codeInk","#5A3221")}</div>
     <h3 class="sech" style="margin-top:14px">When all Gift Sets are taken</h3>
     <div class="grid2">${inp("Title ({max})","closed.title",{max:80})}${inp("Message","closed.text",{rows:2,max:300})}</div>
     <div class="grid2" style="margin-top:8px"><div class="af">Icon${chips("closed.icon",[["🎉","🎉"],["🎁","🎁"],["🍪","🍪"],["💙","💙"],["✨","✨"]])}<div class="colin" style="margin-top:6px;gap:8px">${P.closed.img?`<img src="${esc(imgOk(P.closed.img))}" alt="" style="height:40px"><button class="ghost sm" type="button" data-preclr="closed.img">Remove picture</button>`:`<label class="ghost mqbtn">Upload a picture instead<input type="file" accept="image/*" hidden data-preup="closed.img"></label>`}</div></div>
       <div class="af">Falling effect${chips("closed.fx",[["confetti","✨ Confetti"],["gifts","🎁 Gifts"],["none","None"]])}</div></div>
     <div class="grid2" style="margin-top:8px">${inp("Button text","closed.btn",{max:40})}${inp("Button link (Instagram, WhatsApp...)","closed.link",{max:300,ph:"https://instagram.com/…"})}</div>
-    <div class="grid2" style="margin-top:8px">${col("Background","closed.bg","#000096")}${col("Text","closed.ink","#ffffff")}</div></section>
+    <div class="grid2" style="margin-top:8px">${col("Background","closed.bg","#5A3221")}${col("Text","closed.ink","#ffffff")}</div></section>
   <section class="panel"><h2>🍪 Cookies on the page</h2>${sw("fx.on","Show cookies in the background")}
     <div class="af" style="margin-top:8px">Movement${chips("fx.mode",[["float","Floating"],["fall","Falling"],["both","Both"]])}</div>
     <div class="af" style="margin-top:8px">Your cookie pictures (up to 8, a cookie drawing is used if you add none)${thumbs("fx.imgs",8)}</div>
@@ -6780,7 +6780,7 @@ function viewRevrew(){const R=DB.revrew,P=DB.revpool.items;if(SBH.on&&RVA.st===n
     <div class="grid2" style="margin-top:10px">${sel("Effect",k+".fx",fxo)}${inp("Title",k+".title")}</div>
     ${ta(win?"Text ({reward} = the gift name)":"Text",k+".text")}
     <div class="grid2" style="margin-top:10px">${win?inp("Button",k+".btn",{max:30}):inp("Button 1 (buy again)",k+".btn1",{max:30})+inp("Button 2 (close)",k+".btn2",{max:30})}</div>
-    <div class="grid3" style="margin-top:10px">${col("Background",k+".bg","#FFFFFF")}${col("Text colour",k+".ink","#0B0B45")}${col("Buttons / code",k+".acc","#000096")}</div>
+    <div class="grid3" style="margin-top:10px">${col("Background",k+".bg","#FFFFFF")}${col("Text colour",k+".ink","#2B1A12")}${col("Buttons / code",k+".acc","#5A3221")}</div>
     <button class="btn btn-ghost-blue btn-sm" type="button" data-rvprev="${k}" style="margin-top:10px">👁 Preview</button></section>`;
   const rows=P.map((it,i)=>{const s=st[it.id]||{},bad=s.ok===false;return `<div class="panel" style="padding:12px;margin-top:8px">
     <div class="grid2"><label class="af">Type<select class="in" data-rvp="${i}.type"><option value="cookie" ${it.type==="cookie"?"selected":""}>1. Cookie / flavor (from the menu)</option><option value="gift" ${it.type==="gift"?"selected":""}>2. Gift</option><option value="coupon" ${it.type==="coupon"?"selected":""}>3. Coupon (existing)</option></select></label>
@@ -6803,7 +6803,7 @@ function viewRevrew(){const R=DB.revrew,P=DB.revpool.items;if(SBH.on&&RVA.st===n
   <section class="panel"><h2>🧾 Claiming the reward</h2><div class="grid2" style="margin-top:10px">${inp("Smallest box that can use a reward (this size and bigger, custom boxes too)","claimMin",{num:1})}${sel("How it is claimed","claimMode",[["auto","Applied automatically"],["manual","Customer types the code"]])}</div>
     <p class="note">Only one reward works on an order. A customer holding several chooses which one to use. Below the minimum box, they see the message below under their box. Coupon rewards follow the coupon's own rules instead (set a minimum on the coupon itself).</p>
     <div class="grid2" style="margin-top:10px">${inp("Icon","upg.icon",{max:4})}${inp("Message, 1 reward ({min} = box size)","upg.one")}${inp("Message, several rewards ({n}, {min})","upg.many")}${inp("Manual mode message ({n})","upg.man")}${inp("Choose-one title","upg.pickTitle")}${inp("Expired reward message ({n})","upg.exp")}${inp("Several rewards, one in use ({n})","upg.chg")}${inp("Use button","upg.useBtn",{max:30})}${inp("Change button","upg.changeBtn",{max:30})}</div>
-    <div class="grid2" style="margin-top:10px">${col("Message background","upg.bg","#FFF4D6")}${col("Message text","upg.ink","#0B0B45")}</div></section>
+    <div class="grid2" style="margin-top:10px">${col("Message background","upg.bg","#FFF4D6")}${col("Message text","upg.ink","#2B1A12")}</div></section>
   <section class="panel"><h2>🔔 Reward reminders</h2><p class="sub">Customers who hold a reward they have not used get a line in the bell every day. In the last hours before it expires, the bell and an arm tip remind them 3 times a day (morning, afternoon, night) with a blinking countdown. Works for cookies, gifts and coupons.</p>
     <div class="grid2" style="margin-top:10px">${sw("rem.on","Send reminders")}${inp("Last-day mode starts when less than (hours) is left","rem.hot",{num:1})}${inp("Bell line ({name})","rem.text")}${inp("Countdown text ({time})","rem.cd")}${inp("Last-day arm tip ({name}, {time})","rem.tip")}</div></section>
   <section class="panel"><h2>🎁 Reward pool</h2><p class="sub">Coupons or cookies / gifts the draw can give.</p>${rows||`<p class="note">Nothing yet.</p>`}
@@ -6818,7 +6818,7 @@ function viewRevrew(){const R=DB.revrew,P=DB.revpool.items;if(SBH.on&&RVA.st===n
     <div class="af" style="margin-top:8px">Your own picture, GIF or video (empty = your Blind box picture, or the emoji)<div class="colin" style="flex-wrap:wrap;gap:8px"><label class="ghost mqbtn">${R.bn.waitImg?"Replace":"Upload"}<input type="file" accept="image/*,video/mp4,video/webm" hidden data-rvsimg="waitImg"></label>${R.bn.waitImg?`<button class="danger" type="button" data-rvsclr="waitImg">Remove</button>`:""}</div>
       <input class="in" data-rv="bn.waitImg" maxlength="500" value="${esc(R.bn.waitImg&&!/^data:/.test(R.bn.waitImg)?R.bn.waitImg:"")}" placeholder="Or paste a link: picture, GIF or .mp4" style="margin-top:6px"></div>
     <label class="af" style="margin-top:8px">Speed: ${Math.max(40,Math.min(250,+R.bn.waitSpeed||100))}%<input type="range" min="40" max="250" step="10" value="${Math.max(40,Math.min(250,+R.bn.waitSpeed||100))}" data-rv="bn.waitSpeed" data-rvnum="1"></label>
-    <div class="grid3" style="margin-top:10px">${col("Card background","bn.bg","#FFF4D6")}${col("Card text","bn.ink","#0B0B45")}${col("Card border","bn.line","#FFD166")}</div></section>
+    <div class="grid3" style="margin-top:10px">${col("Card background","bn.bg","#FFF4D6")}${col("Card text","bn.ink","#2B1A12")}${col("Card border","bn.line","#FFD166")}</div></section>
   <section class="panel"><h2>🎯 Choose-a-gift screen</h2><div class="grid2" style="margin-top:10px">${inp("Title","choose.title")}${inp("Text","choose.text")}</div></section>
   ${msg("win","🎉 Winner message",true)}${msg("sad","🥺 Below 5 stars message")}${msg("none","🎁 No reward message")}</div>`}
 function rvPrev(k){rvOutcome({st:k==="win"?"win":k==="sad"?"sad":"none",code:"RV-ABC123",kind:"gift",exp:Date.now()+30*864e5,item:{name:"Free cookie"}},null,true)}
@@ -7054,7 +7054,7 @@ setInterval(()=>{
 },1000);
 
 /* --- owner alerts: popup + sound --- */
-const AACK_KEY="delidome-aack-v1",ABOOT_KEY="delidome-aboot-v1";
+const AACK_KEY="bakebyculture-aack-v1",ABOOT_KEY="bakebyculture-aboot-v1";
 let AACK=new Set();try{AACK=new Set(JSON.parse(localStorage.getItem(AACK_KEY)||"[]"))}catch(e){}
 let ABOOT=Date.now();try{const v=+localStorage.getItem(ABOOT_KEY);if(v)ABOOT=v;else localStorage.setItem(ABOOT_KEY,String(ABOOT))}catch(e){}
 let ALQ=[],AC=null,alRep=null;

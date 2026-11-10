@@ -1,4 +1,4 @@
--- Delidome migration 29: Security tab (owner only).
+-- BakeByCulture migration 29: Security tab (owner only).
 --  * every abuse limit and daily courier cap can be changed by the owner (stored privately in private_kv 'security';
 --    a missing value uses the built-in default, 0 turns that limit off)
 --  * fixes migration 28: the per-visitor checks now sit right after the shop-wide checks

@@ -1,4 +1,4 @@
--- Delidome migration 3: tighten permissions (from the Supabase security check). Safe to run more than once.
+-- BakeByCulture migration 3: tighten permissions (from the Supabase security check). Safe to run more than once.
 
 -- Supabase gives new functions to the public "anon" role by default.
 -- Team functions already refuse anyone not signed in, but now visitors can't even call them.

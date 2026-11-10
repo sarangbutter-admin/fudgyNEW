@@ -1,4 +1,4 @@
--- Delidome migration 32: affiliates.
+-- BakeByCulture migration 32: affiliates.
 --  * the owner creates affiliator accounts (username + password, commission %, optional own coupon) and can pause or switch them off
 --    (paused: can sign in and see the dashboard, but links and coupon stop earning; off: can't sign in)
 --  * a shop link with ?ref=CODE (and &src=ig / tt / wa / ads ...) is counted as a view; an order placed within 30 days of the

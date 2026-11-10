@@ -1,4 +1,4 @@
--- Delidome migration 41: pre-launch gift codes from a coupon CSV (owner only).
+-- BakeByCulture migration 41: pre-launch gift codes from a coupon CSV (owner only).
 --  rows: [{code, phone, end (ms or null), active (bool), note}]; p_update = also change codes that already exist (end date and active only)
 -- Safe to run more than once. Run after migration 40.
 create or replace function public.admin_pre_gift_upsert(p_rows jsonb, p_update boolean) returns jsonb
@@ -7,7 +7,7 @@ declare x jsonb; cd text; pn text; r public.prelaunch_regs; ex bigint; act boole
 begin
   perform public.assert_owner();
   if jsonb_typeof(p_rows) is distinct from 'array' or jsonb_array_length(p_rows) > 2000 then perform public.bad('Up to 2000 rows at a time.'); end if;
-  perform pg_advisory_xact_lock(hashtext('delidome-prelaunch'));
+  perform pg_advisory_xact_lock(hashtext('bakebyculture-prelaunch'));
   for x in select * from jsonb_array_elements(p_rows) loop
     cd := upper(regexp_replace(coalesce(x ->> 'code', ''), '[^A-Za-z0-9_-]', '', 'g'));
     pn := public.norm_phone(coalesce(x ->> 'phone', ''));

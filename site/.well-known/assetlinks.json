@@ -2,7 +2,7 @@
   "relation": ["delegate_permission/common.handle_all_urls"],
   "target": {
     "namespace": "android_app",
-    "package_name": "com.delidome.shop.test",
+    "package_name": "com.bakebyculture.shop.test",
     "sha256_cert_fingerprints": ["31:C4:34:33:0D:C9:29:F2:6C:58:87:D0:1F:C2:01:C0:30:15:8D:0A:55:44:5F:D1:5E:4E:11:9F:31:B7:73:63"]
   }
 }]

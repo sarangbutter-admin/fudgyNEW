@@ -1,4 +1,4 @@
--- Delidome migration 57: delivery promos can take an amount off (not only free) and can be limited to the Store Courier.
+-- BakeByCulture migration 57: delivery promos can take an amount off (not only free) and can be limited to the Store Courier.
 -- A "freedelivery" sale may carry: kind = 'free' (default) | 'amount' (amount = money off the delivery price), scope = 'all' (default) | 'store' (the Biteship couriers keep their price).
 -- Old promos have neither field and behave as before (free, every courier). Safe to run more than once.
 create or replace function public.del_promo_apply(p_n integer, p_at bigint, p_fee numeric, p_src text) returns numeric

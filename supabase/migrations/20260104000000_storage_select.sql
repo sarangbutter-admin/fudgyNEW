@@ -1,4 +1,4 @@
--- Delidome migration 4: let the owner's picture uploads work on Supabase Storage.
+-- BakeByCulture migration 4: let the owner's picture uploads work on Supabase Storage.
 -- Uploads use "upsert" (same picture = same file), which Supabase only allows when the
 -- uploader may also SELECT the file. Public visitors still read pictures through the public URL.
 do $$

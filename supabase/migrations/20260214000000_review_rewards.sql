@@ -1,4 +1,4 @@
--- Delidome migration 45: review rewards.
+-- BakeByCulture migration 45: review rewards.
 --  * after an order is delivered the customer has N days to rate every flavor; when all are rated the shop draws once per order
 --  * only orders of at least a minimum box size whose flavors were ALL rated 5 stars can win; everybody else gets a "sad" or "no reward" message (the page decides what to show)
 --  * the pool holds existing coupon codes and free gifts (with stock). Coupons that are missing, off, used up or ending too soon, and gifts out of stock, are never drawn
@@ -56,7 +56,7 @@ declare o public.orders; c jsonb := public.rv_cfg(); t bigint := public.now_ms()
 begin
   if not public.owns(p_id, p_token) then perform public.bad('We couldn''t find that order.'); end if;
   if not coalesce((c ->> 'on')::boolean, false) then return jsonb_build_object('state', 'off'); end if;
-  perform pg_advisory_xact_lock(hashtext('delidome-rvclaim'));
+  perform pg_advisory_xact_lock(hashtext('bakebyculture-rvclaim'));
   select * into o from public.orders where id = p_id for update;
   if o.status <> 'completed' then return jsonb_build_object('state', 'pending'); end if;
   if o.data ? 'rv' then return jsonb_build_object('state', 'done', 'rv', o.data -> 'rv'); end if;
@@ -168,7 +168,7 @@ begin
   if not public.owns(p_id, p_token) then return jsonb_build_object('ok', false, 'err', 'Please try again.'); end if;
   select * into o from public.orders where id = p_id;
   if o.id is null or o.data ? 'preGift' or o.created_at < t - 900000 then return jsonb_build_object('ok', false, 'err', 'Please try again.'); end if;
-  perform pg_advisory_xact_lock(hashtext('delidome-pregift'));
+  perform pg_advisory_xact_lock(hashtext('bakebyculture-pregift'));
   select * into r from public.prelaunch_regs where code = cd;
   if r.id is null then return public.rv_gift_claim(o, cd); end if;
   if r.used_order is not null and r.used_order <> o.code then return jsonb_build_object('ok', false, 'err', 'This gift code was already used.'); end if;

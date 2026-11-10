@@ -1,4 +1,4 @@
-// Delidome: DOKU online payment (DOKU Checkout, hosted payment page).
+// BakeByCulture: DOKU online payment (DOKU Checkout, hosted payment page).
 // Deploy:  supabase functions deploy doku
 // The Client ID + Secret Key are saved by the owner in Shop settings -> Online payment (private table, never sent to the website).
 // actions: "create" {id, token, group} -> {url, amount, fee}      "status" {id, token} -> {paid}

@@ -1,4 +1,4 @@
--- Delidome migration 51: review rewards all share ONE validity rule.
+-- BakeByCulture migration 51: review rewards all share ONE validity rule.
 --  * cookie and gift rewards: the code is valid "redeemDays" days from the win (revrew doc, default 30)
 --  * coupon rewards: the coupon's own end date (shown to the customer)
 --  * a coupon is not drawn when it ends sooner than "validDays" days from now (revrew doc, default 7), when it is off, not started, or used up

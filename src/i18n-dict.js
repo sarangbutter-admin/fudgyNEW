@@ -8,7 +8,7 @@ window.DD_ID = {
 "Today": "Hari ini", "Tomorrow": "Besok", "just now": "baru saja", "Tue to Fri": "Selasa sampai Jumat",
 
 /* ---- header, menu, general buttons ---- */
-"Delidome home": "Beranda Delidome", "Admin": "Admin", "Notifications": "Notifikasi", "My orders": "Pesanan saya", "Your box": "Kotakku",
+"BakeByCulture home": "Beranda BakeByCulture", "Admin": "Admin", "Notifications": "Notifikasi", "My orders": "Pesanan saya", "Your box": "Kotakku",
 "Language": "Bahasa", "Close": "Tutup", "Cancel": "Batal", "Continue": "Lanjut", "Done": "Selesai", "Got it": "Mengerti", "OK": "OK", "Yes": "Ya", "Back": "Kembali",
 "Go back": "Kembali", "Try again": "Coba lagi", "Copy": "Salin", "Copied": "Tersalin", "Link copied": "Tautan tersalin", "✓ Copied": "✓ Tersalin", "Remove": "Hapus", "Replace": "Ganti",
 "Save changes": "Simpan perubahan", "Saving…": "Menyimpan…", "Sending...": "Mengirim...", "Sent": "Terkirim", "Apply": "Pakai", "Clear": "Hapus", "Reset": "Atur ulang", "Update": "Perbarui", "Upload": "Unggah",
@@ -23,7 +23,7 @@ window.DD_ID = {
 "Pick a box, fill it with the flavors you love, and choose when you want it. Pickup or local delivery.": "Pilih kotak, isi dengan rasa favoritmu, lalu tentukan kapan kamu mau. Ambil sendiri atau antar lokal.",
 "Choose a size, fill every spot, then tell us when you want it. Each box is baked the morning it leaves the oven room.": "Pilih ukuran, isi setiap tempat, lalu beri tahu kami kapan kamu mau. Setiap kotak dipanggang pada pagi hari saat dikirim.",
 "Pickup or local delivery": "Ambil sendiri atau antar lokal", "Order by 8pm for next-day cookies": "Pesan sebelum jam 8 malam untuk kue besok", "Order by 8pm for the next day": "Pesan sebelum jam 8 malam untuk besok",
-"Cookie Boxes": "Kotak Kue", "Delidome Cookie Boxes": "Kotak Kue Delidome", "Come say hello": "Mampir yuk", "Contact us if you have questions.": "Hubungi kami jika ada pertanyaan.", "Watch the video": "Tonton videonya",
+"Cookie Boxes": "Kotak Kue", "BakeByCulture Cookie Boxes": "Kotak Kue BakeByCulture", "Come say hello": "Mampir yuk", "Contact us if you have questions.": "Hubungi kami jika ada pertanyaan.", "Watch the video": "Tonton videonya",
 "Instagram": "Instagram", "Facebook": "Facebook", "TikTok": "TikTok", "Threads": "Threads", "YouTube": "YouTube", "Website": "Situs web",
 "Good to know": "Perlu diketahui", "Flavor reviews": "Ulasan rasa", "Special flavors": "Rasa spesial", "Classics": "Klasik", "Specials": "Spesial", "Premium flavors": "Rasa premium", "All flavors": "Semua rasa",
 "Boxes of": "Kotak isi", "Box of": "Kotak isi", "box of": "kotak isi", "Custom": "Kustom", "Custom box size": "Ukuran kotak kustom", "Need a bigger box?": "Butuh kotak lebih besar?",
@@ -157,7 +157,7 @@ Object.assign(window.DD_ID, {
 "Thank you for the amazing enthusiasm 💙 Stay tuned, more exciting events are coming soon.": "Terima kasih atas antusiasme yang luar biasa 💙 Nantikan acara seru lainnya segera.", "We open soon! The shop is not taking orders yet.": "Kami segera buka! Toko belum menerima pesanan.",
 "This gift code was already used.": "Kode hadiah ini sudah dipakai.", "This gift code has expired.": "Kode hadiah ini sudah kedaluwarsa.", "This gift code belongs to another WhatsApp number.": "Kode hadiah ini milik nomor WhatsApp lain.", "Code copied": "Kode tersalin",
 "You're already registered. Here's your code again.": "Kamu sudah terdaftar. Ini kodemu lagi.", "Your pre-launch gift": "Hadiah pra-peluncuranmu",
-"delidome home": "beranda delidome", "Baked fresh every morning. Build a box your way. Pickup or local delivery. Order by 8pm for next-day cookies": "Dipanggang segar setiap pagi. Buat kotak sesuai seleramu. Ambil sendiri atau antar lokal. Pesan sebelum jam 8 malam untuk kue besok",
+"bakebyculture home": "beranda bakebyculture", "Baked fresh every morning. Build a box your way. Pickup or local delivery. Order by 8pm for next-day cookies": "Dipanggang segar setiap pagi. Buat kotak sesuai seleramu. Ambil sendiri atau antar lokal. Pesan sebelum jam 8 malam untuk kue besok",
 "👀 See what you may get": "👀 Lihat apa yang mungkin kamu dapat", "👀 See what you get": "👀 Lihat apa yang kamu dapat", "You get": "Kamu dapat", ", picked at random when you send your payment proof. It's confirmed once we verify your payment.": ", dipilih acak saat kamu mengirim bukti pembayaran. Dikonfirmasi setelah kami memverifikasi pembayaranmu.",
 "This gift comes with your box. It's confirmed once we verify your payment.": "Hadiah ini ikut dengan kotakmu. Dikonfirmasi setelah kami memverifikasi pembayaranmu.", "These gifts come with your box. It's confirmed once we verify your payment.": "Hadiah-hadiah ini ikut dengan kotakmu. Dikonfirmasi setelah kami memverifikasi pembayaranmu.",
 "That is too large.": "Itu terlalu besar.", "The courier is already booked, so the delivery details can't change now. Please message the shop.": "Kurir sudah dipesan, jadi detail pengantaran tidak bisa diubah lagi. Silakan hubungi toko.", "The courier is already on the way. Please contact the shop.": "Kurir sudah dalam perjalanan. Silakan hubungi toko.",
