@@ -14,6 +14,8 @@ const SRC=rd('src/app.js'),CH=chunks(SRC);
 const ADM0=CH.find(c=>/^\/\* =+ ADMIN =+ \*\/$/.test(c.text.trim())).from;
 const TAIL0=CH.find(c=>/^\/\* --- routing between shop and admin --- \*\/$/.test(c.text.trim())).from;
 const inAdm=c=>c.from>=ADM0&&c.from<TAIL0;
+// the public shop address used in share tags (canonical, og:url, og:image). Change it when the shop moves to its own domain, then rebuild.
+const SITE=(process.env.SITE_URL||'https://delidomeorder.netlify.app').replace(/\/+$/,'');
 const KEEP=new Set(['toast','applyBgx','admName','mqIsVideo','mqTap','mqVids','mqNorm','admBrandHTML','applyBrandSize','applyAdminBrand','SNOW','snowScope','snowStop','snowSprites','snowFlake','snowFrame','snowSize','applySnow','snowOff','snowBtnSync','snowToggle','xtraDraw','XCLS','applyXtra','snowApple','snowDom','snowDbg','heroKick','heroFr','heroFrameApply','AFN','AFN_TABS','afnIn','AFN_IC','afBellHTML','afBellDraw','afNotesLoad','afBellClick','armed','stLabel','NF_TYPES','nfIcon','bcActive','activeBroadcasts','VIS_KEY','VIS','trackVisit','AFF_KEY','affDone','affCapture','AF','AF_SRC','AF_ST','AF_STATUS','afChip','afRange','afShop','afLink','afPeriodHTML','afKpis','afDashHTML','affLoadRep','affLoadProds','afClick','afLinkUpd','afDate','affRender','AFF_START','AF_FILTERS','afShown','afChips','afOrdersHTML','AF_DAYS','AF_BANKS','AF_PAY_ST','afPayLine','afPayOk','afPayBox','afPayHTML','afPaySave','afPayClick','AFM','afCpnLoad','afCpnText','afCouponHTML','afGiveHTML','afGiveLive','afSacHTML','afGiveTimer','GIVE_DUR','afShareHTML','afShareClick','afShareData','afOffText','copyText','AFSH','afPwHTML','AF_FAQ_DEFAULT','AFQ','afFaqLoad','afFaqList','afFaqFill','afFaqHTML','afTabsHTML',
  'msgText','logMsg','chanList','MQ_FONTS','MQ_SIZE','mqFace','mqEnsureFont','mqFamily','mqSeq','renderMarquee','mqBuild','mqFit',
  'LP_DEFAULT_SVG','defaultPage','deepFill','LP_STACK','SOC_KINDS','SOC_SVG','SOC_NAME','socialUrl','socialsHTML','safeUrl','safeMedia','lpFaces','lpEnsureFonts','lpFamily','videoHTML','HERO_SPOTS','HERO_FX','heroCkShow','heroCkN','heroCkx','heroFloats','heroFill','heroShapes','heroList','heroNorm','ytId','vimeoId','isVideoSrc','HERO_BP','HR_RATIO','HB_SHAPES','HB_FX','heroCar','heroMsg','heroRatio','heroLayout','heroRz','HEX_OK','HERO_FRAMES','HDR_SHAPES','HDR_ISHAPES','HDR_BAR','applyHeader','favKey','lpFavicon','renderLanding','sig','lastSig']);
@@ -101,8 +103,8 @@ const adminBlock=html.slice(aS,aE);
 const toastEl=(adminBlock.match(/<div[^>]*id="toast"[^>]*><\/div>/)||[])[0];if(!toastEl)throw new Error('toast element not found');
 let shopHtml=html.slice(0,aS)+toastEl+'\n'+html.slice(aE);
 shopHtml=shopHtml.replace(/\s*<a class="adminlink" href="#admin" aria-label="Admin">Admin<\/a>/,'').replace(/ <a href="#admin">Shop admin<\/a>/,'');
-wr('site/index.html',shopHtml);
-wr('admin-site/index.html',html.replace('<script src="i18n-dict.js"></script>\n<script src="i18n.js"></script>\n','').replace(/\s*<button class="langbtn"[^>]*><\/button>\n\s*<div class="langtip"[^>]*><\/div>/,'').replace('<a class="btn btn-white btn-sm viewshop" href="#shop">View shop →</a>','<a class="btn btn-white btn-sm viewshop" id="viewShop" href="#" target="_blank" rel="noopener noreferrer" style="display:none">View shop ↗</a>').replace('<title>Delidome Cookie Boxes</title>','<title>Team sign in</title>\n<meta name="robots" content="noindex, nofollow">').replace(/<link rel="preconnect"[^>]*>\n?/g,''));
+wr('site/index.html',shopHtml.replace(/%SITE%/g,SITE));
+wr('admin-site/index.html',html.replace(/<meta name="description"[\s\S]*?href="\/llms\.txt">\n/,'').replace('<script src="i18n-dict.js"></script>\n<script src="i18n.js"></script>\n','').replace(/\s*<button class="langbtn"[^>]*><\/button>\n\s*<div class="langtip"[^>]*><\/div>/,'').replace('<a class="btn btn-white btn-sm viewshop" href="#shop">View shop →</a>','<a class="btn btn-white btn-sm viewshop" id="viewShop" href="#" target="_blank" rel="noopener noreferrer" style="display:none">View shop ↗</a>').replace('<title>Delidome Cookie Boxes</title>','<title>Team sign in</title>\n<meta name="robots" content="noindex, nofollow">').replace(/<link rel="preconnect"[^>]*>\n?/g,''));
 fs.copyFileSync(R('src/styles.css'),R('admin-site/styles.css'));
 { // map library for the courier pin (shop only), copied as-is
   const cp=(d)=>{for(const f of fs.readdirSync(R('src/'+d),{withFileTypes:true})){if(f.isDirectory()){fs.mkdirSync(R('site/'+d+'/'+f.name),{recursive:true});cp(d+'/'+f.name)}else{fs.mkdirSync(R('site/'+d),{recursive:true});fs.copyFileSync(R('src/'+d+'/'+f.name),R('site/'+d+'/'+f.name))}}};
@@ -125,7 +127,7 @@ fs.copyFileSync(R('src/styles.css'),R('admin-site/styles.css'));
   let o=keep.filter(l=>!/^\/\*.*\b(admin|owner|sign-in|team|staff|activity|password|editor)\b.*\*\/$/i.test(l.trim())).join('\n').replace(/\.adminlink(?:::before)?\{[^}]*\}/g,'').replace(/and a shop admin \(sidebar \+ panels\) sharing one mock data store/,'');
   wr('site/styles.css',o);
 }
-for(const f of ['404.html','robots.txt','i18n.js','i18n-dict.js','join.html','join.js','join.css','splash.js']){fs.copyFileSync(R('src/'+f),R('site/'+f))}   // join.*: the standalone affiliator sign-up page (/join)
+for(const f of ['404.html','i18n.js','i18n-dict.js','join.html','join.js','join.css','splash.js']){fs.copyFileSync(R('src/'+f),R('site/'+f))}   // join.*: the standalone affiliator sign-up page (/join)
 wr('site/config.js',rd('src/config.js').replace(/,\n  \/\/ team site only[^\n]*\n  shopUrl:[^\n]*\n/,'\n'));
 fs.copyFileSync(R('src/config.js'),R('admin-site/config.js'));fs.copyFileSync(R('src/splash.js'),R('admin-site/splash.js'));
 wr('admin-site/robots.txt','User-agent: *\nDisallow: /\n');

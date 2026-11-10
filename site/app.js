@@ -608,7 +608,70 @@ function renderTimes(){
   $("#times").innerHTML=DB.settings.times.map(t=>{const full=slotFull(S.day,t),off=!!S.day&&k!=="sameday"&&slotTooSoon(S.day,t,k);return `<button class="chip" type="button" data-time="${esc(t)}" ${full?`disabled aria-label="${esc(t)}, full"`:off?`disabled aria-label="${esc(t)}, too soon"`:""}>${esc(t)}${full?" · Full":""}</button>`}).join("");
   document.querySelectorAll("[data-time]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.time===S.time));
 }
+/* --- search engines, AI assistants and social (SEO / GEO): page tags + structured data (JSON-LD), and the optional Meta / TikTok / Google tags --- */
+const seoCur=()=>String(DB.settings.currencyCode||"").toUpperCase()||(/^rp/i.test(DB.settings.currency||"")?"IDR":/^\$/.test(DB.settings.currency||"")?"USD":"IDR");
+const seoSite=()=>{const m=/^https:\/\/[^\s/]+/.exec(String(DB.settings.siteUrl||"").trim());return m?m[0]:location.origin};
+const seoBrand=()=>String(DB.settings.seoBrand||(DB.page&&DB.page.name)||"Delidome").trim().slice(0,70);
+function seoMeta(sel,attr,val){const e=document.head.querySelector(sel);if(e&&val)e.setAttribute(attr,val)}
+// "Mon - Sun" + "10.00 - 19.00" -> "Mo-Su 10:00-19:00" (skipped when it can't be read)
+function seoHours(h){const D={mon:"Mo",tue:"Tu",wed:"We",thu:"Th",fri:"Fr",sat:"Sa",sun:"Su",sen:"Mo",sel:"Tu",rab:"We",kam:"Th",jum:"Fr",sab:"Sa",min:"Su"};
+  return (Array.isArray(h)?h:[]).map(r=>{if(!Array.isArray(r))return "";const ds=String(r[0]||"").toLowerCase().match(/[a-z]{3}/g)||[],t=String(r[1]||"").match(/(\d{1,2})[.:](\d{2})\s*[-–]\s*(\d{1,2})[.:](\d{2})/);
+    const d=ds.map(x=>D[x]).filter(Boolean);if(!d.length||!t)return "";const p=n=>String(n).padStart(2,"0");
+    return `${d.length>1&&/[-–]/.test(r[0])?d[0]+"-"+d[d.length-1]:d.join(",")} ${p(t[1])}:${t[2]}-${p(t[3])}:${t[4]}`}).filter(Boolean)}
+function seoApply(){try{
+  const t=DB.settings,pg=DB.page||{},site=seoSite(),brand=seoBrand(),cur=seoCur(),now=Date.now();
+  const desc=String(t.seoDesc||`Freshly baked cookie boxes from ${brand}. Pick your box size and fill it with your favourite flavors.`).trim().slice(0,300);
+  const title=`${brand} Cookie Boxes`;
+  seoMeta('meta[name="description"]',"content",desc);seoMeta('meta[property="og:description"]',"content",desc);seoMeta('meta[name="twitter:description"]',"content",desc);
+  seoMeta('meta[property="og:title"]',"content",title);seoMeta('meta[name="twitter:title"]',"content",title);seoMeta('meta[property="og:site_name"]',"content",brand);
+  if(t.siteUrl){seoMeta('link[rel="canonical"]',"href",site+"/");seoMeta('meta[property="og:url"]',"content",site+"/")}
+  const img=[t.seoImg,pg.logo].map(x=>String(x||"")).find(x=>/^https:\/\//.test(x))||"";
+  const flv=DB.products.filter(p=>p.status!=="hidden"),av=flv.filter(p=>p.status==="available"&&(!p.track||p.stock>0));
+  const sizes=activeSizes(),prices=sizes.map(z=>+z.price).filter(x=>x>0);
+  const social=["seoIg","seoTiktok","seoFb"].map(k=>String(t[k]||"")).filter(u=>/^https:\/\//.test(u));
+  const biz={"@type":"Bakery","@id":site+"/#shop",name:brand,url:site+"/",description:desc,servesCuisine:"Cookies",currenciesAccepted:cur,
+    ...(img?{image:img,logo:img}:{}),...(t.seoPhone?{telephone:String(t.seoPhone).slice(0,30)}:{}),...(social.length?{sameAs:social}:{}),
+    ...(prices.length?{priceRange:`${money(Math.min(...prices))} - ${money(Math.max(...prices))}`}:{}),
+    ...(t.seoArea||t.address?{areaServed:String(t.seoArea||t.address).slice(0,160)}:{}),
+    ...(t.seoStreet||t.seoCity?{address:{"@type":"PostalAddress",...(t.seoStreet?{streetAddress:t.seoStreet}:{}),...(t.seoCity?{addressLocality:t.seoCity}:{}),...(t.seoPostal?{postalCode:t.seoPostal}:{}),addressCountry:t.seoCountry||"ID"}}:{}),
+    ...(isFinite(parseFloat(t.shopLat))&&isFinite(parseFloat(t.shopLng))&&t.seoShowGeo!==false?{geo:{"@type":"GeoCoordinates",latitude:+parseFloat(t.shopLat).toFixed(3),longitude:+parseFloat(t.shopLng).toFixed(3)}}:{}),
+    ...(seoHours(t.hours).length?{openingHours:seoHours(t.hours)}:{}),hasMenu:site+"/",
+    potentialAction:{"@type":"OrderAction",target:site+"/"}};
+  const prods=sizes.map(z=>{const sl=bestSale(z.n,now),off=sl?saleDiscount(sl,z.price):0;
+    return {"@type":"Product","@id":`${site}/?size=${z.n}#box`,name:`${brand} Cookie Box of ${z.n}`,sku:`box-${z.n}`,brand:{"@type":"Brand",name:brand},category:"Cookies",
+      description:`${desc} Box of ${z.n} cookies, you choose the flavors${av.length?": "+av.map(p=>p.name).join(", "):""}.`.slice(0,1000),...(img?{image:img}:{}),
+      offers:{"@type":"Offer",price:r2(z.price-off).toFixed(2),priceCurrency:cur,availability:av.length?"https://schema.org/InStock":"https://schema.org/OutOfStock",url:`${site}/?size=${z.n}`,itemCondition:"https://schema.org/NewCondition",seller:{"@id":site+"/#shop"},...(sl?{priceValidUntil:new Date(sl.end).toISOString().slice(0,10)}:{})}}});
+  const faq=(pg.faq||[]).filter(f=>f&&f.q&&f.a).map(f=>({"@type":"Question",name:String(f.q),acceptedAnswer:{"@type":"Answer",text:String(f.a).replace(/\{cutoff\}/g,fmtHour(+t.cutoffHour||0))}}));
+  const g={"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":site+"/#site",name:brand,url:site+"/",publisher:{"@id":site+"/#shop"}},biz,...prods,...(faq.length?[{"@type":"FAQPage",mainEntity:faq}]:[])]};
+  let el=document.getElementById("ddLd");if(!el){el=document.createElement("script");el.type="application/ld+json";el.id="ddLd";document.head.appendChild(el)}
+  const txt=JSON.stringify(g).replace(/</g,"\\u003c");if(el.textContent!==txt)el.textContent=txt;
+}catch(e){}}
+// ad tags: load only on the customer shop, only when the owner pasted an ID in Admin -> Shop settings -> Google, Meta & TikTok
+const PX={on:false,seen:new Set()};
+function pxInit(){if(PX.on||(window.DELIDOME_CONFIG&&window.DELIDOME_CONFIG.shopUrl)||location.hash==="#admin")return;const t=DB.settings,w=window,add=src=>{const s=document.createElement("script");s.async=true;s.src=src;document.head.appendChild(s)};
+  const meta=String(t.pxMeta||"").replace(/\D/g,"").slice(0,20),tt=String(t.pxTiktok||"").replace(/[^A-Za-z0-9]/g,"").slice(0,30),ga=String(t.pxGa4||"").trim().toUpperCase().replace(/[^A-Z0-9-]/g,"").slice(0,20);
+  if(!meta&&!tt&&!/^(G|AW)-/.test(ga))return;PX.on=true;
+  if(meta){const f=w.fbq=function(){f.callMethod?f.callMethod.apply(f,arguments):f.queue.push(arguments)};if(!w._fbq)w._fbq=f;f.push=f;f.loaded=true;f.version="2.0";f.queue=[];add("https://connect.facebook.net/en_US/fbevents.js");w.fbq("init",meta);w.fbq("track","PageView")}
+  if(tt){const n="ttq";w.TiktokAnalyticsObject=n;const q=w[n]=w[n]||[];q.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"];
+    q.setAndDefer=(o,m)=>{o[m]=function(){o.push([m].concat([].slice.call(arguments,0)))}};q.methods.forEach(m=>q.setAndDefer(q,m));q.instance=id=>{const e=q._i[id]||[];q.methods.forEach(m=>q.setAndDefer(e,m));return e};
+    q.load=(e,o)=>{const r="https://analytics.tiktok.com/i18n/pixel/events.js";q._i=q._i||{};q._i[e]=[];q._i[e]._u=r;q._t=q._t||{};q._t[e]=+new Date;q._o=q._o||{};q._o[e]=o||{};add(r+"?sdkid="+e+"&lib="+n)};q.load(tt);q.page()}
+  if(/^(G|AW)-/.test(ga)){w.dataLayer=w.dataLayer||[];w.gtag=function(){w.dataLayer.push(arguments)};w.gtag("js",new Date());w.gtag("config",ga);add("https://www.googletagmanager.com/gtag/js?id="+encodeURIComponent(ga))}}
+function pxEv(kind,x){if(!PX.on)return;try{const w=window,cur=seoCur(),brand=seoBrand();
+  if(kind==="view"){const n=+x;if(!n||PX.seen.has(n))return;PX.seen.add(n);const v=+basePrice(n)||0,id="box-"+n,nm=`${brand} Cookie Box of ${n}`;
+    w.fbq&&w.fbq("track","ViewContent",{content_ids:[id],content_type:"product",content_name:nm,value:v,currency:cur});
+    w.ttq&&w.ttq.track("ViewContent",{contents:[{content_id:id,content_type:"product",content_name:nm}],value:v,currency:cur});
+    w.gtag&&w.gtag("event","view_item",{currency:cur,value:v,items:[{item_id:id,item_name:nm,price:v}]})}
+  else if(kind==="checkout"){const q=quote(S,DB,{withDelivery:false}),id="box-"+S.size,v=+q.total||0;
+    w.fbq&&w.fbq("track","InitiateCheckout",{content_ids:[id],content_type:"product",num_items:1,value:v,currency:cur});
+    w.ttq&&w.ttq.track("InitiateCheckout",{contents:[{content_id:id,content_type:"product",quantity:1}],value:v,currency:cur});
+    w.gtag&&w.gtag("event","begin_checkout",{currency:cur,value:v,items:[{item_id:id,item_name:`${brand} Cookie Box of ${S.size}`,price:v,quantity:1}]})}
+  else if(kind==="order"){const o=x||{},id="box-"+o.size,v=+o.total||0;
+    w.fbq&&w.fbq("track","Purchase",{content_ids:[id],content_type:"product",num_items:1,value:v,currency:cur},{eventID:String(o.code||o.id||"")});
+    w.ttq&&w.ttq.track("PlaceAnOrder",{contents:[{content_id:id,content_type:"product",quantity:1}],value:v,currency:cur},{event_id:String(o.code||o.id||"")});
+    w.gtag&&w.gtag("event","purchase",{transaction_id:String(o.code||o.id||""),currency:cur,value:v,shipping:+o.fee||0,coupon:o.coupon||undefined,items:[{item_id:id,item_name:`${brand} Cookie Box of ${o.size}`,price:v,quantity:1}]})}
+}catch(e){}}
 function renderStoreStatic(){
+  try{seoApply();pxInit()}catch(e){}
   const set=DB.settings;
   applyPopScale();
   renderMenu();renderCarousel();renderMarquee($("#marq"),DB.marquee);
@@ -845,7 +908,7 @@ function celebrate(){if(RM)return;const p=$(".boxpanel");
   if(inView(p.getBoundingClientRect()))crumbs(p.querySelector(".slots"),{dough:"#FFFFFF",edge:"#D9DCFA",chips:["#FFFFFF","#EEF0FF"]})}
 /* --- box actions --- */
 // a smaller box: the cookies move up to fit
-function setSize(n){if(S.closed&&n!==S.size){S.closed=false;toast("Box opened so you can change the size")}S.size=n;if(S.box.slice(0,n).filter(Boolean).length<boxN()||S.box.length>n){const keep=S.box.map((id,i)=>[id,!!(S.auto&&S.auto[i])]).filter(x=>x[0]).slice(0,n);S.box=keep.map(x=>x[0]);S.auto=keep.map(x=>x[1])}if(!full())S.step=1;renderStore()}
+function setSize(n){pxEv("view",n);if(S.closed&&n!==S.size){S.closed=false;toast("Box opened so you can change the size")}S.size=n;if(S.box.slice(0,n).filter(Boolean).length<boxN()||S.box.length>n){const keep=S.box.map((id,i)=>[id,!!(S.auto&&S.auto[i])]).filter(x=>x[0]).slice(0,n);S.box=keep.map(x=>x[0]);S.auto=keep.map(x=>x[1])}if(!full())S.step=1;renderStore()}
 function cpMsg(t,ok){const m=$("#cpnMsg");if(!m)return;m.textContent=t||"";m.hidden=!t;m.classList.toggle("ok",!!ok);clearTimeout(cpMsg.t);if(t)cpMsg.t=setTimeout(()=>{m.hidden=true},6000)}
 function renderGiftHint(){
   const el=$("#giftHint");if(!el)return;const pl=giftPlan(S.size);
@@ -1479,6 +1542,7 @@ function renderCoSummary(){
     `<div class="t"><span>Total</span><span class="num">${money(q.total)}</span></div>`;
 }
 function openCheckout(){
+  pxEv("checkout");
   renderCoSummary();
   const del=S.mode==="delivery";$("#addrFields").hidden=!del;$("#bsBox").hidden=true;bsSumDraw();placeFieldsShow();
   $("#coAddr").required=del;
@@ -1639,7 +1703,7 @@ $("#coForm").addEventListener("submit",e=>{
     tsPass("whatsapp").then(pp=>{window.__tsPass=pp||undefined;return SBH.place({notify,sdLate:S.mode!=="pickup"&&S.speed==="sameday"&&!samedayOpen()?true:undefined,shuffled:!!S.shuf,size:S.size,items:fields.items,mode:S.mode,speed:S.speed,day:S.day,time:S.time,note:S.note,addons:[...S.addons],coupon:fields.coupon,preCode:!ed&&PG.code?PG.code:undefined,expectTotal:q.total,customer:cust,ship:q.ship||undefined},ed)}).then(o=>{
       if(o&&o.preGift)pgForget(true);else if(o&&o._preErr)setTimeout(()=>toast("Your gift code was not added: "+o._preErr),900);
       if(pNote||pImg)SBH.placeInfo(o.id,pNote,pImg).catch(err=>toast("Order placed, but the driver note or photo didn't save: "+err.message));
-      addMine(o.id);S.editId=null;saveCart();renderDone(o,!!ed);
+      addMine(o.id);S.editId=null;saveCart();if(!ed)pxEv("order",o);renderDone(o,!!ed);
       S=fresh();$("#coForm").reset();saveCart();sanitizeCart();renderStoreStatic();renderStore();renderEditBar();renderBag();
     }).catch(err=>{if(err.message==="BANNED"){$("#coErr").hidden=true;banShow()}else{$("#coErr").textContent=err.message;$("#coErr").hidden=false;if(/courier/i.test(err.message||"")&&bsOn()&&S.mode==="delivery"){S.ship=null;BSD.err=err.message;BSD.tried=true;bsDraw();renderCoSummary();renderStore()}}SBH.loadShop(true)}).finally(()=>{window.__tsPass=undefined;if(btn)btn.disabled=false});
     return}
@@ -3270,7 +3334,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-06 13:13 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-10 10:41 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afSacHTML()}${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};

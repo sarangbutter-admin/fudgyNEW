@@ -2242,3 +2242,6 @@ body{padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-l
 .bseta{font-weight:800;font-size:14px;color:#0A6B34;white-space:nowrap}
 .bsopts .bsc .num{flex:0 0 auto;font-weight:800;text-align:right}
 @media (prefers-reduced-motion:reduce){.bsic i,.bsic u,.bspill i{animation:none!important}}
+/* Admin: Google, Meta & TikTok panel */
+.seochk{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:4px}.seochk li{font-size:14px}.seochk li.no{color:#8a5a00}
+.seolink{display:grid;gap:4px;margin:8px 0;padding:10px;border:1.5px solid var(--line);border-radius:12px}.seolink small{display:block}.seolink .colin{gap:6px}.seolink input{font-size:13px}

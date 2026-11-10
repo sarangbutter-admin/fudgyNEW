@@ -20,11 +20,49 @@
   to = "/join.html"
   status = 200
 
+# Search engines, AI assistants and shopping catalogs (Google Merchant Center, Meta / Instagram, TikTok).
+# Built live from the shop data by the "feed" Supabase function. A proxy (status 200) costs no Netlify function time.
+[[redirects]]
+  from = "/robots.txt"
+  to = "https://mxkzsdjekhcuvdgsyvpr.supabase.co/functions/v1/feed?f=robots"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "https://mxkzsdjekhcuvdgsyvpr.supabase.co/functions/v1/feed?f=sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/llms.txt"
+  to = "https://mxkzsdjekhcuvdgsyvpr.supabase.co/functions/v1/feed?f=llms"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/feeds/google.xml"
+  to = "https://mxkzsdjekhcuvdgsyvpr.supabase.co/functions/v1/feed?f=google"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/feeds/products.csv"
+  to = "https://mxkzsdjekhcuvdgsyvpr.supabase.co/functions/v1/feed?f=csv"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/og-image"
+  to = "https://mxkzsdjekhcuvdgsyvpr.supabase.co/functions/v1/feed?f=og"
+  status = 200
+  force = true
+
 # Security headers for every page
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' data: https://*.supabase.co https://challenges.cloudflare.com; frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://challenges.cloudflare.com https://connect.facebook.net https://analytics.tiktok.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' data: https://*.supabase.co https://challenges.cloudflare.com https://www.facebook.com https://connect.facebook.net https://analytics.tiktok.com https://*.tiktokw.us https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com; frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
     Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"

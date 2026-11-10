@@ -617,7 +617,70 @@ function renderTimes(){
   $("#times").innerHTML=DB.settings.times.map(t=>{const full=slotFull(S.day,t),off=!!S.day&&k!=="sameday"&&slotTooSoon(S.day,t,k);return `<button class="chip" type="button" data-time="${esc(t)}" ${full?`disabled aria-label="${esc(t)}, full"`:off?`disabled aria-label="${esc(t)}, too soon"`:""}>${esc(t)}${full?" · Full":""}</button>`}).join("");
   document.querySelectorAll("[data-time]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.time===S.time));
 }
+/* --- search engines, AI assistants and social (SEO / GEO): page tags + structured data (JSON-LD), and the optional Meta / TikTok / Google tags --- */
+const seoCur=()=>String(DB.settings.currencyCode||"").toUpperCase()||(/^rp/i.test(DB.settings.currency||"")?"IDR":/^\$/.test(DB.settings.currency||"")?"USD":"IDR");
+const seoSite=()=>{const m=/^https:\/\/[^\s/]+/.exec(String(DB.settings.siteUrl||"").trim());return m?m[0]:location.origin};
+const seoBrand=()=>String(DB.settings.seoBrand||(DB.page&&DB.page.name)||"Delidome").trim().slice(0,70);
+function seoMeta(sel,attr,val){const e=document.head.querySelector(sel);if(e&&val)e.setAttribute(attr,val)}
+// "Mon - Sun" + "10.00 - 19.00" -> "Mo-Su 10:00-19:00" (skipped when it can't be read)
+function seoHours(h){const D={mon:"Mo",tue:"Tu",wed:"We",thu:"Th",fri:"Fr",sat:"Sa",sun:"Su",sen:"Mo",sel:"Tu",rab:"We",kam:"Th",jum:"Fr",sab:"Sa",min:"Su"};
+  return (Array.isArray(h)?h:[]).map(r=>{if(!Array.isArray(r))return "";const ds=String(r[0]||"").toLowerCase().match(/[a-z]{3}/g)||[],t=String(r[1]||"").match(/(\d{1,2})[.:](\d{2})\s*[-–]\s*(\d{1,2})[.:](\d{2})/);
+    const d=ds.map(x=>D[x]).filter(Boolean);if(!d.length||!t)return "";const p=n=>String(n).padStart(2,"0");
+    return `${d.length>1&&/[-–]/.test(r[0])?d[0]+"-"+d[d.length-1]:d.join(",")} ${p(t[1])}:${t[2]}-${p(t[3])}:${t[4]}`}).filter(Boolean)}
+function seoApply(){try{
+  const t=DB.settings,pg=DB.page||{},site=seoSite(),brand=seoBrand(),cur=seoCur(),now=Date.now();
+  const desc=String(t.seoDesc||`Freshly baked cookie boxes from ${brand}. Pick your box size and fill it with your favourite flavors.`).trim().slice(0,300);
+  const title=`${brand} Cookie Boxes`;
+  seoMeta('meta[name="description"]',"content",desc);seoMeta('meta[property="og:description"]',"content",desc);seoMeta('meta[name="twitter:description"]',"content",desc);
+  seoMeta('meta[property="og:title"]',"content",title);seoMeta('meta[name="twitter:title"]',"content",title);seoMeta('meta[property="og:site_name"]',"content",brand);
+  if(t.siteUrl){seoMeta('link[rel="canonical"]',"href",site+"/");seoMeta('meta[property="og:url"]',"content",site+"/")}
+  const img=[t.seoImg,pg.logo].map(x=>String(x||"")).find(x=>/^https:\/\//.test(x))||"";
+  const flv=DB.products.filter(p=>p.status!=="hidden"),av=flv.filter(p=>p.status==="available"&&(!p.track||p.stock>0));
+  const sizes=activeSizes(),prices=sizes.map(z=>+z.price).filter(x=>x>0);
+  const social=["seoIg","seoTiktok","seoFb"].map(k=>String(t[k]||"")).filter(u=>/^https:\/\//.test(u));
+  const biz={"@type":"Bakery","@id":site+"/#shop",name:brand,url:site+"/",description:desc,servesCuisine:"Cookies",currenciesAccepted:cur,
+    ...(img?{image:img,logo:img}:{}),...(t.seoPhone?{telephone:String(t.seoPhone).slice(0,30)}:{}),...(social.length?{sameAs:social}:{}),
+    ...(prices.length?{priceRange:`${money(Math.min(...prices))} - ${money(Math.max(...prices))}`}:{}),
+    ...(t.seoArea||t.address?{areaServed:String(t.seoArea||t.address).slice(0,160)}:{}),
+    ...(t.seoStreet||t.seoCity?{address:{"@type":"PostalAddress",...(t.seoStreet?{streetAddress:t.seoStreet}:{}),...(t.seoCity?{addressLocality:t.seoCity}:{}),...(t.seoPostal?{postalCode:t.seoPostal}:{}),addressCountry:t.seoCountry||"ID"}}:{}),
+    ...(isFinite(parseFloat(t.shopLat))&&isFinite(parseFloat(t.shopLng))&&t.seoShowGeo!==false?{geo:{"@type":"GeoCoordinates",latitude:+parseFloat(t.shopLat).toFixed(3),longitude:+parseFloat(t.shopLng).toFixed(3)}}:{}),
+    ...(seoHours(t.hours).length?{openingHours:seoHours(t.hours)}:{}),hasMenu:site+"/",
+    potentialAction:{"@type":"OrderAction",target:site+"/"}};
+  const prods=sizes.map(z=>{const sl=bestSale(z.n,now),off=sl?saleDiscount(sl,z.price):0;
+    return {"@type":"Product","@id":`${site}/?size=${z.n}#box`,name:`${brand} Cookie Box of ${z.n}`,sku:`box-${z.n}`,brand:{"@type":"Brand",name:brand},category:"Cookies",
+      description:`${desc} Box of ${z.n} cookies, you choose the flavors${av.length?": "+av.map(p=>p.name).join(", "):""}.`.slice(0,1000),...(img?{image:img}:{}),
+      offers:{"@type":"Offer",price:r2(z.price-off).toFixed(2),priceCurrency:cur,availability:av.length?"https://schema.org/InStock":"https://schema.org/OutOfStock",url:`${site}/?size=${z.n}`,itemCondition:"https://schema.org/NewCondition",seller:{"@id":site+"/#shop"},...(sl?{priceValidUntil:new Date(sl.end).toISOString().slice(0,10)}:{})}}});
+  const faq=(pg.faq||[]).filter(f=>f&&f.q&&f.a).map(f=>({"@type":"Question",name:String(f.q),acceptedAnswer:{"@type":"Answer",text:String(f.a).replace(/\{cutoff\}/g,fmtHour(+t.cutoffHour||0))}}));
+  const g={"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":site+"/#site",name:brand,url:site+"/",publisher:{"@id":site+"/#shop"}},biz,...prods,...(faq.length?[{"@type":"FAQPage",mainEntity:faq}]:[])]};
+  let el=document.getElementById("ddLd");if(!el){el=document.createElement("script");el.type="application/ld+json";el.id="ddLd";document.head.appendChild(el)}
+  const txt=JSON.stringify(g).replace(/</g,"\\u003c");if(el.textContent!==txt)el.textContent=txt;
+}catch(e){}}
+// ad tags: load only on the customer shop, only when the owner pasted an ID in Admin -> Shop settings -> Google, Meta & TikTok
+const PX={on:false,seen:new Set()};
+function pxInit(){if(PX.on||(window.DELIDOME_CONFIG&&window.DELIDOME_CONFIG.shopUrl)||location.hash==="#admin")return;const t=DB.settings,w=window,add=src=>{const s=document.createElement("script");s.async=true;s.src=src;document.head.appendChild(s)};
+  const meta=String(t.pxMeta||"").replace(/\D/g,"").slice(0,20),tt=String(t.pxTiktok||"").replace(/[^A-Za-z0-9]/g,"").slice(0,30),ga=String(t.pxGa4||"").trim().toUpperCase().replace(/[^A-Z0-9-]/g,"").slice(0,20);
+  if(!meta&&!tt&&!/^(G|AW)-/.test(ga))return;PX.on=true;
+  if(meta){const f=w.fbq=function(){f.callMethod?f.callMethod.apply(f,arguments):f.queue.push(arguments)};if(!w._fbq)w._fbq=f;f.push=f;f.loaded=true;f.version="2.0";f.queue=[];add("https://connect.facebook.net/en_US/fbevents.js");w.fbq("init",meta);w.fbq("track","PageView")}
+  if(tt){const n="ttq";w.TiktokAnalyticsObject=n;const q=w[n]=w[n]||[];q.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"];
+    q.setAndDefer=(o,m)=>{o[m]=function(){o.push([m].concat([].slice.call(arguments,0)))}};q.methods.forEach(m=>q.setAndDefer(q,m));q.instance=id=>{const e=q._i[id]||[];q.methods.forEach(m=>q.setAndDefer(e,m));return e};
+    q.load=(e,o)=>{const r="https://analytics.tiktok.com/i18n/pixel/events.js";q._i=q._i||{};q._i[e]=[];q._i[e]._u=r;q._t=q._t||{};q._t[e]=+new Date;q._o=q._o||{};q._o[e]=o||{};add(r+"?sdkid="+e+"&lib="+n)};q.load(tt);q.page()}
+  if(/^(G|AW)-/.test(ga)){w.dataLayer=w.dataLayer||[];w.gtag=function(){w.dataLayer.push(arguments)};w.gtag("js",new Date());w.gtag("config",ga);add("https://www.googletagmanager.com/gtag/js?id="+encodeURIComponent(ga))}}
+function pxEv(kind,x){if(!PX.on)return;try{const w=window,cur=seoCur(),brand=seoBrand();
+  if(kind==="view"){const n=+x;if(!n||PX.seen.has(n))return;PX.seen.add(n);const v=+basePrice(n)||0,id="box-"+n,nm=`${brand} Cookie Box of ${n}`;
+    w.fbq&&w.fbq("track","ViewContent",{content_ids:[id],content_type:"product",content_name:nm,value:v,currency:cur});
+    w.ttq&&w.ttq.track("ViewContent",{contents:[{content_id:id,content_type:"product",content_name:nm}],value:v,currency:cur});
+    w.gtag&&w.gtag("event","view_item",{currency:cur,value:v,items:[{item_id:id,item_name:nm,price:v}]})}
+  else if(kind==="checkout"){const q=quote(S,DB,{withDelivery:false}),id="box-"+S.size,v=+q.total||0;
+    w.fbq&&w.fbq("track","InitiateCheckout",{content_ids:[id],content_type:"product",num_items:1,value:v,currency:cur});
+    w.ttq&&w.ttq.track("InitiateCheckout",{contents:[{content_id:id,content_type:"product",quantity:1}],value:v,currency:cur});
+    w.gtag&&w.gtag("event","begin_checkout",{currency:cur,value:v,items:[{item_id:id,item_name:`${brand} Cookie Box of ${S.size}`,price:v,quantity:1}]})}
+  else if(kind==="order"){const o=x||{},id="box-"+o.size,v=+o.total||0;
+    w.fbq&&w.fbq("track","Purchase",{content_ids:[id],content_type:"product",num_items:1,value:v,currency:cur},{eventID:String(o.code||o.id||"")});
+    w.ttq&&w.ttq.track("PlaceAnOrder",{contents:[{content_id:id,content_type:"product",quantity:1}],value:v,currency:cur},{event_id:String(o.code||o.id||"")});
+    w.gtag&&w.gtag("event","purchase",{transaction_id:String(o.code||o.id||""),currency:cur,value:v,shipping:+o.fee||0,coupon:o.coupon||undefined,items:[{item_id:id,item_name:`${brand} Cookie Box of ${o.size}`,price:v,quantity:1}]})}
+}catch(e){}}
 function renderStoreStatic(){
+  try{seoApply();pxInit()}catch(e){}
   const set=DB.settings;
   applyPopScale();
   renderMenu();renderCarousel();renderMarquee($("#marq"),DB.marquee);
@@ -857,7 +920,7 @@ function celebrate(){if(RM)return;const p=$(".boxpanel");
 
 /* --- box actions --- */
 // a smaller box: the cookies move up to fit
-function setSize(n){if(S.closed&&n!==S.size){S.closed=false;toast("Box opened so you can change the size")}S.size=n;if(S.box.slice(0,n).filter(Boolean).length<boxN()||S.box.length>n){const keep=S.box.map((id,i)=>[id,!!(S.auto&&S.auto[i])]).filter(x=>x[0]).slice(0,n);S.box=keep.map(x=>x[0]);S.auto=keep.map(x=>x[1])}if(!full())S.step=1;renderStore()}
+function setSize(n){pxEv("view",n);if(S.closed&&n!==S.size){S.closed=false;toast("Box opened so you can change the size")}S.size=n;if(S.box.slice(0,n).filter(Boolean).length<boxN()||S.box.length>n){const keep=S.box.map((id,i)=>[id,!!(S.auto&&S.auto[i])]).filter(x=>x[0]).slice(0,n);S.box=keep.map(x=>x[0]);S.auto=keep.map(x=>x[1])}if(!full())S.step=1;renderStore()}
 
 function cpMsg(t,ok){const m=$("#cpnMsg");if(!m)return;m.textContent=t||"";m.hidden=!t;m.classList.toggle("ok",!!ok);clearTimeout(cpMsg.t);if(t)cpMsg.t=setTimeout(()=>{m.hidden=true},6000)}
 function renderGiftHint(){
@@ -1493,6 +1556,7 @@ function renderCoSummary(){
     `<div class="t"><span>Total</span><span class="num">${money(q.total)}</span></div>`;
 }
 function openCheckout(){
+  pxEv("checkout");
   renderCoSummary();
   const del=S.mode==="delivery";$("#addrFields").hidden=!del;$("#bsBox").hidden=true;bsSumDraw();placeFieldsShow();
   $("#coAddr").required=del;
@@ -1654,7 +1718,7 @@ $("#coForm").addEventListener("submit",e=>{
     tsPass("whatsapp").then(pp=>{window.__tsPass=pp||undefined;return SBH.place({notify,sdLate:S.mode!=="pickup"&&S.speed==="sameday"&&!samedayOpen()?true:undefined,shuffled:!!S.shuf,size:S.size,items:fields.items,mode:S.mode,speed:S.speed,day:S.day,time:S.time,note:S.note,addons:[...S.addons],coupon:fields.coupon,preCode:!ed&&PG.code?PG.code:undefined,expectTotal:q.total,customer:cust,ship:q.ship||undefined},ed)}).then(o=>{
       if(o&&o.preGift)pgForget(true);else if(o&&o._preErr)setTimeout(()=>toast("Your gift code was not added: "+o._preErr),900);
       if(pNote||pImg)SBH.placeInfo(o.id,pNote,pImg).catch(err=>toast("Order placed, but the driver note or photo didn't save: "+err.message));
-      addMine(o.id);S.editId=null;saveCart();renderDone(o,!!ed);
+      addMine(o.id);S.editId=null;saveCart();if(!ed)pxEv("order",o);renderDone(o,!!ed);
       S=fresh();$("#coForm").reset();saveCart();sanitizeCart();renderStoreStatic();renderStore();renderEditBar();renderBag();
     }).catch(err=>{if(err.message==="BANNED"){$("#coErr").hidden=true;banShow()}else{$("#coErr").textContent=err.message;$("#coErr").hidden=false;if(/courier/i.test(err.message||"")&&bsOn()&&S.mode==="delivery"){S.ship=null;BSD.err=err.message;BSD.tried=true;bsDraw();renderCoSummary();renderStore()}}SBH.loadShop(true)}).finally(()=>{window.__tsPass=undefined;if(btn)btn.disabled=false});
     return}
@@ -4574,12 +4638,49 @@ $("#amain").addEventListener("input",e=>{if(e.target.dataset.tsk==="siteKey"){DB
 $("#amain").addEventListener("change",e=>{const el=e.target;if(el.dataset.tsk==="on"){DB.settings.turnstile.on=el.checked;saveDB();toast("Saved");renderAdmin()}
   else if(el.dataset.tsw){DB.settings.turnstile.where=Object.assign({},DB.settings.turnstile.where,{[el.dataset.tsw]:el.checked});saveDB();toast("Saved")}});
 $("#amain").addEventListener("click",async e=>{if(!e.target.closest("[data-tssave]"))return;const v=(document.querySelector("[data-tssec]")||{}).value||"";TSA.busy=true;try{TSA.st=await SBH.tsSave({secret:v});toast("Secret key saved")}catch(er){toast(er.message||"Couldn't save the key.")}TSA.busy=false;renderAdmin()});
+/* --- Shop settings: Google, Meta & TikTok (SEO / GEO, shopping feeds, ad tags) --- */
+function seoPanel(){const s=DB.settings,base=String(s.siteUrl||(window.DELIDOME_CONFIG||{}).shopUrl||"https://delidomeorder.netlify.app").replace(/\/+$/,"");
+  const inp=(l,k,ph,mx=160,note="")=>`<label class="af">${l}<input class="in" data-k="settings::${k}" value="${esc(s[k]||"")}" maxlength="${mx}" placeholder="${esc(ph)}">${note?`<small class="note">${note}</small>`:""}</label>`;
+  const hasPic=DB.products.filter(p=>p.status!=="hidden"),noPic=hasPic.filter(p=>!p.img).length,low=DB.sizes.filter(z=>z.active&&+z.price>0&&+z.price<1000).length&&/^rp/i.test(s.currency||"");
+  const ok=(c,t,fix)=>`<li class="${c?"ok":"no"}">${c?"✅":"⚠️"} ${t}${!c&&fix?` <small class="note" style="margin:0">${fix}</small>`:""}</li>`;
+  const link=(l,path,use)=>`<div class="seolink"><div><b>${l}</b><small class="note" style="margin:0">${use}</small></div><div class="colin"><input class="in" readonly value="${esc(base+path)}" aria-label="${esc(l)}"><button class="ghost" type="button" data-seocopy="${esc(base+path)}">Copy</button></div></div>`;
+  return `<section class="panel" id="seoPanel"><h2>🔎 Google, Meta &amp; TikTok</h2><p class="sub">Helps people find your shop on Google and AI assistants (ChatGPT, Gemini, Perplexity), makes nice previews when your link is shared, and gives Google Shopping, Facebook / Instagram Shops and TikTok Shop a product list that updates by itself.</p>
+    <h3 style="margin:12px 0 4px;font-size:15px">Ready check</h3><ul class="seochk">
+      ${ok(/^https:\/\//.test(s.siteUrl||""),"Website address set","Type it below (your own domain when you have one).")}
+      ${ok(!!String(s.seoBrand||"").trim(),"Brand name set","Used in Google, product titles and link previews.")}
+      ${ok(String(s.seoDesc||"").trim().length>=50,"Shop description (50+ letters)","Write 1 to 2 sentences about what you sell and where.")}
+      ${ok(/^https:\/\//.test(s.seoImg||"")||!!DB.page.logo,"Share picture","Paste a link to a nice square or wide photo, or set a logo on the landing page.")}
+      ${ok(!!String(s.seoPhone||"").trim(),"WhatsApp / phone shown to Google","")}
+      ${ok(!!(s.seoCity||s.seoArea),"City or delivery area","Google uses it for local searches like “cookies near me”.")}
+      ${ok(!noPic,noPic?`${noPic} flavor(s) without a photo`:"Every flavor has a photo","Photos help a lot on Google, Instagram and TikTok.")}
+      ${ok(!low,low?"Some box prices look like test prices (under Rp1,000)":"Box prices look real","Google and Meta reject wrong prices. Set real prices before you connect the feeds.")}
+    </ul>
+    <h3 style="margin:16px 0 4px;font-size:15px">Your shop on the web</h3>
+    <div class="grid2">${inp("Website address","siteUrl","https://delidome.id",120,"Start with https://. When you move to your own domain, change it here and tell us to rebuild the share tags.")}${inp("Brand name","seoBrand","Delidome",70)}</div>
+    <label class="af" style="margin-top:8px">Shop description (for Google, AI assistants and link previews)<textarea class="in" rows="3" maxlength="300" data-k="settings::seoDesc" placeholder="Freshly baked cookie boxes in Jakarta. Pick a box of 4, 6 or 12 and choose your flavors. Sameday delivery around Jabodetabek.">${esc(s.seoDesc||"")}</textarea></label>
+    ${inp("Share picture link (https://…)","seoImg","https://… (1200 × 630 works best)",400,"Shown when your link is shared on WhatsApp, Instagram, Facebook, X. Empty = your logo.")}
+    <div class="grid2" style="margin-top:8px">${inp("WhatsApp / phone","seoPhone","+62 812 3456 7890",30)}${inp("Delivery area","seoArea","Jakarta, Bogor, Depok, Tangerang, Bekasi",160)}</div>
+    <div class="grid3" style="margin-top:8px">${inp("Street address (optional)","seoStreet","Jl. …",120,"Leave empty if you don't want it public.")}${inp("City","seoCity","Jakarta Selatan",60)}${inp("Postal code","seoPostal","12xxx",10)}</div>
+    <label class="chk" style="margin-top:8px"><input type="checkbox" data-k="settings::seoShowGeo" ${s.seoShowGeo!==false?"checked":""}> <b>Show my shop's map position to Google</b> <span class="note" style="margin:0">(rounded to about 100 m, from the shop location in Delivery &amp; courier)</span></label>
+    <div class="grid3" style="margin-top:8px">${inp("Instagram link","seoIg","https://instagram.com/…",120)}${inp("TikTok link","seoTiktok","https://tiktok.com/@…",120)}${inp("Facebook link","seoFb","https://facebook.com/…",120)}</div>
+    <h3 style="margin:16px 0 4px;font-size:15px">Product feeds (update by themselves)</h3>
+    <p class="note" style="margin:0 0 6px">Each box size is a product (Box of 4, Box of 6…) with its price, flash sale price, photo and stock. Customers who tap it land on your shop with that box chosen.</p>
+    ${link("Google Merchant Center","/feeds/google.xml","Products → Feeds → Add → Scheduled fetch → paste this link. Free listings on Google Shopping.")}
+    ${link("Meta (Facebook &amp; Instagram Shop)","/feeds/google.xml","Commerce Manager → Catalog → Data sources → Data feed → Scheduled feed → paste this link.")}
+    ${link("TikTok Shop / TikTok catalog","/feeds/products.csv","TikTok Ads Manager → Assets → Catalogs → Add products → Data feed → paste this link.")}
+    ${link("Sitemap (Google Search Console)","/sitemap.xml","Search Console → Sitemaps → paste this link.")}
+    ${link("For AI assistants","/llms.txt","Nothing to do: AI tools read it by themselves.")}
+    <h3 style="margin:16px 0 4px;font-size:15px">Ad tags (optional)</h3><p class="note" style="margin:0 0 6px">Paste the ID only. They track visits, box views, checkout and placed orders so your Facebook, Instagram, TikTok and Google ads can measure sales. Leave empty to load nothing.</p>
+    <div class="grid3">${inp("Meta Pixel ID","pxMeta","123456789012345",20)}${inp("TikTok Pixel ID","pxTiktok","C1ABCDEF…",30)}${inp("Google tag ID","pxGa4","G-XXXXXXX",20)}</div>
+    <p class="note" style="margin:6px 0 0">Ad tags use cookies. If you run ads, add a line about it to your privacy notice.</p>
+  </section>`}
 function viewSettings(){
   const s=DB.settings,th=DB.thanks,pp=DB.proofpop,al=DB.alerts;
   const hc=(l,k,d)=>`<label class="af">${l}<input type="color" data-k="settings::${k}" value="${HEX_OK.test(s[k]||"")?s[k]:d}" style="width:100%;height:42px"></label>`;
   const hsel=(l,k,opts,d)=>`<label class="af">${l}<select class="in" data-k="settings::${k}">${opts.map(([v,n])=>`<option value="${v}" ${(s[k]||d)===v?"selected":""}>${n}</option>`).join("")}</select></label>`;
   return head("Shop settings","Order cutoff, opening days, payment and the details shown on the shop page. Delivery and couriers are in the Delivery & courier tab.")+MOCK+`
   <div class="stack">
+${seoPanel()}
     <section class="panel"><h2>Top bar</h2><p class="sub">The bar at the top of the shop with your logo, the bell and My orders.</p>
       <div style="display:flex;gap:10px;align-items:center;margin:10px 0"><label class="sw"><input type="checkbox" data-k="settings::hdrOn" ${s.hdrOn?"checked":""} aria-label="Use my own top bar look"><span></span></label><span class="stlabel">Use my own top bar look${s.hdrOn?"":" (off: the standard white bar)"}</span></div>
       <div style="display:flex;gap:10px;align-items:center;margin:0 0 10px"><label class="sw"><input type="checkbox" data-lp="nameShow" ${DB.page.nameShow!==false?"checked":""} aria-label="Show the shop name next to the logo"><span></span></label><span class="stlabel">Show the shop name next to the logo (turn off for logo only)</span></div>
@@ -7380,7 +7481,7 @@ function affRender(){try{applyBgx();applySnow()}catch(e){}let v=document.getElem
     v.addEventListener("input",e=>{const el=e.target;if(el.dataset.afpf&&AF.pf)AF.pf[el.dataset.afpf]=el.value});
     v.addEventListener("change",e=>{const el=e.target;if(el.id==="afTo"||el.id==="afCh")afLinkUpd(v);if(el.dataset.afd)afDate(el,true);if(el.dataset.afpf==="method"&&AF.pf){AF.pf.method=el.value;affRender()}})}
   const me=SBH.aff;
-  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-06 13:13 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
+  v.innerHTML=`<header class="afhdr" style="background:${hexOk(DB.page&&DB.page.brand,"#000096")}"><span class="logo" style="display:inline-flex;align-items:center">${admBrandHTML()}</span><small class="afver">build 2026-11-10 10:41 UTC</small><span class="afwho"><span id="afBellBox" class="afbellbox">${afBellHTML()}</span>@${esc(me.username)}<button class="ghost" type="button" data-afout>Sign out</button></span></header>
   <main class="afmain">${afSacHTML()}${afTabsHTML()}${AF.tab==="faq"?afFaqHTML(AF.rep):AF.rep?afDashHTML(AF.rep,false):`<section class="panel"><div class="empty">${AF.err?esc(AF.err):"Loading your numbers…"}</div></section>`}</main>`;
   afLinkUpd(v)}
 const AFF_START=window.affStart=function(me){SBH.aff=me;AFM.cpn=null;AFM.gd=null;AFM.edit=false;afCpnLoad();AF.rep=null;AF.sf="all";AF.tab="dash";afFaqLoad().then(()=>{if(AF.tab==="faq")affRender()});AFN.d=null;AFN.open=false;affRender();affLoadRep(me.id,true);afNotesLoad();clearInterval(AFN.t);AFN.t=setInterval(afNotesLoad,60000)};
@@ -7739,6 +7840,7 @@ am.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)r
   else if(d.cuchecked){try{CU.list=await SBH.rpc("admin_cust_reviewed",{p_id:d.cuchecked});toast("Marked as checked")}catch(x){toast(x.message);return}const y=scrollY;renderAdmin();scrollTo(0,y)}
   else if(d.cuonly!==undefined){CU.only=d.cuonly;renderAdmin()}
   else if(d.cuexport!==undefined){cuExport()}
+  else if(d.seocopy!==undefined){const v=d.seocopy;(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(()=>toast("Link copied"),()=>toast(v))}
   else if(d.ordexport!==undefined){ordExport()}
   else if(d.cuban){CU.bf={id:d.cuban,reason:"",days:7};renderAdmin()}
   else if(d.cubanno!==undefined){CU.bf=null;renderAdmin()}
